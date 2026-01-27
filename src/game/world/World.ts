@@ -3,18 +3,23 @@ import * as THREE from "three"
 import { Tile } from "./Tile"
 import type { TileType } from "./Tile"
 import { ObjectManager } from "./ObjectManager"
+import { Time } from "../../game/core/Time"
 
 export class World {
   tiles: Tile[] = []
-  size: number
+  size: number = 120
   tileSize: number
 
   scene: THREE.Scene
   objects: ObjectManager
 
-  constructor(scene: THREE.Scene, size: number = 20, tileSize: number = 2) {
+  private sun!: THREE.DirectionalLight
+  private backSun!: THREE.DirectionalLight
+  private ambient!: THREE.AmbientLight
+  private time = 0 // ms depuis le début du cycle
+
+  constructor(scene: THREE.Scene, tileSize: number = 2) {
     this.scene = scene
-    this.size = size
     this.tileSize = tileSize
 
     this.objects = new ObjectManager(this.scene, this.size, this.tileSize)
@@ -22,6 +27,7 @@ export class World {
     this.setupLights()
     this.generateTiles()
     this.populateDecor()
+    this.updateSun()
   }
 
   generateTiles() {
@@ -40,31 +46,68 @@ export class World {
     }
   }
 
-  // éclairage "sunset" du monde
   setupLights() {
-    // lumière principale chaude, basse sur l'horizon
-    const sunColor = new THREE.Color("#ffb347")   // orange doux
-    const sun = new THREE.DirectionalLight(sunColor, 1.6)
-    sun.position.set(-40, 18, 25)
-    sun.target.position.set(0, 0, 0)
-    this.scene.add(sun)
-    this.scene.add(sun.target)
+    // lumière principale chaude
+    this.sun = new THREE.DirectionalLight("#ffb347", 1)
+    this.sun.castShadow = true
+    this.sun.shadow.mapSize.width = 4096
+    this.sun.shadow.mapSize.height = 4096
+    const d = 20
+    this.sun.shadow.camera.left = -d
+    this.sun.shadow.camera.right = d
+    this.sun.shadow.camera.top = d
+    this.sun.shadow.camera.bottom = -d
+    this.sun.shadow.camera.near = 1
+    this.sun.shadow.camera.far = 400
+    this.scene.add(this.sun)
+    this.scene.add(this.sun.target)
 
-    // fill light rosée venant de l'autre côté, très douce
-    const backSun = new THREE.DirectionalLight("#ff7aa2", 0.4)
-    backSun.position.set(35, 12, -30)
-    this.scene.add(backSun)
+    // fill light rosée
+    this.backSun = new THREE.DirectionalLight("#ff7aa2", 0.4)
+    this.backSun.position.set(35, 12, -30)
+    this.scene.add(this.backSun)
 
-    // lumière globale chaude, légèrement désaturée
-    const ambient = new THREE.AmbientLight("#ffe0c7", 0.55)
-    this.scene.add(ambient)
+    // lumière globale
+    this.ambient = new THREE.AmbientLight("#ffe0c7", 0.55)
+    this.scene.add(this.ambient)
   }
+
+  /** à appeler chaque frame pour mettre à jour le cycle jour/nuit */
+  /** à appeler à chaque frame depuis ton Renderer */
+  updateSun() {
+    const cycle = 5 * 60
+    const t = (Time.elapsed % cycle) / cycle
+  
+    const angle = (t - 0.25) * Math.PI * 2
+
+    console.log(angle)
+    const radius = 100
+  
+    this.sun.position.set(
+      Math.cos(angle) * radius,
+      Math.max(0, Math.sin(angle)) * radius,
+      50
+    )
+    this.sun.lookAt(0, 0, 0)
+  
+    const daylight = Math.max(0, Math.sin(angle))
+  
+    this.sun.intensity = daylight
+  
+    const dayColor = new THREE.Color("#ffb347")
+    const nightColor = new THREE.Color("#001133")
+    this.sun.color = nightColor.clone().lerp(dayColor, daylight)
+  
+    this.ambient.intensity = THREE.MathUtils.lerp(
+      0.05,
+      0.55,
+      daylight
+    )
+  }  
 
   populateDecor() {
     const area = this.size * this.size
 
-    // densités (par tuile) calibrées sur l'ancien cas 20x20 :
-    // 30 arbres, 20 pierres, 50 fleurs → divisé par 400
     const treeDensity = 30 / 400
     const stoneDensity = 20 / 400
     const flowerDensity = 50 / 400
@@ -78,7 +121,6 @@ export class World {
     this.objects.populateRandomly(flowers, "flower")
   }
 
-  // objets sélectionnables pour le raycast UI (arbres, pierres, fleurs)
   getPickableMeshes(): THREE.Object3D[] {
     return [
       ...this.objects.trees,
@@ -90,7 +132,7 @@ export class World {
   randomTileType(): TileType {
     const r = Math.random()
     if (r < 0.7) return "grass"
-    if (r < 0.8) return "water"
+    if (r < 0.72) return "water"
     if (r < 0.95) return "sand"
     return "stone"
   }

@@ -4,3 +4,14 @@ html, body, #root {
   overflow: hidden;
   cursor: url('/cursor_default.png') 0 0, auto;
 }
+
+header {
+    position: absolute;
+    left: 1rem;
+    top: 1rem;
+
+    .game-clock {
+        position: absolute;
+        left: 64px;
+    }
+}

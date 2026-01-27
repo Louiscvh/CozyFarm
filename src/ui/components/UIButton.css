@@ -1,5 +1,6 @@
 .ui-button {
   border-radius: 14px;
+  z-index: 1;
   border: none;
   display: inline-flex;
   align-items: center;

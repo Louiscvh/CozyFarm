@@ -22,6 +22,7 @@ export class ObjectManager {
     const material = new THREE.MeshStandardMaterial({ color: "#4f8b3b" })
     const geometry = new THREE.ConeGeometry(0.5, 1.5, 8)
     const tree = new THREE.Mesh(geometry, material)
+    tree.castShadow = true
     tree.position.set(x, 0.75, z)
     tree.userData = {
       kind: "tree",
@@ -37,6 +38,7 @@ export class ObjectManager {
     const geometry = new THREE.DodecahedronGeometry(0.2)
     const stone = new THREE.Mesh(geometry, material)
     stone.position.set(x, 0.15, z)
+    stone.castShadow = true
     stone.userData = {
       kind: "stone",
       name: "Roche",
@@ -51,6 +53,7 @@ export class ObjectManager {
     const geometry = new THREE.CylinderGeometry(0.05, 0.05, 0.3, 6)
     const flower = new THREE.Mesh(geometry, material)
     flower.position.set(x, 0.15, z)
+    flower.castShadow = true
     flower.userData = {
       kind: "flower",
       name: "Fleur",

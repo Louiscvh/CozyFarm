@@ -4,85 +4,94 @@ import { World } from "../game/world/World"
 
 export class Renderer {
   static instance: Renderer | null = null
+
   scene: THREE.Scene
   camera: THREE.OrthographicCamera
+  cameraDefaultPosition: {
+    left: number,
+    right: number,
+    top: number,
+    bot: number
+  }
   renderer: THREE.WebGLRenderer
-
   cameraController: CameraController
-
-  world!: World
+  world: World
 
   mouse = new THREE.Vector2()
-
   private ambientAudio: HTMLAudioElement | null = null
 
   constructor() {
     Renderer.instance = this
+
+    // --- Scene ---
     this.scene = new THREE.Scene()
-    // ciel sunset rose-orangé
     this.scene.background = new THREE.Color("#ffb3a7")
-    
+
+    // --- Renderer ---
     this.renderer = new THREE.WebGLRenderer({ antialias: true })
     this.renderer.setSize(window.innerWidth, window.innerHeight)
     this.renderer.setPixelRatio(window.devicePixelRatio)
+    this.renderer.shadowMap.enabled = true       // <- activation
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap  // optionnel, plus doux
     document.body.appendChild(this.renderer.domElement)
 
+    // --- World ---
+    this.world = new World(this.scene, 2)
+    this.cameraDefaultPosition = {top: 20, left: 20, right: 20, bot: 20}
+    // --- Camera ---
     const aspect = window.innerWidth / window.innerHeight
-    const size = 20
     this.camera = new THREE.OrthographicCamera(
-      -size * aspect, size * aspect,
-      size, -size,
-      0.01, 500
+      -this.cameraDefaultPosition.left * aspect, this.cameraDefaultPosition.right * aspect,
+      this.cameraDefaultPosition.top, -this.cameraDefaultPosition.bot,
+      0.01, 100
     )
-
     this.cameraController = new CameraController(this.camera)
 
-    // --- World ---
-    this.world = new World(this.scene, 60, 2)
 
     // --- Ambiance sonore ---
-    // on prépare la musique, mais on ne la lance qu'au premier input utilisateur
+    this.setupAmbientAudio("../assets/ambient.mp3")
+
+    // --- Input ---
+    window.addEventListener("mousemove", e => {
+      this.mouse.x = (e.clientX / window.innerWidth) * 2 - 1
+      this.mouse.y = -(e.clientY / window.innerHeight) * 2 + 1
+    })
+
+    // --- Resize ---
+    window.addEventListener("resize", this.onResize)
+  }
+
+  private setupAmbientAudio(url: string) {
     try {
-      const url = new URL("../assets/ambient.mp3", import.meta.url).href
-      this.ambientAudio = new Audio(url)
+      this.ambientAudio = new Audio(new URL(url, import.meta.url).href)
       this.ambientAudio.loop = true
       this.ambientAudio.volume = 0.5
 
-      const startOnce = () => {
-        if (!this.ambientAudio) return
-        // certains navigateurs peuvent encore bloquer; on ignore simplement les erreurs
-        this.ambientAudio.play().catch(() => {})
-      }
-
+      const startOnce = () => this.ambientAudio?.play().catch(() => {})
       const opts: AddEventListenerOptions = { once: true }
+
       window.addEventListener("pointerdown", startOnce, opts)
       window.addEventListener("keydown", startOnce, opts)
       window.addEventListener("touchstart", startOnce, opts)
     } catch {
-      // si jamais l'URL échoue, on ne casse pas le renderer
+      // ignore si échec
     }
+  }
 
-    window.addEventListener("mousemove", (e) => {
-        this.mouse.x = (e.clientX / window.innerWidth) * 2 - 1
-        this.mouse.y = -(e.clientY / window.innerHeight) * 2 + 1
-    })
-
-    // --- Resize ---
-    window.addEventListener("resize", () => {
-      const aspect = window.innerWidth / window.innerHeight
-      const size = 20
-      this.camera.left = -size * aspect
-      this.camera.right = size * aspect
-      this.camera.top = size
-      this.camera.bottom = -size
-      this.camera.updateProjectionMatrix()
-      this.renderer.setSize(window.innerWidth, window.innerHeight)
-    })
+  private onResize = () => {
+    const aspect = window.innerWidth / window.innerHeight
+    this.camera.left = -this.cameraDefaultPosition.left * aspect
+    this.camera.right = this.cameraDefaultPosition.right * aspect
+    this.camera.top = this.cameraDefaultPosition.top
+    this.camera.bottom = -this.cameraDefaultPosition.bot
+    this.camera.updateProjectionMatrix()
+    this.renderer.setSize(window.innerWidth, window.innerHeight)
   }
 
   render() {
-    this.cameraController.update()  
+    this.cameraController.update()
     this.renderer.render(this.scene, this.camera)
+    this.world.updateSun()
   }
 
   resetCameraToHome() {

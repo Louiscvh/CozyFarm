@@ -16,11 +16,11 @@ export class Tile {
     switch (type) {
       case "grass":
         // herbe un peu plus douce et chaude
-        material = new THREE.MeshStandardMaterial({ color: "#7fb36a" })
+        material = new THREE.MeshStandardMaterial({ color: "#5AAB61" })
         break
       case "water":
         // eau plus profonde, tirant légèrement vers l'indigo
-        material = new THREE.MeshStandardMaterial({ color: "#142c5c" })
+        material = new THREE.MeshStandardMaterial({ color: "#0080ff" })
         break
       case "sand":
         // sable plus pêche, pour accrocher la lumière orangée
@@ -34,6 +34,7 @@ export class Tile {
 
     const geometry = new THREE.BoxGeometry(size, 0.1, size)
     this.mesh = new THREE.Mesh(geometry, material)
+    this.mesh.receiveShadow = true
     this.mesh.position.copy(position)
   }
 }

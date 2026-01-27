@@ -11,7 +11,6 @@ let lastTime = performance.now()
 function loop(time: number) {
   const dt = (time - lastTime) / 1000 // secondes
   lastTime = time
-
   game.update(dt)
   renderer.render()
 
