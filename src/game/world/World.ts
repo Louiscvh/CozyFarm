@@ -16,7 +16,6 @@ export class World {
   private sun!: THREE.DirectionalLight
   private backSun!: THREE.DirectionalLight
   private ambient!: THREE.AmbientLight
-  private time = 0 // ms depuis le début du cycle
 
   constructor(scene: THREE.Scene, tileSize: number = 2) {
     this.scene = scene
