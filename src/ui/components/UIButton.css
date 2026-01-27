@@ -1,0 +1,66 @@
+.ui-button {
+  border-radius: 14px;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  pointer-events: auto;
+  transition:
+    transform 0.16s ease-out,
+    box-shadow 0.16s ease-out,
+    background 0.16s ease-out,
+    opacity 0.16s ease-out;
+}
+
+.ui-button:hover {
+  cursor: url('/cursor_click.png') 0 0, default!important;
+}
+
+.ui-button--md {
+  width: 44px;
+  height: 44px;
+}
+
+.ui-button--lg {
+  width: 52px;
+  height: 52px;
+}
+
+.ui-button--primary {
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.95),
+    rgba(230, 244, 234, 0.95)
+  );
+  box-shadow:
+    0 8px 18px rgba(0, 0, 0, 0.16),
+    0 0 0 1px rgba(255, 255, 255, 0.8);
+}
+
+.ui-button--primary:hover {
+  transform: translateY(-0.5px);
+  box-shadow:
+    0 11px 22px rgba(0, 0, 0, 0.2),
+    0 0 0 1px rgba(255, 255, 255, 0.9);
+}
+
+.ui-button--primary:active {
+  transform: scale(0.985);
+  box-shadow:
+    0 5px 12px rgba(0, 0, 0, 0.16),
+    0 0 0 1px rgba(255, 255, 255, 0.8);
+}
+
+@media (max-width: 768px) {
+  .ui-button--md {
+    width: 52px;
+    height: 52px;
+  }
+
+  .ui-button--lg {
+    width: 60px;
+    height: 60px;
+  }
+}
+
