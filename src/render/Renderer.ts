@@ -49,7 +49,7 @@ export class Renderer {
 
 
     // --- Ambiance sonore ---
-    this.setupAmbientAudio("../assets/ambient.mp3")
+    this.setupAmbientAudio()
 
     // --- Input ---
     window.addEventListener("mousemove", e => {
