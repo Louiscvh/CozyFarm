@@ -90,7 +90,7 @@ export class World {
 
   async spawnEntity(def: Entity, tileX: number, tileZ: number) {
     const entity = await createEntity(def, this.tileSize)
-    placeOnTile(entity, tileX, tileZ, this.tileSize, def, this.size)
+    placeOnTile(entity, tileX, tileZ, this.tileSize)
   
     this.scene.add(entity)
     this.entities.push(entity)

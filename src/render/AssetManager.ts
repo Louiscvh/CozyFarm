@@ -1,5 +1,5 @@
-import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader"
-import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader"
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js"
+import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js"
 
 export class AssetManager {
     private loader = new GLTFLoader()

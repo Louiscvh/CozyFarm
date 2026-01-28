@@ -15,7 +15,7 @@ export async function createEntity(
   const cast = def.castShadow !== undefined ? def.castShadow : true
   const receive = def.receiveShadow !== undefined ? def.receiveShadow : true
 
-  root.traverse(obj => {
+  root.traverse((obj: THREE.Object3D) => {
     if ((obj as THREE.Mesh).isMesh) {
       obj.castShadow = cast
       obj.receiveShadow = receive
