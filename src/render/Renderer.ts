@@ -61,22 +61,19 @@ export class Renderer {
     window.addEventListener("resize", this.onResize)
   }
 
-  private setupAmbientAudio(url: string) {
-    try {
-      this.ambientAudio = new Audio(new URL(url, import.meta.url).href)
-      this.ambientAudio.loop = true
-      this.ambientAudio.volume = 0.5
+  private setupAmbientAudio() {
+    this.ambientAudio = new Audio("/sounds/ambient.mp3")
+    this.ambientAudio.loop = true
+    this.ambientAudio.volume = 0.5
 
-      const startOnce = () => this.ambientAudio?.play().catch(() => {})
-      const opts: AddEventListenerOptions = { once: true }
+    const startOnce = () => this.ambientAudio?.play().catch(() => {})
+    const opts: AddEventListenerOptions = { once: true }
 
-      window.addEventListener("pointerdown", startOnce, opts)
-      window.addEventListener("keydown", startOnce, opts)
-      window.addEventListener("touchstart", startOnce, opts)
-    } catch {
-      // ignore si échec
-    }
+    window.addEventListener("pointerdown", startOnce, opts)
+    window.addEventListener("keydown", startOnce, opts)
+    window.addEventListener("touchstart", startOnce, opts)
   }
+
 
   private onResize = () => {
     const aspect = window.innerWidth / window.innerHeight
