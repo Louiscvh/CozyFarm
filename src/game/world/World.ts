@@ -2,13 +2,19 @@
 import * as THREE from "three"
 import { Tile } from "./Tile"
 import type { TileType } from "./Tile"
-import { ObjectManager } from "./ObjectManager"
+import { ObjectManager } from "./TileFactory"
 import { Time } from "../../game/core/Time"
+import { FarmEntity } from "../entity/FarmEntity"
+import { createEntity } from "../entity/EntityFactory"
+import { placeOnTile } from "../entity/utils/placeOnTile"
+import type { Entity } from "../entity/Entity"
+import { WheatField } from '../entity/WheatField';
 
 export class World {
   tiles: Tile[] = []
   size: number = 120
   tileSize: number
+  public entities: THREE.Object3D[] = []
 
   scene: THREE.Scene
   objects: ObjectManager
@@ -24,9 +30,20 @@ export class World {
     this.objects = new ObjectManager(this.scene, this.size, this.tileSize)
 
     this.setupLights()
+    this.spawnEntitiesAsync()
     this.generateTiles()
     this.populateDecor()
     this.updateSun()
+
+  }
+
+  private async spawnEntitiesAsync() {
+    await this.spawnEntity(FarmEntity, 0, 0)
+    await this.spawnEntity(WheatField, 2, 0)
+    await this.spawnEntity(WheatField, 3, 0)
+    await this.spawnEntity(WheatField, 3, -1)
+    await this.spawnEntity(WheatField, 2, -1)
+
   }
 
   generateTiles() {
@@ -71,6 +88,16 @@ export class World {
     this.scene.add(this.ambient)
   }
 
+  async spawnEntity(def: Entity, tileX: number, tileZ: number) {
+    const entity = await createEntity(def, this.tileSize)
+    placeOnTile(entity, tileX, tileZ, this.tileSize, def, this.size)
+  
+    this.scene.add(entity)
+    this.entities.push(entity)
+  }
+
+
+
   /** à appeler chaque frame pour mettre à jour le cycle jour/nuit */
   /** à appeler à chaque frame depuis ton Renderer */
   updateSun() {
@@ -79,7 +106,6 @@ export class World {
   
     const angle = (t - 0.25) * Math.PI * 2
 
-    console.log(angle)
     const radius = 100
   
     this.sun.position.set(

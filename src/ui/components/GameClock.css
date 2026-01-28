@@ -1,0 +1,11 @@
+.game-clock {
+    position: absolute;
+    left: 64px;
+    top: 4px;
+    color: white;
+    font-family:Verdana, Geneva, Tahoma, sans-serif;
+    font-weight: normal;
+    font-size: 1.8rem;
+    margin-block-start: 0em;
+    margin-block-end: 0em;
+}

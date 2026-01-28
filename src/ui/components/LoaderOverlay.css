@@ -1,0 +1,41 @@
+/* LoaderOverlay.css */
+.loader-overlay {
+    position: fixed;
+    inset: 0;
+    background: white;
+    z-index: 9999;
+  
+    clip-path: circle(150% at 50% 50%);
+    pointer-events: all;
+  }
+  
+  .loader-overlay.reveal {
+    animation: loader-hole 1.4s forwards;
+  }
+  
+  /* 🎯 Animation Animal Crossing style */
+  @keyframes loader-hole {
+    /* départ : écran blanc */
+    0% {
+      clip-path: circle(150% at 50% 50%);
+      animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    }
+  
+    /* 1️⃣ fermeture rapide jusqu’à ~50% */
+    60% {
+      clip-path: circle(40% at 50% 50%);
+      animation-timing-function: cubic-bezier(0.2, 0.8, 0.4, 1.2);
+    }
+  
+    /* 2️⃣ mini rebond */
+    75% {
+      clip-path: circle(48% at 50% 50%);
+      animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    }
+  
+    /* 3️⃣ fermeture finale */
+    100% {
+      clip-path: circle(0% at 50% 50%);
+    }
+  }
+  

@@ -4,6 +4,6 @@ export class Time {
   
     static update(dt: number) {
       this.delta = dt
-      this.elapsed += dt
+      this.elapsed += dt * 10
     }
   }
