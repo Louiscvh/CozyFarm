@@ -1,6 +1,5 @@
 // src/render/CameraController.ts
 import * as THREE from "three"
-import { Time } from "../game/core/Time"
 import { KeyboardInput } from "../input/KeyboardInput"
 import { MouseDrag } from "../input/MouseDrag"
 
@@ -12,7 +11,7 @@ export class CameraController {
   distance = 5
   targetDistance = 5
   zoomVelocity = 0
-  zoomSpeed = 0.05
+  zoomSpeed = 0.015
   zoomFriction = 0.85
   minDistance = 3
   maxDistance = 20
@@ -90,6 +89,7 @@ export class CameraController {
     const forward = this.getForward()
     const right = this.getRight()
     const moveDir = new THREE.Vector3()
+    const cameraDelta = 1 / 60 // fixe ~60fps
 
     if (this.keyboard.isDown("z")) moveDir.add(forward)
     if (this.keyboard.isDown("s")) moveDir.add(forward.clone().multiplyScalar(-1))
@@ -100,12 +100,12 @@ export class CameraController {
       moveDir.normalize()
       const t = ((this.distance - this.minDistance) / (this.maxDistance - this.minDistance))
       const speed = THREE.MathUtils.lerp(this.maxSpeed, this.minSpeed, t * t)
-      this.moveVelocity.addScaledVector(moveDir, speed * Time.delta * 2)
+      this.moveVelocity.addScaledVector(moveDir, speed * cameraDelta * 2)
     }
 
     this.moveVelocity.multiplyScalar(this.moveFriction)
-    this.target.addScaledVector(this.moveVelocity, Time.delta)
-  }
+    this.target.addScaledVector(this.moveVelocity, cameraDelta)
+}
 
   private handleZoom() {
     if (Math.abs(this.zoomVelocity) > 0.001) {
@@ -147,6 +147,10 @@ export class CameraController {
   resetToHome() {
     this.isReturningHome = true
     this.returnT = 0
+
+    this.moveVelocity.set(0, 0, 0)
+    this.zoomVelocity = 0
+
     this.returnStartTarget.copy(this.target)
     this.returnStartDistance = this.distance
     this.returnStartAzimuth = this.azimuth

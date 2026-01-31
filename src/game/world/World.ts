@@ -101,11 +101,8 @@ export class World {
   /** à appeler chaque frame pour mettre à jour le cycle jour/nuit */
   /** à appeler à chaque frame depuis ton Renderer */
   updateSun() {
-    const cycle = 5 * 60
-    const t = (Time.elapsed % cycle) / cycle
-  
+    const t = Time.getVisualDayT()
     const angle = (t - 0.25) * Math.PI * 2
-
     const radius = 100
   
     this.sun.position.set(
@@ -113,27 +110,24 @@ export class World {
       Math.max(0, Math.sin(angle)) * radius,
       50
     )
-    this.sun.lookAt(0, 0, 0)
   
     const daylight = Math.max(0, Math.sin(angle))
-  
     this.sun.intensity = daylight
   
     const dayColor = new THREE.Color("#ffb347")
     const nightColor = new THREE.Color("#001133")
     this.sun.color = nightColor.clone().lerp(dayColor, daylight)
   
-    this.ambient.intensity = THREE.MathUtils.lerp(
-      0.05,
-      0.55,
-      daylight
-    )
-  }  
+    this.ambient.intensity = THREE.MathUtils.lerp(0.05, 0.55, daylight)
+  }
+  
+  
+  
 
   populateDecor() {
     const area = this.size * this.size
 
-    const treeDensity = 30 / 400
+    const treeDensity = 60 / 400
     const stoneDensity = 20 / 400
     const flowerDensity = 50 / 400
 
