@@ -3,12 +3,32 @@
     bottom: 16px;
     right: 16px;
     display: flex;
-    gap: 8px;
+    gap: 16px;
     padding: 10px 14px;
-    background: rgba(20, 20, 20, 0.85);
+    background: rgba(20, 20, 20, 0.5);
     color: white;
     border-radius: 8px;
     font-size: 12px;
+  
+    /* départ caché */
+    opacity: 0;
+    transform: translateY(100%) scale(0.95);
+    pointer-events: none;
+  
+    /* transition pour apparition + bump */
+    transition: 
+      opacity 0.3s cubic-bezier(0.2, 1, 0.3, 1),
+      transform 0.3s cubic-bezier(0.2, 1, 0.3, 1);
   }
 
+  .dev-toolbar section{
+    display: flex;
+    gap: 4px;
+  }
+  
+  .dev-toolbar.visible {
+    opacity: 1;
+    transform: translateY(0%) scale(1); /* petit bump */
+    pointer-events: auto;
+  }
   

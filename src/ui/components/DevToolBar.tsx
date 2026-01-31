@@ -1,29 +1,28 @@
-// src/ui/components/DevToolBar.tsx
-import "./DevToolBar.css"
-import { Time } from "../../game/core/Time"
 import { useEffect, useState } from "react"
+import { Time } from "../../game/core/Time"
 import { UIButton } from "./UIButton"
+import "./DevToolBar.css"
 
 export const DevToolBar = () => {
+  const [visible, setVisible] = useState(false)
 
-    const [, forceUpdate] = useState(0)
-
-  // permet de rafraîchir l’UI si le mode change ailleurs
+  // toggle toolbar avec @
   useEffect(() => {
-    const id = setInterval(() => {
-      forceUpdate(v => v + 1)
-    }, 300)
-
-    return () => clearInterval(id)
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "@") {
+        setVisible(v => !v)
+      }
+    }
+    window.addEventListener("keydown", onKey)
+    return () => window.removeEventListener("keydown", onKey)
   }, [])
 
   const setSpeed = (v: number) => Time.setSpeed(v)
-
   const goDay = () => Time.jumpToDayT(0.5, 2)
   const goNight = () => Time.jumpToDayT(0.0, 2)
 
   return (
-    <div className="dev-toolbar">
+    <div className={`dev-toolbar ${visible ? "visible" : ""}`}>
       <section>
         {[1, 4, 10].map(v => (
           <UIButton
@@ -39,7 +38,7 @@ export const DevToolBar = () => {
       <section>
         <UIButton onClick={goDay}>Midi</UIButton>
         <UIButton onClick={goNight}>Minuit</UIButton>
-        </section>
+      </section>
     </div>
   )
 }
