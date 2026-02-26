@@ -22,7 +22,7 @@ export const HomeButton = () => {
       >
         <path
           d="M4 11.5L12 5l8 6.5V19a1 1 0 0 1-1 1h-4.5v-4.5h-5V20H5a1 1 0 0 1-1-1v-7.5Z"
-          fill="#4a6b4a"
+          fill="white"
         />
         <path
           d="M3 11.5 12 4l9 7.5"

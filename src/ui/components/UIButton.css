@@ -1,21 +1,23 @@
+/* src/ui/components/UIButton.css */
+
 .ui-button {
-  border-radius: 14px;
+  border-radius: 8px;
   z-index: 1;
-  border: none;
+  border: 1.5px solid rgba(255, 255, 255, 0.1);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   pointer-events: auto;
   transition:
-    transform 0.16s ease-out,
-    box-shadow 0.16s ease-out,
-    background 0.16s ease-out,
-    opacity 0.16s ease-out;
+    transform 0.15s ease-out,
+    box-shadow 0.15s ease-out,
+    background 0.15s ease-out,
+    border-color 0.15s ease-out;
 }
 
 .ui-button:hover {
-  cursor: url('/cursor_click.png') 0 0, default!important;
+  cursor: url('/cursor_click.png') 0 0, default !important;
 }
 
 .ui-button--md {
@@ -28,29 +30,49 @@
   height: 52px;
 }
 
+/* ── Primary : dark glass, cohérent avec l'inventaire ── */
 .ui-button--primary {
-  background: linear-gradient(
-    145deg,
-    rgba(255, 255, 255, 0.95),
-    rgba(230, 244, 234, 0.95)
-  );
+  background: rgba(10, 10, 15, 0.72);
+  color: white;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-color: rgba(255, 255, 255, 0.1);
   box-shadow:
-    0 8px 18px rgba(0, 0, 0, 0.16),
-    0 0 0 1px rgba(255, 255, 255, 0.8);
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .ui-button--primary:hover {
-  transform: translateY(-0.5px);
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-2px);
   box-shadow:
-    0 11px 22px rgba(0, 0, 0, 0.2),
-    0 0 0 1px rgba(255, 255, 255, 0.9);
+    0 12px 36px rgba(0, 0, 0, 0.45),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
 .ui-button--primary:active {
-  transform: scale(0.985);
+  transform: scale(0.97);
   box-shadow:
-    0 5px 12px rgba(0, 0, 0, 0.16),
-    0 0 0 1px rgba(255, 255, 255, 0.8);
+    0 4px 16px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+/* ── Ghost ── */
+.ui-button--ghost {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.ui-button--ghost:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.15);
+  transform: translateY(-1px);
+}
+
+.ui-button--ghost:active {
+  transform: scale(0.97);
 }
 
 @media (max-width: 768px) {
@@ -64,4 +86,3 @@
     height: 60px;
   }
 }
-

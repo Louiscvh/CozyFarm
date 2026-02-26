@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { Time } from "../../game/core/Time"
 import { UIButton } from "./UIButton"
+import { World } from "../../game/world/World"
 import "./DevToolBar.css"
 
 export const DevToolBar = () => {
@@ -16,7 +17,7 @@ export const DevToolBar = () => {
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
   }, [])
-
+  const toggleDebugMarkers = () => World.current?.toggleDebugMarkers()
   const setSpeed = (v: number) => Time.setSpeed(v)
   const goDay = () => Time.jumpToDayT(0.5, 2)
   const goNight = () => Time.jumpToDayT(0.0, 2)
@@ -38,6 +39,9 @@ export const DevToolBar = () => {
       <section>
         <UIButton onClick={goDay}>Midi</UIButton>
         <UIButton onClick={goNight}>Minuit</UIButton>
+      </section>
+      <section>
+        <UIButton onClick={toggleDebugMarkers}>Debug Markers</UIButton>
       </section>
     </div>
   )

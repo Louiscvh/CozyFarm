@@ -5,8 +5,9 @@
     display: flex;
     gap: 16px;
     padding: 10px 14px;
-    background: rgba(20, 20, 20, 0.5);
-    color: white;
+    background: rgba(0, 0, 0, 0.55);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.08);    font-family: "JetBrains Mono", "Fira Code", monospace;
     border-radius: 8px;
     font-size: 12px;
   
