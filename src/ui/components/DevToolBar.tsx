@@ -29,7 +29,7 @@ export const DevToolBar = () => {
   return (
     <div className={`dev-toolbar ${visible ? "visible" : ""}`}>
       <section>
-        {[1, 4, 10].map(v => (
+        {[1, 5, 10].map(v => (
           <UIButton
             key={v}
             className={Time.timeScale === v ? "selected" : ""}
