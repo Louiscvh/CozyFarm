@@ -44,6 +44,15 @@
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
+.ui-button--primary.selected {
+  background: rgba(255, 255, 255, 0.12)!important;
+  border-color: white!important;
+  box-shadow:
+    0 0 12px rgba(255, 255, 255, 0.3),
+    inset 0 0 8px rgba(255, 255, 255, 0.08)!important;
+  transform: translateY(-3px)!important;
+}
+
 .ui-button--primary:hover {
   background: rgba(255, 255, 255, 0.09);
   border-color: rgba(255, 255, 255, 0.25);

@@ -6,7 +6,12 @@ import "./DevToolBar.css"
 
 export const DevToolBar = () => {
   const [visible, setVisible] = useState(false)
+  const [, forceUpdate] = useState(0)
 
+  const setSpeed = (v: number) => {
+    Time.setSpeed(v)
+    forceUpdate(n => n + 1)
+  }
   // toggle toolbar avec @
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -18,7 +23,6 @@ export const DevToolBar = () => {
     return () => window.removeEventListener("keydown", onKey)
   }, [])
   const toggleDebugMarkers = () => World.current?.toggleDebugMarkers()
-  const setSpeed = (v: number) => Time.setSpeed(v)
   const goDay = () => Time.jumpToDayT(0.5, 2)
   const goNight = () => Time.jumpToDayT(0.0, 2)
 
@@ -28,7 +32,7 @@ export const DevToolBar = () => {
         {[1, 4, 10].map(v => (
           <UIButton
             key={v}
-            className={Time.timeScale === v ? "active" : ""}
+            className={Time.timeScale === v ? "selected" : ""}
             onClick={() => setSpeed(v)}
           >
             x{v}
