@@ -1,5 +1,6 @@
 .dev-toolbar {
     position: fixed;
+    z-index: 1000;
     bottom: 24px;
     right: 24px;
     display: flex;

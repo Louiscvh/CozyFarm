@@ -69,26 +69,28 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
     // buildGhost — appelé uniquement quand l'item sélectionné change
     // ----------------------------------------------------------------
     async function buildGhost(entity: typeof placementStore.selectedItem) {
-      if (!entity) return
-      removeGhost()
-
-      const { assetManager } = await import("../../render/AssetManager")
-      const gltf = await assetManager.loadGLTF(entity.entity.model)
-      const root = gltf.scene.clone(true)
-
-      const size = entity.entity.sizeInTiles
-      const { scaleModelToTiles } = await import("../../game/entity/utils/scaleModelToTiles")
-      scaleModelToTiles(root, size, world!.tileSize)
-      root.traverse((obj) => {
-        if ((obj as THREE.Mesh).isMesh) {
-          (obj as THREE.Mesh).material = new THREE.MeshBasicMaterial({
-            color: 0x00ff00,
-            transparent: true,
-            opacity: 0.5,
-            depthWrite: false,
-          })
-        }
-      })
+        if (!entity) return
+        removeGhost()
+      
+        const { createEntity } = await import("../../game/entity/EntityFactory")
+        const root = await createEntity(entity.entity, world!.tileSize)
+      
+        // Applique le matériau ghost sur tous les meshes
+        root.traverse((obj) => {
+          if ((obj as THREE.Mesh).isMesh) {
+            (obj as THREE.Mesh).material = new THREE.MeshBasicMaterial({
+              color: 0x00ff00,
+              transparent: true,
+              opacity: 0.5,
+              depthWrite: false,
+            })
+          }
+          // Cache les lights du ghost — on ne veut pas qu'elles éclairent la scène
+          if ((obj as THREE.PointLight).isLight) {
+            obj.visible = false
+          }
+        })
+        const size = entity.entity.sizeInTiles
 
       root.frustumCulled = false
       root.traverse((obj) => { obj.frustumCulled = false })
@@ -127,12 +129,18 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
       function animateGhost() {
         rafRef.current = requestAnimationFrame(animateGhost)
         if (!ghostRef.current) return
-
+      
         currentPos.current.lerp(targetPos.current, 0.35)
         ghostRef.current.position.copy(currentPos.current)
-
+      
         currentRotY.current += (targetRotY.current - currentRotY.current) * 0.3
         ghostRef.current.rotation.y = currentRotY.current
+      
+        // Animation torche dans le ghost
+        if (ghostRef.current.userData.isTorch) {
+          const now = performance.now() / 1000
+          ;(ghostRef.current as any).updateTorch(now, 0) // intensité 0 — pas de lumière dans le ghost
+        }
       }
       animateGhost()
     }

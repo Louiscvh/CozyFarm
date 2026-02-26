@@ -29,10 +29,10 @@ export class World {
   objects: ObjectManager
 
   private sun!: THREE.DirectionalLight
-  private moon!: THREE.DirectionalLight  // 🌙 lumière lunaire
+  private moon!: THREE.DirectionalLight
   private backSun!: THREE.DirectionalLight
   private ambient!: THREE.AmbientLight
-  camera!: THREE.Camera // ajouter
+  camera!: THREE.Camera
 
   constructor(scene: THREE.Scene, tileSize: number = 2) {
     World.current = this
@@ -92,7 +92,7 @@ export class World {
     for (let dx = 0; dx < gridSize; dx++) {
       for (let dz = 0; dz < gridSize; dz++) {
         this.occupiedPositions.add(`${tileX + dx}|${tileZ + dz}`)
-        this.createDebugMarker(tileX + dx, tileZ + dz, 1) // ← 1 marker par tile
+        this.createDebugMarker(tileX + dx, tileZ + dz, 1)
       }
     }
   }
@@ -125,7 +125,7 @@ export class World {
     const worldZ = (tileZ - this.size / 2) * this.tileSize + (size / 2) * this.tileSize
     marker.position.set(worldX - this.tileSize / 2, 0.25, worldZ - this.tileSize / 2)
     marker.visible = this.debugMarkersVisible
-    marker.userData.tileKey = `${tileX}|${tileZ}` // ← clé unique par tile
+    marker.userData.tileKey = `${tileX}|${tileZ}`
   
     this.debugMarkers.push(marker)
     this.scene.add(marker)
@@ -155,7 +155,7 @@ export class World {
     this.scene.add(entity)
     this.entities.push(entity)
   
-    return entity  // ← retourne l'objet au lieu de true
+    return entity
   }
 
   generateTiles() {
@@ -175,7 +175,6 @@ export class World {
   }
 
   setupLights() {
-    // Soleil — lumière principale chaude
     this.sun = new THREE.DirectionalLight("#ffb347", 1)
     this.sun.castShadow = true
     this.sun.shadow.mapSize.width = 4096
@@ -190,77 +189,78 @@ export class World {
     this.scene.add(this.sun)
     this.scene.add(this.sun.target)
   
-    // 🌙 Lune — froide, directionnelle, avec ombres
-    // Résolution shadow plus basse que le soleil pour économiser les perfs
     this.moon = new THREE.DirectionalLight("#c8d8ff", 0)
     this.moon.castShadow = true
-    this.moon.shadow.mapSize.width = 1024
-    this.moon.shadow.mapSize.height = 1024
+    this.moon.shadow.mapSize.width = 2048
+    this.moon.shadow.mapSize.height = 2048
     this.moon.shadow.camera.left = -d
     this.moon.shadow.camera.right = d
     this.moon.shadow.camera.top = d
     this.moon.shadow.camera.bottom = -d
     this.moon.shadow.camera.near = 1
     this.moon.shadow.camera.far = 400
-    // Ombres lunaires légèrement floues pour un rendu naturel
     this.moon.shadow.radius = 3
     this.scene.add(this.moon)
     this.scene.add(this.moon.target)
   
-    // Fill light rosée (jour uniquement, gérée dans updateSun)
     this.backSun = new THREE.DirectionalLight("#ff7aa2", 0.4)
     this.backSun.position.set(35, 12, -30)
     this.scene.add(this.backSun)
   
-    // Ambient minimal — on veut du contraste, pas un dome
     this.ambient = new THREE.AmbientLight("#ffe0c7", 0.2)
     this.scene.add(this.ambient)
   }
   
   updateSun() {
     const t = Time.getVisualDayT()
-    const angle = (t - 0.25) * Math.PI * 2
     const radius = 100
+    const sunriseT = 0.25   // 6h
+    const sunsetT  = 0.917  // 22h
   
-    // --- Soleil ---
-    const sunY = Math.sin(angle)
-    const daylight = Math.max(0, sunY)
+    const dayProgress = (t - sunriseT) / (sunsetT - sunriseT)
+    const sunAngle = dayProgress * Math.PI
+    const sunY = Math.sin(sunAngle)
+    const isDay = t >= sunriseT && t <= sunsetT
+    const daylight = isDay ? Math.max(0, sunY) : 0
   
     this.sun.position.set(
-      Math.cos(angle) * radius,
+      Math.cos(sunAngle - Math.PI / 2) * radius,
       Math.max(0, sunY) * radius,
       50
     )
     this.sun.intensity = daylight
     this.sun.color = new THREE.Color("#001133").lerp(new THREE.Color("#ffb347"), daylight)
-  
-    // Fill rosé visible seulement de jour
     this.backSun.intensity = daylight * 0.4
   
-    // --- Lune (angle opposé : +π) ---
-    const moonAngle = angle + Math.PI
-    const moonY = Math.sin(moonAngle) // = -sunY
+    const nightProgress = t < sunriseT
+      ? (t + (1 - sunsetT)) / (1 - (sunsetT - sunriseT))
+      : (t - sunsetT) / (1 - (sunsetT - sunriseT))
+    const moonAngle = nightProgress * Math.PI
+    const moonY = Math.sin(moonAngle)
   
     this.moon.position.set(
-      Math.cos(moonAngle) * radius,
-      Math.max(0.1, moonY) * radius, // min 0.1 pour garder un angle rasant réaliste
+      Math.cos(moonAngle - Math.PI / 2) * radius,
+      Math.max(0.1, moonY) * radius,
       -50
     )
+    const nightDepth = isDay ? 0 : Math.max(0, moonY)
+    this.moon.intensity = nightDepth * smoothstep(0, 0.3, 1 - daylight) * 0.05
   
-    // Intensité : monte à 0.25 en pleine nuit, s'efface au crépuscule
-    // smoothstep pour une transition douce sans flash
-    const nightDepth = Math.max(0, -sunY)               // 0 = jour, 1 = minuit
-    const moonAbove = Math.max(0, moonY)                // 0 si sous l'horizon
-    this.moon.intensity = moonAbove * smoothstep(0, 0.3, nightDepth) * 0.05
-  
-    // --- Ambient : très bas la nuit pour que la lune soit directionnelle ---
-    // On veut que la face éclairée soit visible, l'autre dans le noir
-    const nightAmbient = new THREE.Color("#060810")  // quasi noir, légèrement bleuté
+    const nightAmbient = new THREE.Color("#060810")
     const dayAmbient = new THREE.Color("#ffe0c7")
     this.ambient.color = nightAmbient.clone().lerp(dayAmbient, daylight)
-    // Nuit : 0.03 (quasi rien) — tout le travail est fait par la lune directionnelle
-    // Jour : 0.55
     this.ambient.intensity = THREE.MathUtils.lerp(0.03, 0.55, daylight)
+
+    // --- Torches ---
+    // S'allument la nuit, s'éteignent le jour
+    // Flickering : variation rapide de l'intensité avec sin + bruit
+    const now = performance.now() / 1000
+    const torchIntensity = 1 - daylight
+
+    for (const entity of this.entities) {
+      if (!entity.userData.isTorch) continue
+      ;(entity as any).updateTorch(now, torchIntensity)
+    }
   }
 
   async populateDecor() {
@@ -276,7 +276,7 @@ export class World {
     ]
 
     for (const e of fixedEntities) {
-      await this.spawnEntitySafe(e.def, e.tileX, e.tileZ, e.size) // ← tout est géré ici
+      await this.spawnEntitySafe(e.def, e.tileX, e.tileZ, e.size)
     }
 
     const area = this.size * this.size
@@ -304,7 +304,6 @@ export class World {
         const success = await this.spawnEntitySafe(type, tileX, tileZ, entitySize)
         if (success) placedCount++
       }
-
     }
   }
 
@@ -325,7 +324,6 @@ export class World {
   }
 }
 
-// Helper — interpolation douce entre 0 et 1 dans [edge0, edge1]
 function smoothstep(edge0: number, edge1: number, x: number): number {
   const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)))
   return t * t * (3 - 2 * t)

@@ -7,16 +7,18 @@ import { Rock1Entity } from "../../game/entity/Rock1"
 import { Flower1Entity } from "../../game/entity/Flower1"
 import { FarmEntity } from "../../game/entity/FarmEntity"
 import { WheatField } from "../../game/entity/WheatField"
+import { TorchEntity } from "../../game/entity/TorchEntity"
 import "./InventoryBar.css"
 import { UIButton } from "./UIButton"
 
 const INVENTORY_ITEMS: InventoryItem[] = [
-  { id: "tree2",  label: "Pin",    icon: "🌲", entity: Tree1Entity },
-  { id: "tree1",  label: "Chêne",  icon: "🌳", entity: Tree2Entity },
-  { id: "rock",   label: "Rocher", icon: "🪨", entity: Rock1Entity },
-  { id: "flower", label: "Fleur",  icon: "🌸", entity: Flower1Entity },
-  { id: "farm",   label: "Ferme",  icon: "🏚️", entity: FarmEntity },
-  { id: "wheat",  label: "Blé",    icon: "🌾", entity: WheatField },
+  { id: "tree2",  label: "Pin",     icon: "🌲", entity: Tree1Entity },
+  { id: "tree1",  label: "Chêne",   icon: "🌳", entity: Tree2Entity },
+  { id: "rock",   label: "Rocher",  icon: "🪨", entity: Rock1Entity },
+  { id: "flower", label: "Fleur",   icon: "🌸", entity: Flower1Entity },
+  { id: "farm",   label: "Ferme",   icon: "🏚️", entity: FarmEntity },
+  { id: "wheat",  label: "Blé",     icon: "🌾", entity: WheatField },
+  { id: "torch",  label: "Torche",  icon: "🔥", entity: TorchEntity },
 ]
 
 export function InventoryBar() {
@@ -38,8 +40,8 @@ export function InventoryBar() {
         placementStore.cancel()
       }
 
-      // Sélection via touches 1-6
-      if (/^[1-6]$/.test(e.key)) {
+      // Sélection via touches 1-7
+      if (/^[1-7]$/.test(e.key)) {
         const index = parseInt(e.key, 10) - 1
         const item = INVENTORY_ITEMS[index]
         if (item) {
