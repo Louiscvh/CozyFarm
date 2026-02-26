@@ -7,24 +7,29 @@ import "./DevToolBar.css"
 export const DevToolBar = () => {
   const [visible, setVisible] = useState(false)
   const [, forceUpdate] = useState(0)
+  const [isRaining, setIsRaining] = useState(World.current?.weather.getRainIntensity() != 'none')
 
   const setSpeed = (v: number) => {
     Time.setSpeed(v)
     forceUpdate(n => n + 1)
   }
-  // toggle toolbar avec @
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "@") {
-        setVisible(v => !v)
-      }
+      if (e.key === "@") setVisible(v => !v)
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
   }, [])
+
   const toggleDebugMarkers = () => World.current?.toggleDebugMarkers()
-  const goDay = () => Time.jumpToDayT(0.5, 2)
+  const goDay   = () => Time.jumpToDayT(0.5, 2)
   const goNight = () => Time.jumpToDayT(0.0, 2)
+
+  const toggleRain = () => {
+    World.current?.weather.toggleRain()
+    setIsRaining(World.current?.weather.getRainIntensity() !== "none")
+  }
 
   return (
     <div className={`dev-toolbar ${visible ? "visible" : ""}`}>
@@ -41,9 +46,11 @@ export const DevToolBar = () => {
       </section>
 
       <section>
-        <UIButton onClick={goDay}>12h</UIButton>
-        <UIButton onClick={goNight}>00h</UIButton>
+        <UIButton onClick={goDay}>🌞</UIButton>
+        <UIButton onClick={goNight}>🌙</UIButton>
+        <UIButton onClick={toggleRain} className={isRaining ? "selected" : ""}>☔️</UIButton>
       </section>
+
       <section>
         <UIButton onClick={toggleDebugMarkers}>Tile</UIButton>
       </section>

@@ -1,3 +1,4 @@
+// src/render/Renderer.ts
 import * as THREE from "three"
 import { CameraController } from "./CameraController"
 import { World } from "../game/world/World"
@@ -31,14 +32,12 @@ export class Renderer {
     this.renderer = new THREE.WebGLRenderer({ antialias: true })
     this.renderer.setSize(window.innerWidth, window.innerHeight)
     this.renderer.setPixelRatio(window.devicePixelRatio)
-    this.renderer.shadowMap.enabled = true       // <- activation
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap  // optionnel, plus doux
+    this.renderer.shadowMap.enabled = true
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap
     document.body.appendChild(this.renderer.domElement)
 
-    // --- World ---
-    this.world = new World(this.scene, 2)
-    this.cameraDefaultPosition = {top: 20, left: 20, right: 20, bot: 20}
     // --- Camera ---
+    this.cameraDefaultPosition = { top: 20, left: 20, right: 20, bot: 20 }
     const aspect = window.innerWidth / window.innerHeight
     this.camera = new THREE.OrthographicCamera(
       -this.cameraDefaultPosition.left * aspect, this.cameraDefaultPosition.right * aspect,
@@ -46,7 +45,10 @@ export class Renderer {
       0.01, 100
     )
     this.cameraController = new CameraController(this.camera)
-    this.world.camera = this.camera
+
+    // --- World (après la caméra) ---
+    this.world = new World(this.scene, 2)
+    this.world.setCamera(this.camera) // initialise Weather avec la caméra
 
     // --- Ambiance sonore ---
     this.setupAmbientAudio()
@@ -74,12 +76,11 @@ export class Renderer {
     window.addEventListener("touchstart", startOnce, opts)
   }
 
-
   private onResize = () => {
     const aspect = window.innerWidth / window.innerHeight
-    this.camera.left = -this.cameraDefaultPosition.left * aspect
-    this.camera.right = this.cameraDefaultPosition.right * aspect
-    this.camera.top = this.cameraDefaultPosition.top
+    this.camera.left   = -this.cameraDefaultPosition.left * aspect
+    this.camera.right  =  this.cameraDefaultPosition.right * aspect
+    this.camera.top    =  this.cameraDefaultPosition.top
     this.camera.bottom = -this.cameraDefaultPosition.bot
     this.camera.updateProjectionMatrix()
     this.renderer.setSize(window.innerWidth, window.innerHeight)
@@ -88,7 +89,6 @@ export class Renderer {
   render() {
     this.cameraController.update()
     this.renderer.render(this.scene, this.camera)
-    this.world.updateSun()
   }
 
   resetCameraToHome() {

@@ -3,7 +3,6 @@ import * as THREE from "three"
 import { Tile } from "./Tile"
 import type { TileType } from "./Tile"
 import { ObjectManager } from "./TileFactory"
-import { Time } from "../../game/core/Time"
 import { FarmEntity } from "../entity/FarmEntity"
 import { createEntity } from "../entity/EntityFactory"
 import { placeOnTile } from "../entity/utils/placeOnTile"
@@ -13,6 +12,7 @@ import { Tree1Entity } from "../entity/Tree1"
 import { Tree2Entity } from "../entity/Tree2"
 import { Flower1Entity } from "../entity/Flower1"
 import { Rock1Entity } from "../entity/Rock1"
+import { Weather } from "./Weather"
 
 export class World {
   static current: World | null = null
@@ -27,25 +27,43 @@ export class World {
 
   scene: THREE.Scene
   objects: ObjectManager
-
-  private sun!: THREE.DirectionalLight
-  private moon!: THREE.DirectionalLight
-  private backSun!: THREE.DirectionalLight
-  private ambient!: THREE.AmbientLight
   camera!: THREE.Camera
+
+  public weather!: Weather
 
   constructor(scene: THREE.Scene, tileSize: number = 2) {
     World.current = this
     this.scene = scene
-    
+
     this.tileSize = tileSize
     this.objects = new ObjectManager(this.scene, this.size, this.tileSize)
 
-    this.setupLights()
     this.generateTiles()
     this.initialize()
-    this.updateSun()
   }
+
+  // La camera n'est pas dispo dans le constructeur dans certains setups,
+  // donc on initialise Weather dès qu'elle est assignée.
+  setCamera(camera: THREE.Camera) {
+    this.camera = camera
+    this.weather = new Weather(this.scene, this.camera)
+    }
+
+  update(deltaTime: number) {
+    if (!this.weather) return
+
+    this.weather.update(deltaTime)
+
+    const now = performance.now() / 1000
+    const torchIntensity = 1 - this.weather.daylight
+
+    for (const entity of this.entities) {
+      if (!entity.userData.isTorch) continue
+      ;(entity as any).updateTorch(now, torchIntensity)
+    }
+  }
+
+  // ─── Debug markers ───────────────────────────────────────────────────────────
 
   public toggleDebugMarkers() {
     this.debugMarkersVisible = !this.debugMarkersVisible
@@ -54,13 +72,35 @@ export class World {
     }
   }
 
+  clearDebugMarkers() {
+    for (const marker of this.debugMarkers) {
+      this.scene.remove(marker)
+      marker.geometry.dispose()
+      ;(marker.material as THREE.Material).dispose()
+    }
+    this.debugMarkers = []
+  }
+
+  private createDebugMarker(tileX: number, tileZ: number, size: number) {
+    const geometry = new THREE.BoxGeometry(this.tileSize * size, 0.5, this.tileSize * size)
+    const material = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.3 })
+    const marker = new THREE.Mesh(geometry, material)
+
+    const worldX = (tileX - this.size / 2) * this.tileSize + (size / 2) * this.tileSize
+    const worldZ = (tileZ - this.size / 2) * this.tileSize + (size / 2) * this.tileSize
+    marker.position.set(worldX - this.tileSize / 2, 0.25, worldZ - this.tileSize / 2)
+    marker.visible = this.debugMarkersVisible
+    marker.userData.tileKey = `${tileX}|${tileZ}`
+
+    this.debugMarkers.push(marker)
+    this.scene.add(marker)
+  }
+
+  // ─── Tile occupancy ──────────────────────────────────────────────────────────
+
   private getCenteredTopLeft(centerTileX: number, centerTileZ: number, size: number): { x: number, z: number } {
     const offset = Math.floor(size / 2)
     return { x: centerTileX - offset, z: centerTileZ - offset }
-  }
-
-  async initialize() {
-    await this.populateDecor()
   }
 
   worldToTileIndex(worldX: number, worldZ: number): { tileX: number, tileZ: number } {
@@ -103,7 +143,7 @@ export class World {
       for (let dz = 0; dz < gridSize; dz++) {
         const key = `${tileX + dx}|${tileZ + dz}`
         this.occupiedPositions.delete(key)
-  
+
         const idx = this.debugMarkers.findIndex(m => m.userData.tileKey === key)
         if (idx !== -1) {
           const marker = this.debugMarkers[idx]
@@ -116,36 +156,14 @@ export class World {
     }
   }
 
-  private createDebugMarker(tileX: number, tileZ: number, size: number) {
-    const geometry = new THREE.BoxGeometry(this.tileSize * size, 0.5, this.tileSize * size)
-    const material = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.3 })
-    const marker = new THREE.Mesh(geometry, material)
-  
-    const worldX = (tileX - this.size / 2) * this.tileSize + (size / 2) * this.tileSize
-    const worldZ = (tileZ - this.size / 2) * this.tileSize + (size / 2) * this.tileSize
-    marker.position.set(worldX - this.tileSize / 2, 0.25, worldZ - this.tileSize / 2)
-    marker.visible = this.debugMarkersVisible
-    marker.userData.tileKey = `${tileX}|${tileZ}`
-  
-    this.debugMarkers.push(marker)
-    this.scene.add(marker)
-  }
-
-  clearDebugMarkers() {
-    for (const marker of this.debugMarkers) {
-      this.scene.remove(marker)
-      marker.geometry.dispose()
-      ;(marker.material as THREE.Material).dispose()
-    }
-    this.debugMarkers = []
-  }
+  // ─── Entity spawning ─────────────────────────────────────────────────────────
 
   async spawnEntitySafe(def: Entity, tileX: number, tileZ: number, size: number = 1): Promise<THREE.Object3D | null> {
     const gridSize = Math.max(1, Math.ceil(size))
     if (!this.canSpawn(tileX, tileZ, gridSize)) return null
-  
+
     this.markOccupied(tileX, tileZ, gridSize)
-  
+
     const entity = await createEntity(def, this.tileSize)
     entity.userData.id = def.id
     entity.userData.tileX = tileX
@@ -154,8 +172,14 @@ export class World {
     placeOnTile(entity, tileX, tileZ, this.tileSize, this.size, gridSize)
     this.scene.add(entity)
     this.entities.push(entity)
-  
+
     return entity
+  }
+
+  // ─── World generation ────────────────────────────────────────────────────────
+
+  async initialize() {
+    await this.populateDecor()
   }
 
   generateTiles() {
@@ -171,95 +195,6 @@ export class World {
         this.tiles.push(tile)
         this.scene.add(tile.mesh)
       }
-    }
-  }
-
-  setupLights() {
-    this.sun = new THREE.DirectionalLight("#ffb347", 1)
-    this.sun.castShadow = true
-    this.sun.shadow.mapSize.width = 4096
-    this.sun.shadow.mapSize.height = 4096
-    const d = 20
-    this.sun.shadow.camera.left = -d
-    this.sun.shadow.camera.right = d
-    this.sun.shadow.camera.top = d
-    this.sun.shadow.camera.bottom = -d
-    this.sun.shadow.camera.near = 1
-    this.sun.shadow.camera.far = 400
-    this.scene.add(this.sun)
-    this.scene.add(this.sun.target)
-  
-    this.moon = new THREE.DirectionalLight("#c8d8ff", 0)
-    this.moon.castShadow = true
-    this.moon.shadow.mapSize.width = 2048
-    this.moon.shadow.mapSize.height = 2048
-    this.moon.shadow.camera.left = -d
-    this.moon.shadow.camera.right = d
-    this.moon.shadow.camera.top = d
-    this.moon.shadow.camera.bottom = -d
-    this.moon.shadow.camera.near = 1
-    this.moon.shadow.camera.far = 400
-    this.moon.shadow.radius = 3
-    this.scene.add(this.moon)
-    this.scene.add(this.moon.target)
-  
-    this.backSun = new THREE.DirectionalLight("#ff7aa2", 0.4)
-    this.backSun.position.set(35, 12, -30)
-    this.scene.add(this.backSun)
-  
-    this.ambient = new THREE.AmbientLight("#ffe0c7", 0.2)
-    this.scene.add(this.ambient)
-  }
-  
-  updateSun() {
-    const t = Time.getVisualDayT()
-    const radius = 100
-    const sunriseT = 0.25   // 6h
-    const sunsetT  = 0.917  // 22h
-  
-    const dayProgress = (t - sunriseT) / (sunsetT - sunriseT)
-    const sunAngle = dayProgress * Math.PI
-    const sunY = Math.sin(sunAngle)
-    const isDay = t >= sunriseT && t <= sunsetT
-    const daylight = isDay ? Math.max(0, sunY) : 0
-  
-    this.sun.position.set(
-      Math.cos(sunAngle - Math.PI / 2) * radius,
-      Math.max(0, sunY) * radius,
-      50
-    )
-    this.sun.intensity = daylight
-    this.sun.color = new THREE.Color("#001133").lerp(new THREE.Color("#ffb347"), daylight)
-    this.backSun.intensity = daylight * 0.4
-  
-    const nightProgress = t < sunriseT
-      ? (t + (1 - sunsetT)) / (1 - (sunsetT - sunriseT))
-      : (t - sunsetT) / (1 - (sunsetT - sunriseT))
-    const moonAngle = nightProgress * Math.PI
-    const moonY = Math.sin(moonAngle)
-  
-    this.moon.position.set(
-      Math.cos(moonAngle - Math.PI / 2) * radius,
-      Math.max(0.1, moonY) * radius,
-      -50
-    )
-    const nightDepth = isDay ? 0 : Math.max(0, moonY)
-    this.moon.intensity = nightDepth * smoothstep(0, 0.3, 1 - daylight) * 0.05
-  
-    const nightAmbient = new THREE.Color("#060810")
-    const dayAmbient = new THREE.Color("#ffe0c7")
-    this.ambient.color = nightAmbient.clone().lerp(dayAmbient, daylight)
-    this.ambient.intensity = THREE.MathUtils.lerp(0.03, 0.55, daylight)
-
-    // --- Torches ---
-    // S'allument la nuit, s'éteignent le jour
-    // Flickering : variation rapide de l'intensité avec sin + bruit
-    const now = performance.now() / 1000
-    const torchIntensity = 1 - daylight
-
-    for (const entity of this.entities) {
-      if (!entity.userData.isTorch) continue
-      ;(entity as any).updateTorch(now, torchIntensity)
     }
   }
 
@@ -307,6 +242,8 @@ export class World {
     }
   }
 
+  // ─── Misc ────────────────────────────────────────────────────────────────────
+
   getPickableMeshes(): THREE.Object3D[] {
     return [
       ...this.objects.trees,
@@ -322,9 +259,4 @@ export class World {
     if (r < 0.95) return "sand"
     return "stone"
   }
-}
-
-function smoothstep(edge0: number, edge1: number, x: number): number {
-  const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)))
-  return t * t * (3 - 2 * t)
 }

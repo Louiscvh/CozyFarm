@@ -1,3 +1,4 @@
+// main.tsx
 import { Game } from "./game/core/Game"
 import { Renderer } from "./render/Renderer"
 import { createRoot } from "react-dom/client"
@@ -9,9 +10,11 @@ const renderer = new Renderer()
 let lastTime = performance.now()
 
 function loop(time: number) {
-  const dt = (time - lastTime) / 1000 // secondes
+  const dt = (time - lastTime) / 1000
   lastTime = time
+
   game.update(dt)
+  renderer.world.update(dt) // ← manquait : pluie + cycle jour/nuit
   renderer.render()
 
   requestAnimationFrame(loop)
