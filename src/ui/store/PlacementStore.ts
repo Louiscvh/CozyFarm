@@ -22,7 +22,9 @@ class PlacementStore {
 
   subscribe(fn: PlacementListener) {
     this.listeners.add(fn)
-    return () => this.listeners.delete(fn)
+    return () => {
+      this.listeners.delete(fn)
+    }
   }
 
   notify() {

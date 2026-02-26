@@ -73,10 +73,9 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
       const gltf = await assetManager.loadGLTF(entity.entity.model)
       const root = gltf.scene.clone(true)
 
-      const size = Math.max(1, Math.ceil(entity.entity.sizeInTiles ?? 1))
+      const size = entity.entity.sizeInTiles
       const { scaleModelToTiles } = await import("../../game/entity/utils/scaleModelToTiles")
       scaleModelToTiles(root, size, world!.tileSize)
-
       root.traverse((obj) => {
         if ((obj as THREE.Mesh).isMesh) {
           (obj as THREE.Mesh).material = new THREE.MeshBasicMaterial({
