@@ -8,10 +8,11 @@ import { Flower1Entity } from "../../game/entity/Flower1"
 import { FarmEntity } from "../../game/entity/FarmEntity"
 import { WheatField } from "../../game/entity/WheatField"
 import "./InventoryBar.css"
+import { UIButton } from "./UIButton"
 
 const INVENTORY_ITEMS: InventoryItem[] = [
-  { id: "tree1",  label: "Chêne",  icon: "🌳", entity: Tree1Entity },
-  { id: "tree2",  label: "Pin",    icon: "🌲", entity: Tree2Entity },
+  { id: "tree2",  label: "Pin",    icon: "🌲", entity: Tree1Entity },
+  { id: "tree1",  label: "Chêne",  icon: "🌳", entity: Tree2Entity },
   { id: "rock",   label: "Rocher", icon: "🪨", entity: Rock1Entity },
   { id: "flower", label: "Fleur",  icon: "🌸", entity: Flower1Entity },
   { id: "farm",   label: "Ferme",  icon: "🏚️", entity: FarmEntity },
@@ -32,11 +33,27 @@ export function InventoryBar() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setSelectedId(null)
+      if (e.key === "Escape") {
+        setSelectedId(null)
+        placementStore.cancel()
+      }
+
+      // Sélection via touches 1-6
+      if (/^[1-6]$/.test(e.key)) {
+        const index = parseInt(e.key, 10) - 1
+        const item = INVENTORY_ITEMS[index]
+        if (item) {
+          if (selectedId === item.id) {
+            placementStore.cancel()
+          } else {
+            placementStore.select(item)
+          }
+        }
+      }
     }
     window.addEventListener("keydown", onKey)
     return () => window.removeEventListener("keydown", onKey)
-  }, [])
+  }, [selectedId])
 
   function handleSelect(item: InventoryItem) {
     if (selectedId === item.id) {
@@ -58,7 +75,7 @@ export function InventoryBar() {
 
       <div id="inventory-slots">
         {INVENTORY_ITEMS.map((item, i) => (
-          <button
+          <UIButton
             key={item.id}
             className={`inv-slot ${selectedId === item.id ? "selected" : ""}`}
             onClick={() => handleSelect(item)}
@@ -67,7 +84,7 @@ export function InventoryBar() {
             <span className="inv-slot-key">{i + 1}</span>
             <span className="inv-slot-icon">{item.icon}</span>
             <span className="inv-slot-label">{item.label}</span>
-          </button>
+          </UIButton>
         ))}
       </div>
     </div>

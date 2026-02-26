@@ -98,11 +98,11 @@
   }
   
   .inv-slot.selected {
-    background: rgba(77, 200, 255, 0.12);
-    border-color: #4dc8ff;
+    background: rgba(255, 255, 255, 0.12);
+    border-color: white;
     box-shadow:
-      0 0 12px rgba(77, 200, 255, 0.3),
-      inset 0 0 8px rgba(77, 200, 255, 0.08);
+      0 0 12px rgba(255, 255, 255, 0.3),
+      inset 0 0 8px rgba(255, 255, 255, 0.08);
     transform: translateY(-3px);
   }
   
@@ -133,7 +133,7 @@
   }
   
   .inv-slot.selected .inv-slot-label {
-    color: rgba(77, 200, 255, 0.85);
+    color: white;
   }
   
   /* ── Animations ── */

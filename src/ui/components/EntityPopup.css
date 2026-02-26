@@ -1,0 +1,6 @@
+/* src/ui/components/EntityPopup.css */
+.entity-popup {
+    pointer-events: auto;
+    z-index: 1000;
+    transition: transform 0.1s ease-out;
+  }

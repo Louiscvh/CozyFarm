@@ -3,8 +3,6 @@ import { useEffect, useRef } from "react"
 import * as THREE from "three"
 import { placementStore } from "../store/PlacementStore"
 import { World } from "../../game/world/World"
-import { createEntity } from "../../game/entity/EntityFactory"
-import { placeOnTile } from "../../game/entity/utils/placeOnTile"
 
 interface UsePlacementOptions {
   camera: THREE.Camera
@@ -17,7 +15,7 @@ const groundPlane = new THREE.Mesh(
 )
 groundPlane.rotation.x = -Math.PI / 2
 
-const highlightMatOk  = new THREE.MeshBasicMaterial({ color: 0x00ff88, transparent: true, opacity: 0.35, depthWrite: false })
+const highlightMatOk  = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.35, depthWrite: false })
 const highlightMatBad = new THREE.MeshBasicMaterial({ color: 0xff2244, transparent: true, opacity: 0.35, depthWrite: false })
 const highlightMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), highlightMatOk)
 highlightMesh.rotation.x = -Math.PI / 2
@@ -25,7 +23,7 @@ highlightMesh.position.y = 0.02
 highlightMesh.visible = false
 
 function setGhostColor(ghost: THREE.Object3D, canPlace: boolean) {
-  const color = canPlace ? 0xffffff : 0xff2244
+  const color = canPlace ? 0x00ff00 : 0xff2244
   ghost.traverse((obj) => {
     if ((obj as THREE.Mesh).isMesh) {
       const mats = Array.isArray((obj as THREE.Mesh).material)
@@ -37,10 +35,15 @@ function setGhostColor(ghost: THREE.Object3D, canPlace: boolean) {
 }
 
 export function usePlacement({ camera, renderer }: UsePlacementOptions) {
-  const raycaster  = useRef(new THREE.Raycaster())
-  const mouse      = useRef(new THREE.Vector2())
-  const ghostRef   = useRef<THREE.Object3D | null>(null)
-  const yOffsetRef = useRef<number>(0)
+  const raycaster    = useRef(new THREE.Raycaster())
+  const mouse        = useRef(new THREE.Vector2())
+  const ghostRef     = useRef<THREE.Object3D | null>(null)
+  const yOffsetRef   = useRef<number>(0)
+  const targetPos    = useRef(new THREE.Vector3())
+  const currentPos   = useRef(new THREE.Vector3())
+  const targetRotY   = useRef<number>(0)
+  const currentRotY  = useRef<number>(0)
+  const rafRef       = useRef<number>(0)
 
   useEffect(() => {
     const world = World.current
@@ -79,7 +82,7 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
       root.traverse((obj) => {
         if ((obj as THREE.Mesh).isMesh) {
           (obj as THREE.Mesh).material = new THREE.MeshBasicMaterial({
-            color: 0xffffff,
+            color: 0x00ff00,
             transparent: true,
             opacity: 0.5,
             depthWrite: false,
@@ -90,32 +93,55 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
       root.frustumCulled = false
       root.traverse((obj) => { obj.frustumCulled = false })
 
-      // Rotation courante du store
-      root.rotation.y = THREE.MathUtils.degToRad(placementStore.rotation)
-
       highlightMesh.scale.set(world!.tileSize * size, world!.tileSize * size, 1)
 
+      // Initialise position — pas d'easing au premier affichage
       if (placementStore.hoveredTile) {
         const { x, z } = tileToWorld(placementStore.hoveredTile.tileX, placementStore.hoveredTile.tileZ, size)
-        root.position.set(x, yOffsetRef.current, z)
+        currentPos.current.set(x, yOffsetRef.current, z)
+        targetPos.current.set(x, yOffsetRef.current, z)
+        root.position.copy(currentPos.current)
         const canPlace = world!.canSpawn(placementStore.hoveredTile.tileX, placementStore.hoveredTile.tileZ, size)
         setGhostColor(root, canPlace)
         highlightMesh.position.set(x, 0.02, z)
         highlightMesh.material = canPlace ? highlightMatOk : highlightMatBad
         highlightMesh.visible = true
       } else {
-        root.position.set(0, yOffsetRef.current, 0)
+        currentPos.current.set(0, yOffsetRef.current, 0)
+        targetPos.current.set(0, yOffsetRef.current, 0)
+        root.position.copy(currentPos.current)
       }
+
+      // Initialise rotation — pas d'easing au premier affichage
+      const initRot = THREE.MathUtils.degToRad(placementStore.rotation)
+      currentRotY.current = initRot
+      targetRotY.current  = initRot
+      root.rotation.y     = initRot
 
       world!.scene.add(root)
       ghostRef.current = root
       placementStore.ghostMesh = root
+
+      // Boucle d'easing position + rotation
+      cancelAnimationFrame(rafRef.current)
+      function animateGhost() {
+        rafRef.current = requestAnimationFrame(animateGhost)
+        if (!ghostRef.current) return
+
+        currentPos.current.lerp(targetPos.current, 0.35)
+        ghostRef.current.position.copy(currentPos.current)
+
+        currentRotY.current += (targetRotY.current - currentRotY.current) * 0.3
+        ghostRef.current.rotation.y = currentRotY.current
+      }
+      animateGhost()
     }
 
     // ----------------------------------------------------------------
     // removeGhost
     // ----------------------------------------------------------------
     function removeGhost() {
+      cancelAnimationFrame(rafRef.current)
       if (ghostRef.current) {
         world!.scene.remove(ghostRef.current)
         ghostRef.current.traverse((obj) => {
@@ -160,9 +186,7 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
       const { x, z } = tileToWorld(tileX, tileZ, size)
 
       if (ghostRef.current) {
-        ghostRef.current.position.x = x
-        ghostRef.current.position.z = z
-        ghostRef.current.position.y = yOffsetRef.current
+        targetPos.current.set(x, yOffsetRef.current, z)
         setGhostColor(ghostRef.current, canPlace)
       }
 
@@ -171,27 +195,51 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
       highlightMesh.material = canPlace ? highlightMatOk : highlightMatBad
     }
 
+    let clickAudio: HTMLAudioElement | null = null
+
+    const playClickSound = () => {
+      try {
+        if (!clickAudio) {
+          const url = new URL("../../assets/click.mp3", import.meta.url).href
+          clickAudio = new Audio(url)
+          clickAudio.volume = 0.6
+        }
+        clickAudio.currentTime = 0
+        clickAudio.play().catch(() => {})
+      } catch {
+        // on ignore les erreurs audio
+      }
+    }
+
     // ----------------------------------------------------------------
-    // onClick
+    // onClick — avec détection de drag
     // ----------------------------------------------------------------
+    let mouseDownPos = { x: 0, y: 0 }
+
+    function onMouseDown(e: MouseEvent) {
+      mouseDownPos = { x: e.clientX, y: e.clientY }
+    }
+
     async function onClick(e: MouseEvent) {
       if ((e.target as HTMLElement).closest("#ui-root")) return
       if (!placementStore.selectedItem || !placementStore.hoveredTile) return
       if (!placementStore.canPlace) return
 
+      // Si la souris a bougé de plus de 5px entre mousedown et click, c'est un drag — on ignore
+      const dx = e.clientX - mouseDownPos.x
+      const dy = e.clientY - mouseDownPos.y
+      if (Math.sqrt(dx * dx + dy * dy) > 5) return
+
       const { tileX, tileZ } = placementStore.hoveredTile
       const item = placementStore.selectedItem
       const size = Math.max(1, Math.ceil(item.entity.sizeInTiles ?? 1))
 
-      if (!world!.canSpawn(tileX, tileZ, size)) return
+      const entity = await world!.spawnEntitySafe(item.entity, tileX, tileZ, size)
+      if (!entity) return
 
-      world!.markOccupied(tileX, tileZ, size)
+      entity.rotation.y = targetRotY.current
 
-      const entity = await createEntity(item.entity, world!.tileSize)
-      entity.rotation.y = THREE.MathUtils.degToRad(placementStore.rotation)
-      placeOnTile(entity, tileX, tileZ, world!.tileSize, world!.size, size)
-      world!.scene.add(entity)
-      world!.entities.push(entity)
+      playClickSound()
     }
 
     // ----------------------------------------------------------------
@@ -205,12 +253,8 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
       }
 
       if ((e.key === "r" || e.key === "R") && placementStore.selectedItem) {
-        // ✅ Mettre à jour le store (notifie l'UI pour afficher le bon degré)
         placementStore.rotate()
-        // ✅ Appliquer immédiatement la rotation au ghost sans le reconstruire
-        if (ghostRef.current) {
-          ghostRef.current.rotation.y = THREE.MathUtils.degToRad(placementStore.rotation)
-        }
+        targetRotY.current += THREE.MathUtils.degToRad(90)
       }
     }
 
@@ -228,10 +272,10 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
           buildGhost(placementStore.selectedItem)
         }
       }
-      // La rotation est gérée directement dans onKeyDown, pas ici
     })
 
     window.addEventListener("mousemove", onMouseMove)
+    window.addEventListener("mousedown", onMouseDown)
     window.addEventListener("click",     onClick)
     window.addEventListener("keydown",   onKeyDown)
 
@@ -241,6 +285,7 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
       world.scene.remove(groundPlane)
       world.scene.remove(highlightMesh)
       window.removeEventListener("mousemove", onMouseMove)
+      window.removeEventListener("mousedown", onMouseDown)
       window.removeEventListener("click",     onClick)
       window.removeEventListener("keydown",   onKeyDown)
     }

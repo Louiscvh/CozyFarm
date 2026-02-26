@@ -17,7 +17,7 @@ import { Rock1Entity } from "../entity/Rock1"
 export class World {
   static current: World | null = null
   tiles: Tile[] = []
-  size: number = 120
+  size: number = 80
   tileSize: number
   public entities: THREE.Object3D[] = []
 
@@ -32,16 +32,17 @@ export class World {
   private moon!: THREE.DirectionalLight  // 🌙 lumière lunaire
   private backSun!: THREE.DirectionalLight
   private ambient!: THREE.AmbientLight
+  camera!: THREE.Camera // ajouter
 
   constructor(scene: THREE.Scene, tileSize: number = 2) {
     World.current = this
     this.scene = scene
+    
     this.tileSize = tileSize
     this.objects = new ObjectManager(this.scene, this.size, this.tileSize)
 
     this.setupLights()
     this.generateTiles()
-    this.reserveFixedZones()
     this.initialize()
     this.updateSun()
   }
@@ -56,24 +57,6 @@ export class World {
   private getCenteredTopLeft(centerTileX: number, centerTileZ: number, size: number): { x: number, z: number } {
     const offset = Math.floor(size / 2)
     return { x: centerTileX - offset, z: centerTileZ - offset }
-  }
-
-  private reserveFixedZones() {
-    const center = this.size / 2
-
-    const farmTL = this.getCenteredTopLeft(center, center, FarmEntity.sizeInTiles)
-
-    const fixedZones: { x: number, z: number, size: number }[] = [
-      { x: farmTL.x,   z: farmTL.z,   size: FarmEntity.sizeInTiles },
-      { x: center + 2, z: center - 2, size: WheatField.sizeInTiles },
-      { x: center + 3, z: center + 0, size: WheatField.sizeInTiles },
-      { x: center + 3, z: center - 2, size: WheatField.sizeInTiles },
-      { x: center + 2, z: center - 1, size: WheatField.sizeInTiles },
-    ]
-
-    for (const zone of fixedZones) {
-      this.markOccupied(zone.x, zone.z, zone.size)
-    }
   }
 
   async initialize() {
@@ -106,44 +89,44 @@ export class World {
 
   markOccupied(tileX: number, tileZ: number, size: number = 1) {
     const gridSize = Math.max(1, Math.ceil(size))
-
     for (let dx = 0; dx < gridSize; dx++) {
       for (let dz = 0; dz < gridSize; dz++) {
         this.occupiedPositions.add(`${tileX + dx}|${tileZ + dz}`)
+        this.createDebugMarker(tileX + dx, tileZ + dz, 1) // ← 1 marker par tile
       }
     }
-
-    this.createDebugMarker(tileX, tileZ, gridSize)
   }
 
   markFree(tileX: number, tileZ: number, size: number = 1) {
     const gridSize = Math.max(1, Math.ceil(size))
     for (let dx = 0; dx < gridSize; dx++) {
       for (let dz = 0; dz < gridSize; dz++) {
-        this.occupiedPositions.delete(`${tileX + dx}|${tileZ + dz}`)
+        const key = `${tileX + dx}|${tileZ + dz}`
+        this.occupiedPositions.delete(key)
+  
+        const idx = this.debugMarkers.findIndex(m => m.userData.tileKey === key)
+        if (idx !== -1) {
+          const marker = this.debugMarkers[idx]
+          this.scene.remove(marker)
+          marker.geometry.dispose()
+          ;(marker.material as THREE.Material).dispose()
+          this.debugMarkers.splice(idx, 1)
+        }
       }
     }
   }
 
   private createDebugMarker(tileX: number, tileZ: number, size: number) {
-    const geometry = new THREE.BoxGeometry(
-      this.tileSize * size,
-      0.5,
-      this.tileSize * size
-    )
-    const material = new THREE.MeshBasicMaterial({
-      color: 0xff0000,
-      transparent: true,
-      opacity: 0.3,
-    })
+    const geometry = new THREE.BoxGeometry(this.tileSize * size, 0.5, this.tileSize * size)
+    const material = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.3 })
     const marker = new THREE.Mesh(geometry, material)
-
+  
     const worldX = (tileX - this.size / 2) * this.tileSize + (size / 2) * this.tileSize
     const worldZ = (tileZ - this.size / 2) * this.tileSize + (size / 2) * this.tileSize
-
     marker.position.set(worldX - this.tileSize / 2, 0.25, worldZ - this.tileSize / 2)
     marker.visible = this.debugMarkersVisible
-
+    marker.userData.tileKey = `${tileX}|${tileZ}` // ← clé unique par tile
+  
     this.debugMarkers.push(marker)
     this.scene.add(marker)
   }
@@ -157,21 +140,22 @@ export class World {
     this.debugMarkers = []
   }
 
-  async spawnEntitySafe(def: Entity, tileX: number, tileZ: number, size: number = 1): Promise<boolean> {
+  async spawnEntitySafe(def: Entity, tileX: number, tileZ: number, size: number = 1): Promise<THREE.Object3D | null> {
     const gridSize = Math.max(1, Math.ceil(size))
-
-    if (!this.canSpawn(tileX, tileZ, gridSize)) {
-      return false
-    }
-
+    if (!this.canSpawn(tileX, tileZ, gridSize)) return null
+  
     this.markOccupied(tileX, tileZ, gridSize)
-
+  
     const entity = await createEntity(def, this.tileSize)
+    entity.userData.id = def.id
+    entity.userData.tileX = tileX
+    entity.userData.tileZ = tileZ
+    entity.userData.tileSize = gridSize
     placeOnTile(entity, tileX, tileZ, this.tileSize, this.size, gridSize)
     this.scene.add(entity)
     this.entities.push(entity)
-
-    return true
+  
+    return entity  // ← retourne l'objet au lieu de true
   }
 
   generateTiles() {
@@ -281,7 +265,6 @@ export class World {
 
   async populateDecor() {
     const center = this.size / 2
-
     const farmTL = this.getCenteredTopLeft(center, center, FarmEntity.sizeInTiles)
 
     const fixedEntities: { def: Entity, tileX: number, tileZ: number, size: number }[] = [
@@ -293,10 +276,7 @@ export class World {
     ]
 
     for (const e of fixedEntities) {
-      const entity = await createEntity(e.def, this.tileSize)
-      placeOnTile(entity, e.tileX, e.tileZ, this.tileSize, this.size, e.size)
-      this.scene.add(entity)
-      this.entities.push(entity)
+      await this.spawnEntitySafe(e.def, e.tileX, e.tileZ, e.size) // ← tout est géré ici
     }
 
     const area = this.size * this.size
@@ -325,7 +305,6 @@ export class World {
         if (success) placedCount++
       }
 
-      console.log(`Placed ${placedCount}/${count} entities after ${attempts} attempts`)
     }
   }
 

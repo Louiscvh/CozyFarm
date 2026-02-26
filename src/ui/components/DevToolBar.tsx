@@ -37,11 +37,11 @@ export const DevToolBar = () => {
       </section>
 
       <section>
-        <UIButton onClick={goDay}>Midi</UIButton>
-        <UIButton onClick={goNight}>Minuit</UIButton>
+        <UIButton onClick={goDay}>12h</UIButton>
+        <UIButton onClick={goNight}>00h</UIButton>
       </section>
       <section>
-        <UIButton onClick={toggleDebugMarkers}>Debug Markers</UIButton>
+        <UIButton onClick={toggleDebugMarkers}>Tile</UIButton>
       </section>
     </div>
   )

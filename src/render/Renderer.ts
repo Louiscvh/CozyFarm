@@ -46,7 +46,7 @@ export class Renderer {
       0.01, 100
     )
     this.cameraController = new CameraController(this.camera)
-
+    this.world.camera = this.camera
 
     // --- Ambiance sonore ---
     this.setupAmbientAudio()

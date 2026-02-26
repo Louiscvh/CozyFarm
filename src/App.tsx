@@ -10,6 +10,7 @@ import { InventoryBar } from "./ui/components/InventoryBar"
 import { usePlacement } from "./ui/hooks/usePlacement"
 import { placementStore } from "./ui/store/PlacementStore"
 import { Renderer } from "./render/Renderer"
+import { EntityPopups } from "./ui/components/EntityPopup"
 
 export const App = () => {
   return (
@@ -25,6 +26,8 @@ export const App = () => {
 
         <DevToolBar />
         <InventoryBar />
+        <EntityPopups />
+
       </div>
     </LoaderProvider>
   )
