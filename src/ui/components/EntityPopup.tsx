@@ -109,14 +109,39 @@ export function EntityPopups() {
     }
   
     deletedStack.push({ entityObject: e, occupiedTiles })
-  
-    w.scene.remove(e)
     w.entities = w.entities.filter(en => en !== e)
     occupiedTiles.forEach(t => w.markFree(t.x, t.z, t.size))
-  
     placementStore.hoveredTile = null
     placementStore.canPlace = true
     setHoveredPopup(null)
+  
+    // Animation : sursaut vers le haut puis chute en rétrécissant
+    const startY = e.position.y
+    const startScale = e.scale.x
+    const duration = 400 // ms
+    const startTime = performance.now()
+  
+    function animate(now: number) {
+      const t = Math.min((now - startTime) / duration, 1)
+  
+      // Sursaut : monte légèrement au début puis chute
+      // easing : petit bounce au début (t=0→0.2) puis chute accélérée
+      const bounce = Math.sin(t * Math.PI) * 0.3        // arc en cloche, hauteur max 0.3
+      const fall   = t * t * -3                          // chute quadratique vers le bas
+      e.position.y = startY + bounce + fall
+  
+      // Rétrécit progressivement, accéléré en fin
+      const scale = startScale * (1 - t * t)
+      e.scale.set(scale, scale, scale)
+  
+      if (t < 1) {
+        requestAnimationFrame(animate)
+      } else {
+        w?.scene.remove(e)
+      }
+    }
+  
+    requestAnimationFrame(animate)
   }
 
   if (!hoveredPopup) return null
