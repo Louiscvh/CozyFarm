@@ -8,6 +8,7 @@ import { Tree1Entity } from "../entity/Tree1"
 import { Tree2Entity } from "../entity/Tree2"
 import { Flower1Entity } from "../entity/Flower1"
 import { Rock1Entity } from "../entity/Rock1"
+import { Tree3Entity } from "../entity/Tree3"
 
 // ─── Decor definitions ────────────────────────────────────────────────────────
 
@@ -15,9 +16,9 @@ export interface DecorCategory { types: Entity[]; density: number }
 export interface FixedEntityDef { def: Entity; tileX: number; tileZ: number; size: number }
 
 export const DECOR_CATEGORIES: DecorCategory[] = [
-  { types: [Tree1Entity, Tree2Entity], density: 40 / 400 },
-  { types: [Rock1Entity],              density: 20 / 400 },
-  { types: [Flower1Entity],            density: 30 / 400 },
+  { types: [Tree1Entity, Tree2Entity, Tree3Entity], density: 20 / 400 },
+  { types: [Rock1Entity],              density: 10 / 400 },
+  { types: [Flower1Entity],            density: 60 / 400 },
 ]
 
 export function getFixedEntities(worldCenter: number): FixedEntityDef[] {

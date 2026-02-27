@@ -5,13 +5,31 @@ import { assetManager } from "../../render/AssetManager"
 import { scaleModelToTiles } from "./utils/scaleModelToTiles"
 import { applyRotation } from "./utils/applyRotation"
 import { createTorchMesh } from "./TorchMesh"
+import { World } from "../world/World"
 
-const DEBUG_HITBOX = false // ← passe à true pour voir le wireframe
+export let debugHitboxEnabled = false
+
+export function toggleDebugHitbox() {
+  debugHitboxEnabled = !debugHitboxEnabled
+
+  const w = World.current
+  if (!w) return
+
+  for (const entity of w.entities) {
+    const hitbox = entity.getObjectByName("__hitbox__")
+    if (!hitbox) continue
+
+    hitbox.children.forEach((child) => {
+      if ((child as THREE.LineSegments).isLineSegments) {
+        child.visible = debugHitboxEnabled
+      }
+    })
+  }
+}
 
 export function attachHitBox(root: THREE.Object3D): void {
   root.updateMatrixWorld(true)
 
-  // IMPORTANT : on ignore le scale du root
   const originalScale = root.scale.clone()
   root.scale.set(1, 1, 1)
   root.updateMatrixWorld(true)
@@ -23,26 +41,29 @@ export function attachHitBox(root: THREE.Object3D): void {
   box.getSize(size)
   box.getCenter(center)
 
+  // ← Corrige le Y AVANT de remettre le scale
+  // box.min.y est en espace non-scalé (scale=1), donc pas besoin de multiplier
+  root.position.y -= box.min.y * originalScale.y
   // On remet le scale
   root.scale.copy(originalScale)
   root.updateMatrixWorld(true)
 
   const geometry = new THREE.BoxGeometry(size.x, size.y, size.z)
 
-  const wire = new THREE.WireframeGeometry(geometry)
-  const line = new THREE.LineSegments(
-    wire,
-    new THREE.LineBasicMaterial({ color: 0x00ff00, depthTest: true, visible: DEBUG_HITBOX })
-  )
-
   const hitMesh = new THREE.Mesh(
     geometry,
     new THREE.MeshBasicMaterial({ visible: false })
   )
 
+  const wire = new THREE.WireframeGeometry(geometry)
+  const line = new THREE.LineSegments(
+    wire,
+    new THREE.LineBasicMaterial({ color: 0xffffff, depthTest: false })
+  )
+  line.visible = debugHitboxEnabled
   hitMesh.add(line)
 
-  hitMesh.position.copy(center) // local direct
+  hitMesh.position.copy(center)
   hitMesh.name = "__hitbox__"
   hitMesh.userData.isHitBox = true
 

@@ -5,6 +5,7 @@ import "./EntityPopup.css"
 import { UIButton } from "./UIButton"
 import { placementStore } from "../store/PlacementStore"
 import { historyStore } from "../store/HistoryStore"
+import { Renderer } from "../../render/Renderer"
 
 interface PopupInfo {
   entityObject: THREE.Object3D
@@ -18,6 +19,51 @@ export function EntityPopups() {
   const currentRotY = useRef<number>(0)
   const targetRotY  = useRef<number>(0)
   const popupRef = useRef<HTMLDivElement | null>(null)
+
+  useEffect(() => {
+    const r = Renderer.instance
+    if (!r) return
+
+    const prev = r.cameraController.onUpdate
+    r.cameraController.onUpdate = () => {
+
+      const mouse = Renderer.instance!.mouse  // ← déjà trackée
+      const w = World.current
+      if (!w) return
+    
+      setHoveredPopup(current => {
+        if (!current) return null
+        if (!w.entities.includes(current.entityObject)) return null
+    
+        // Vérifie si la souris est toujours sur l'hitbox
+        const raycaster = new THREE.Raycaster()
+        raycaster.setFromCamera(mouse, w.camera) // mouse = THREE.Vector2 du Renderer
+    
+        const hitbox = current.entityObject.getObjectByName("__hitbox__")
+        if (!hitbox) return null
+    
+        const intersects = raycaster.intersectObject(hitbox, false)
+        if (intersects.length === 0) return null  // ← ferme la popup
+    
+        // Repositionne
+        const box = new THREE.Box3().setFromObject(hitbox)
+        const topCenter = new THREE.Vector3(
+          (box.min.x + box.max.x) / 2,
+          box.max.y + 0.3,
+          (box.min.z + box.max.z) / 2
+        )
+        topCenter.project(w.camera)
+    
+        const x = (topCenter.x + 1) / 2 * window.innerWidth
+        const y = (-topCenter.y + 1) / 2 * window.innerHeight
+    
+        if (Math.abs(x - current.screenPos.x) < 0.5 && Math.abs(y - current.screenPos.y) < 0.5) return current
+        return { ...current, screenPos: { x, y } }
+      })
+    }
+
+    return () => { r.cameraController.onUpdate = prev }
+  }, [])
 
   useEffect(() => {
     const raycaster = new THREE.Raycaster()

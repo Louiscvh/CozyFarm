@@ -71,25 +71,30 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
     // ----------------------------------------------------------------
     async function buildGhost(entity: typeof placementStore.selectedItem) {
       if (!entity) return
-      removeGhost()
+  removeGhost()
 
-      const { createEntity } = await import("../../game/entity/EntityFactory")
-      const root = await createEntity(entity.entity, world!.tileSize)
+  const { createEntity } = await import("../../game/entity/EntityFactory")
+  const root = await createEntity(entity.entity, world!.tileSize)
 
-      root.traverse((obj) => {
-        if ((obj as THREE.Mesh).isMesh) {
-          if (obj.name === "__hitbox__") {
-            obj.parent?.remove(obj)
-          }
-          (obj as THREE.Mesh).material = new THREE.MeshBasicMaterial({
-            color: 0x00ff00,
-            transparent: true,
-            opacity: 0.5,
-            depthWrite: false,
-          })
+  // ← Le groundOffset est déjà dans root.position.y après createEntity
+    const groundY = root.position.y
+    yOffsetRef.current = groundY
+
+    root.traverse((obj) => {
+      if ((obj as THREE.Mesh).isMesh) {
+        if (obj.name === "__hitbox__") {
+          obj.parent?.remove(obj)
+          return
         }
-        if ((obj as THREE.PointLight).isLight) obj.visible = false
-      })
+        ;(obj as THREE.Mesh).material = new THREE.MeshBasicMaterial({
+          color: 0x00ff00,
+          transparent: true,
+          opacity: 0.5,
+          depthWrite: false,
+        })
+      }
+      if ((obj as THREE.PointLight).isLight) obj.visible = false
+    })
       const size = entity.entity.sizeInTiles
 
       root.frustumCulled = false
@@ -173,7 +178,7 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
       raycaster.current.setFromCamera(mouse.current, camera)
       const hits = raycaster.current.intersectObject(groundPlane)
       if (!hits.length) return
-      
+
       const { tileX, tileZ } = snapToTile(hits[0].point.x, hits[0].point.z)
 
       // Toujours mis à jour, même sans item sélectionné
@@ -181,7 +186,7 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
 
       if (!placementStore.selectedItem) return
 
-      const size     = Math.max(1, Math.ceil(placementStore.selectedItem.entity.sizeInTiles ?? 1))
+      const size = Math.max(1, Math.ceil(placementStore.selectedItem.entity.sizeInTiles ?? 1))
       const canPlace = world!.tilesFactory.canSpawn(tileX, tileZ, size)
       placementStore.canPlace = canPlace
 
@@ -240,6 +245,9 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
         tileX,
         tileZ,
         tileSize: size,
+        originalY: entity.position.y,           // ← stocke ici
+        originalScale: entity.scale.clone(),     // ← et ici
+        originalRotation: entity.rotation.clone(), // ← et ici
       })
 
       playClickSound()

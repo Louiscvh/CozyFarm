@@ -10,6 +10,7 @@ import { WheatField } from "../../game/entity/WheatField"
 import { TorchEntity } from "../../game/entity/TorchEntity"
 import "./InventoryBar.css"
 import { UIButton } from "./UIButton"
+import { CabanaEntity } from "../../game/entity/Cabana"
 
 const INVENTORY_ITEMS: InventoryItem[] = [
   { id: "tree2",  label: "Pin",     icon: "🌲", entity: Tree1Entity },
@@ -18,6 +19,7 @@ const INVENTORY_ITEMS: InventoryItem[] = [
   { id: "flower", label: "Fleur",   icon: "🌸", entity: Flower1Entity },
   { id: "farm",   label: "Ferme",   icon: "🏚️", entity: FarmEntity },
   { id: "wheat",  label: "Blé",     icon: "🌾", entity: WheatField },
+  { id: "cabana", label: "Cabane",  icon: "🛖", entity: CabanaEntity},
   { id: "torch",  label: "Torche",  icon: "🔥", entity: TorchEntity },
 ]
 

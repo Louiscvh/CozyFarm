@@ -77,13 +77,17 @@ export class CameraController {
     window.addEventListener("touchcancel", endPinch)
   }
 
+  onUpdate?: () => void
+
   update() {
     this.mouseDrag.update()
     this.handleMovement()
     this.handleZoom()
     this.handleReturnHome()
     this.updateCamera()
+    this.onUpdate?.()  // ← appelé à chaque frame
   }
+  
 
   private handleMovement() {
     const ctrl = this.keyboard.isDown("control") || this.keyboard.isDown("meta")

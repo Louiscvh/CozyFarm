@@ -47,7 +47,7 @@ export class Renderer {
     this.cameraController = new CameraController(this.camera)
 
     // --- World (après la caméra) ---
-    this.world = new World(this.scene, 2)
+    this.world = new World(this.scene, 1)
     this.world.setCamera(this.camera)
     this.world.setWeather();
 

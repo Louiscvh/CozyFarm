@@ -3,12 +3,19 @@ import { Time } from "../../game/core/Time"
 import { UIButton } from "./UIButton"
 import { World } from "../../game/world/World"
 import "./DevToolBar.css"
+import { toggleDebugHitbox } from "../../game/entity/EntityFactory"
 
 export const DevToolBar = () => {
   const [visible, setVisible] = useState(false)
   const [, forceUpdate] = useState(0)
   const [isRaining, setIsRaining] = useState(World.current?.weather.getRainIntensity() != 'none')
   const [lastSpeed, setLastSpeed] = useState(1)
+  const [hitboxVisible, setHitboxVisible] = useState(false)
+
+  const toggleHitbox = () => {
+    toggleDebugHitbox()
+    setHitboxVisible(v => !v)
+  }
 
   const setSpeed = (v: number) => {
     Time.setSpeed(v)
@@ -45,6 +52,7 @@ export const DevToolBar = () => {
 
   return (
     <div className={`dev-toolbar ${visible ? "visible" : ""}`}>
+      <div className="line">
       <section>
         <UIButton
           className={isPaused ? "selected" : ""}
@@ -70,9 +78,15 @@ export const DevToolBar = () => {
         <UIButton onClick={toggleRain} className={isRaining ? "selected" : ""}>☔️</UIButton>
       </section>
 
+     
+      </div>
+      <div className="line">
       <section>
         <UIButton onClick={toggleDebugMarkers}>🚧</UIButton>
+        <UIButton onClick={toggleHitbox} className={hitboxVisible ? "selected" : ""}>📦</UIButton>
       </section>
+      </div>
+      
     </div>
   )
 }

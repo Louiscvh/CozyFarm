@@ -5,54 +5,37 @@ import "./RollBackBar.css"
 
 export const RollBackBar = () => {
   const [canUndo, setCanUndo] = useState(false)
-  const [canRedo, setCanRedo]  = useState(false)
-
-  const sync = () => {
-    setCanUndo(historyStore.canUndo)
-    setCanRedo(historyStore.canRedo)
-  }
+  const [canRedo, setCanRedo] = useState(false)
 
   useEffect(() => {
-    // Sync sur les touches clavier aussi
+    // Sync réactif via subscribe — plus de setInterval
+    const unsub = historyStore.subscribe(() => {
+      setCanUndo(historyStore.canUndo)
+      setCanRedo(historyStore.canRedo)
+    })
+
     const onKey = (e: KeyboardEvent) => {
-      if (!e.ctrlKey) return
-      if (e.key.toLowerCase() === "z") {
-        e.preventDefault()
-        if (!e.repeat) { applyUndo(); sync() }
-      }
-      if (e.key.toLowerCase() === "y") {
-        e.preventDefault()
-        if (!e.repeat) { applyRedo(); sync() }
-      }
+      if (!e.ctrlKey || e.repeat) return
+      if (e.key.toLowerCase() === "z") { e.preventDefault(); applyUndo() }
+      if (e.key.toLowerCase() === "y") { e.preventDefault(); applyRedo() }
     }
     window.addEventListener("keydown", onKey)
 
-    const interval = setInterval(sync, 100)
-    return () => {
-      window.removeEventListener("keydown", onKey)
-      clearInterval(interval)
-    }
+    return () => { unsub(); window.removeEventListener("keydown", onKey) }
   }, [])
-
-  const handleUndo = () => { applyUndo(); sync() }
-  const handleRedo = () => { applyRedo(); sync() }
 
   return (
     <div className="rollback-bar">
       <UIButton
-          className={!canUndo ? "disabled" : ""}
-          onClick={canUndo ? handleUndo : undefined}
-          title="Annuler (Ctrl+Z)"
-        >
-          ↩
-        </UIButton>
-        <UIButton
-          className={!canRedo ? "disabled" : ""}
-          onClick={canRedo ? handleRedo : undefined}
-          title="Rétablir (Ctrl+Y)"
-        >
-          ↪
-        </UIButton>
+        className={!canUndo ? "disabled" : ""}
+        onClick={canUndo ? applyUndo : undefined}
+        title="Annuler (Ctrl+Z)"
+      >↩</UIButton>
+      <UIButton
+        className={!canRedo ? "disabled" : ""}
+        onClick={canRedo ? applyRedo : undefined}
+        title="Rétablir (Ctrl+Y)"
+      >↪</UIButton>
     </div>
   )
 }

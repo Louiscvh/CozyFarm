@@ -3,14 +3,15 @@ import * as THREE from "three"
 import { World } from "../../game/world/World"
 import { placementStore } from "./PlacementStore"
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
 interface PlaceAction {
   type: "place"
   entityObject: THREE.Object3D
   tileX: number
   tileZ: number
   tileSize: number
+  originalY: number
+  originalScale: THREE.Vector3
+  originalRotation: THREE.Euler
 }
 
 interface DeleteAction {
@@ -26,27 +27,33 @@ interface DeleteAction {
 
 export type HistoryAction = PlaceAction | DeleteAction
 
-// ─── Store ────────────────────────────────────────────────────────────────────
-
 class HistoryStore {
   private undoStack: HistoryAction[] = []
   private redoStack: HistoryAction[] = []
+  private listeners: (() => void)[] = []
+
+  private notify() { this.listeners.forEach(fn => fn()) }
+
+  subscribe(fn: () => void) {
+    this.listeners.push(fn)
+    return () => { this.listeners = this.listeners.filter(l => l !== fn) }
+  }
 
   push(action: HistoryAction) {
     this.undoStack.push(action)
-    // Toute nouvelle action efface le redo
     this.redoStack = []
+    this.notify()
   }
 
   undo(): HistoryAction | undefined {
     const action = this.undoStack.pop()
-    if (action) this.redoStack.push(action)
+    if (action) { this.redoStack.push(action); this.notify() }
     return action
   }
 
   redo(): HistoryAction | undefined {
     const action = this.redoStack.pop()
-    if (action) this.undoStack.push(action)
+    if (action) { this.undoStack.push(action); this.notify() }
     return action
   }
 
@@ -56,22 +63,27 @@ class HistoryStore {
 
 export const historyStore = new HistoryStore()
 
-// ─── Helpers d'animation ──────────────────────────────────────────────────────
+// ─── Animations ───────────────────────────────────────────────────────────────
 
-function animateRemove(w: NonNullable<typeof World.current>, e: THREE.Object3D) {
+function animateRemove(w: NonNullable<typeof World.current>, e: THREE.Object3D): () => void {
   const startY     = e.position.y
   const startScale = e.scale.x
   const duration   = 400
   const startTime  = performance.now()
+  let cancelled    = false
+  let rafId        = 0
 
   function animate(now: number) {
+    if (cancelled) return
     const t = Math.min((now - startTime) / duration, 1)
     e.position.y = startY + Math.sin(t * Math.PI) * 0.3 + t * t * -3
     e.scale.setScalar(startScale * (1 - t * 0.7))
-    if (t < 1) requestAnimationFrame(animate)
+    if (t < 1) { rafId = requestAnimationFrame(animate) }
     else w.scene.remove(e)
   }
-  requestAnimationFrame(animate)
+  rafId = requestAnimationFrame(animate)
+
+  return () => { cancelled = true; cancelAnimationFrame(rafId) }
 }
 
 function animateAppear(en: THREE.Object3D, originalY: number, originalScale: THREE.Vector3, originalRotation: THREE.Euler) {
@@ -79,27 +91,54 @@ function animateAppear(en: THREE.Object3D, originalY: number, originalScale: THR
   const startTime = performance.now()
   const fromScale = en.scale.x
   const fromY     = en.position.y
-
   en.rotation.copy(originalRotation)
 
   function animateIn(now: number) {
     const t         = Math.min((now - startTime) / duration, 1)
     const ease      = 1 - Math.pow(1 - t, 3)
     const overshoot = Math.sin(t * Math.PI) * 0.2
-
     en.scale.setScalar(fromScale + (originalScale.x - fromScale) * ease)
     en.position.y = fromY + (originalY - fromY) * ease + overshoot
-
     if (t < 1) requestAnimationFrame(animateIn)
-    else {
-      en.scale.copy(originalScale)
-      en.position.y = originalY
-    }
+    else { en.scale.copy(originalScale); en.position.y = originalY }
   }
   requestAnimationFrame(animateIn)
 }
 
-// ─── Undo ─────────────────────────────────────────────────────────────────────
+// ─── Helpers partagés ─────────────────────────────────────────────────────────
+
+function restoreEntity(
+  w: NonNullable<typeof World.current>,
+  action: DeleteAction
+) {
+  action.cancelAnimation()
+  const { entityObject: en, occupiedTiles, savedHoveredTile, originalY, originalScale, originalRotation } = action
+
+  en.scale.setScalar(0)
+  en.position.y = originalY - 2
+  w.scene.add(en)
+  w.entities.push(en)
+  occupiedTiles.forEach(t => w.tilesFactory.markOccupied(t.x, t.z, t.size))
+
+  placementStore.hoveredTile = savedHoveredTile
+  if (savedHoveredTile) {
+    placementStore.canPlace = w.tilesFactory.canSpawn(savedHoveredTile.tileX, savedHoveredTile.tileZ, 1)
+  }
+
+  animateAppear(en, originalY, originalScale, originalRotation)
+}
+
+function removeEntity(
+  w: NonNullable<typeof World.current>,
+  action: DeleteAction
+) {
+  const e = action.entityObject
+  w.entities = w.entities.filter(en => en !== e)
+  action.occupiedTiles.forEach(t => w.tilesFactory.markFree(t.x, t.z, t.size))
+  action.cancelAnimation = animateRemove(w, e)
+}
+
+// ─── Undo / Redo ──────────────────────────────────────────────────────────────
 
 export function applyUndo() {
   const w = World.current
@@ -108,77 +147,29 @@ export function applyUndo() {
   if (!action) return
 
   if (action.type === "place") {
-    const e = action.entityObject
-    w.entities = w.entities.filter(en => en !== e)
+    w.entities = w.entities.filter(en => en !== action.entityObject)
     w.tilesFactory.markFree(action.tileX, action.tileZ, action.tileSize)
-    animateRemove(w, e)
+    animateRemove(w, action.entityObject)
   }
 
-  if (action.type === "delete") {
-    const { entityObject: en, occupiedTiles, savedHoveredTile,
-            cancelAnimation, originalY, originalScale, originalRotation } = action
-
-    cancelAnimation()
-    w.scene.add(en)
-    w.entities.push(en)
-    occupiedTiles.forEach(t => w.tilesFactory.markOccupied(t.x, t.z, t.size))
-
-    placementStore.hoveredTile = savedHoveredTile
-    if (savedHoveredTile) {
-      const { tileX, tileZ } = savedHoveredTile
-      placementStore.canPlace = w.tilesFactory.canSpawn(tileX, tileZ, 1)
-    }
-
-    animateAppear(en, originalY, originalScale, originalRotation)
-  }
+  if (action.type === "delete") restoreEntity(w, action)
 }
-
-// ─── Redo ─────────────────────────────────────────────────────────────────────
 
 export function applyRedo() {
   const w = World.current
   if (!w) return
-
   const action = historyStore.redo()
   if (!action) return
 
   if (action.type === "place") {
-    // Remet l'entité dans la scène
-    w.scene.add(action.entityObject)
-    w.entities.push(action.entityObject)
+    const { entityObject: e, originalY, originalScale, originalRotation } = action
+    e.scale.setScalar(0)
+    e.position.y = originalY - 2
+    w.scene.add(e)
+    w.entities.push(e)
     w.tilesFactory.markOccupied(action.tileX, action.tileZ, action.tileSize)
-    animateAppear(
-      action.entityObject,
-      action.entityObject.position.y,
-      action.entityObject.scale.clone(),
-      action.entityObject.rotation.clone(),
-    )
+    animateAppear(e, originalY, originalScale, originalRotation)
   }
 
-  if (action.type === "delete") {
-    const e = action.entityObject
-    w.entities = w.entities.filter(en => en !== e)
-    action.occupiedTiles.forEach(t => w.tilesFactory.markFree(t.x, t.z, t.size))
-
-    // Réinitialise le cancelAnimation pour la nouvelle anim
-    const duration   = 400
-    const startTime  = performance.now()
-    let   cancelled  = false
-    let   rafId      = 0
-
-    action.cancelAnimation = () => { cancelled = true; cancelAnimationFrame(rafId) }
-
-    const startY     = e.position.y
-    const startScale = e.scale.x
-
-    function animate(now: number) {
-      if (cancelled) return
-      const t = Math.min((now - startTime) / duration, 1)
-      e.position.y = startY + Math.sin(t * Math.PI) * 0.3 + t * t * -3
-      e.scale.setScalar(startScale * (1 - t * 0.7))
-      if (t < 1) { rafId = requestAnimationFrame(animate) }
-      else w?.scene.remove(e)
-    }
-    rafId = requestAnimationFrame(animate)
-  }
+  if (action.type === "delete") removeEntity(w, action)
 }

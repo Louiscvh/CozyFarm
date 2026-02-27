@@ -29,7 +29,7 @@ export function placeOnTile(
 
   obj.position.set(
     (tileX - halfWorld) * tileSize + centerOffset,
-    0,
+    obj.position.y,
     (tileZ - halfWorld) * tileSize + centerOffset
   )
 }

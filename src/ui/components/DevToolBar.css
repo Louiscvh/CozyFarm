@@ -4,7 +4,8 @@
     bottom: 24px;
     right: 24px;
     display: flex;
-    gap: 16px;
+    flex-direction: column;
+    gap: 4px;
     padding: 10px 14px;
     border-radius: 8px;
   
@@ -29,6 +30,10 @@
       pointer-events: all;
   }
 
+  .dev-toolbar .line {
+    display: flex;
+    gap: 16px;
+  }
   .dev-toolbar section{
     display: flex;
     gap: 4px;
