@@ -1,11 +1,11 @@
 .game-clock {
     position: absolute;
     left: 64px;
-    top: 4px;
+    top: 12px;
     color: white;
     font-family: "JetBrains Mono", "Fira Code", monospace;
     font-weight: normal;
-    font-size: 1.8rem;
+    font-size: 1.2rem;
     margin-block-start: 0em;
     margin-block-end: 0em;
 }

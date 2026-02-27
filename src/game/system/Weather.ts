@@ -1,7 +1,7 @@
 // src/world/Weather.ts
 import * as THREE from "three"
-import { Time } from "../../game/core/Time"
-import { Rain, type RainIntensity } from "./Rain"
+import { Time } from "../core/Time"
+import { Rain, type RainIntensity } from "../world/Rain"
 
 function smoothstep(edge0: number, edge1: number, x: number): number {
   const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)))

@@ -1,40 +1,33 @@
 // src/world/Tile.ts
-import * as THREE from "three"
 
 export type TileType = "grass" | "water" | "sand" | "stone"
 
-export class Tile {
-  mesh: THREE.Mesh
+export interface TileVisual {
+  color: string
+  roughness: number
+  metalness: number
+}
+
+export const TILE_VISUALS: Record<TileType, TileVisual> = {
+  grass: { color: "#4a8c52", roughness: 0.95, metalness: 0.0 },
+  water: { color: "#1a6fa8", roughness: 0.1,  metalness: 0.3 },
+  sand:  { color: "#d4a96a", roughness: 0.9,  metalness: 0.0 },
+  stone: { color: "#7a7470", roughness: 0.85, metalness: 0.05 },
+}
+
+export const TILE_TYPES: TileType[] = ["grass", "water", "sand", "stone"]
+
+export function randomTileType(): TileType {
+  const r = Math.random()
+  if (r < 0.70) return "grass"
+  if (r < 0.72) return "water"
+  if (r < 0.95) return "sand"
+  return "stone"
+}
+
+// Structure de données légère — plus de Mesh individuel
+export interface Tile {
   type: TileType
-  position: THREE.Vector3
-
-  constructor(type: TileType, position: THREE.Vector3, size: number = 2) {
-    this.type = type
-    this.position = position
-
-    let material: THREE.Material
-    switch (type) {
-      case "grass":
-        // herbe un peu plus douce et chaude
-        material = new THREE.MeshStandardMaterial({ color: "#5AAB61" })
-        break
-      case "water":
-        // eau plus profonde, tirant légèrement vers l'indigo
-        material = new THREE.MeshStandardMaterial({ color: "#0080ff" })
-        break
-      case "sand":
-        // sable plus pêche, pour accrocher la lumière orangée
-        material = new THREE.MeshStandardMaterial({ color: "#f5c97a" })
-        break
-      case "stone":
-        // pierre un peu plus chaude
-        material = new THREE.MeshStandardMaterial({ color: "#b0a7a0" })
-        break
-    }
-
-    const geometry = new THREE.BoxGeometry(size, 0.1, size)
-    this.mesh = new THREE.Mesh(geometry, material)
-    this.mesh.receiveShadow = true
-    this.mesh.position.copy(position)
-  }
+  tileX: number
+  tileZ: number
 }

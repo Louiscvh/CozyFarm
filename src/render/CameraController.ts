@@ -86,12 +86,14 @@ export class CameraController {
   }
 
   private handleMovement() {
+    const ctrl = this.keyboard.isDown("control") || this.keyboard.isDown("meta")
+
     const forward = this.getForward()
     const right = this.getRight()
     const moveDir = new THREE.Vector3()
-    const cameraDelta = 1 / 60 // fixe ~60fps
+    const cameraDelta = 1 / 60
 
-    if (this.keyboard.isDown("z")) moveDir.add(forward)
+    if (!ctrl && this.keyboard.isDown("z")) moveDir.add(forward)
     if (this.keyboard.isDown("s")) moveDir.add(forward.clone().multiplyScalar(-1))
     if (this.keyboard.isDown("q")) moveDir.add(right.clone().multiplyScalar(-1))
     if (this.keyboard.isDown("d")) moveDir.add(right)

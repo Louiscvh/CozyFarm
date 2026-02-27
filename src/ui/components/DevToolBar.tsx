@@ -8,10 +8,20 @@ export const DevToolBar = () => {
   const [visible, setVisible] = useState(false)
   const [, forceUpdate] = useState(0)
   const [isRaining, setIsRaining] = useState(World.current?.weather.getRainIntensity() != 'none')
+  const [lastSpeed, setLastSpeed] = useState(1)
 
   const setSpeed = (v: number) => {
     Time.setSpeed(v)
     forceUpdate(n => n + 1)
+  }
+
+  const togglePause = () => {
+    if (Time.timeScale === 0) {
+      setSpeed(lastSpeed)
+    } else {
+      setLastSpeed(Time.timeScale)
+      setSpeed(0)
+    }
   }
 
   useEffect(() => {
@@ -31,9 +41,18 @@ export const DevToolBar = () => {
     setIsRaining(World.current?.weather.getRainIntensity() !== "none")
   }
 
+  const isPaused = Time.timeScale === 0
+
   return (
     <div className={`dev-toolbar ${visible ? "visible" : ""}`}>
       <section>
+        <UIButton
+          className={isPaused ? "selected" : ""}
+          onClick={togglePause}
+        >
+          {isPaused ? "▶️" : "⏸️"}
+        </UIButton>
+
         {[1, 5, 10].map(v => (
           <UIButton
             key={v}
@@ -52,7 +71,7 @@ export const DevToolBar = () => {
       </section>
 
       <section>
-        <UIButton onClick={toggleDebugMarkers}>Tile</UIButton>
+        <UIButton onClick={toggleDebugMarkers}>🚧</UIButton>
       </section>
     </div>
   )

@@ -48,7 +48,8 @@ export class Renderer {
 
     // --- World (après la caméra) ---
     this.world = new World(this.scene, 2)
-    this.world.setCamera(this.camera) // initialise Weather avec la caméra
+    this.world.setCamera(this.camera)
+    this.world.setWeather();
 
     // --- Ambiance sonore ---
     this.setupAmbientAudio()

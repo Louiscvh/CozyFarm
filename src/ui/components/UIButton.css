@@ -16,6 +16,7 @@
     transform 0.15s ease-out,
     box-shadow 0.15s ease-out,
     background 0.15s ease-out,
+    opacity 0.15s ease-out,
     border-color 0.15s ease-out;
 }
 
@@ -51,6 +52,13 @@
     0 0 12px rgba(255, 255, 255, 0.3),
     inset 0 0 8px rgba(255, 255, 255, 0.08)!important;
   transform: translateY(-3px)!important;
+}
+
+.ui-button--primary.disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+  pointer-events: none;
+  filter: saturate(0);
 }
 
 .ui-button--primary:hover {

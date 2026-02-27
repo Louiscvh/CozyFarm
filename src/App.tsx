@@ -11,6 +11,7 @@ import { usePlacement } from "./ui/hooks/usePlacement"
 import { placementStore } from "./ui/store/PlacementStore"
 import { Renderer } from "./render/Renderer"
 import { EntityPopups } from "./ui/components/EntityPopup"
+import { RollBackBar } from "./ui/components/RollBackBar"
 
 export const App = () => {
   return (
@@ -23,11 +24,13 @@ export const App = () => {
           <HomeButton />
           <GameClock />
         </header>
-
-        <DevToolBar />
-        <InventoryBar />
         <EntityPopups />
 
+        <footer>
+          <RollBackBar/>
+          <DevToolBar />
+          <InventoryBar />
+        </footer>
       </div>
     </LoaderProvider>
   )

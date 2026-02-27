@@ -2,6 +2,7 @@
 import { useEffect, useRef } from "react"
 import * as THREE from "three"
 import { placementStore } from "../store/PlacementStore"
+import { historyStore } from "../store/HistoryStore"
 import { World } from "../../game/world/World"
 
 interface UsePlacementOptions {
@@ -66,44 +67,42 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
     }
 
     // ----------------------------------------------------------------
-    // buildGhost — appelé uniquement quand l'item sélectionné change
+    // buildGhost
     // ----------------------------------------------------------------
     async function buildGhost(entity: typeof placementStore.selectedItem) {
-        if (!entity) return
-        removeGhost()
-      
-        const { createEntity } = await import("../../game/entity/EntityFactory")
-        const root = await createEntity(entity.entity, world!.tileSize)
-      
-        // Applique le matériau ghost sur tous les meshes
-        root.traverse((obj) => {
-          if ((obj as THREE.Mesh).isMesh) {
-            (obj as THREE.Mesh).material = new THREE.MeshBasicMaterial({
-              color: 0x00ff00,
-              transparent: true,
-              opacity: 0.5,
-              depthWrite: false,
-            })
+      if (!entity) return
+      removeGhost()
+
+      const { createEntity } = await import("../../game/entity/EntityFactory")
+      const root = await createEntity(entity.entity, world!.tileSize)
+
+      root.traverse((obj) => {
+        if ((obj as THREE.Mesh).isMesh) {
+          if (obj.name === "__hitbox__") {
+            obj.parent?.remove(obj)
           }
-          // Cache les lights du ghost — on ne veut pas qu'elles éclairent la scène
-          if ((obj as THREE.PointLight).isLight) {
-            obj.visible = false
-          }
-        })
-        const size = entity.entity.sizeInTiles
+          (obj as THREE.Mesh).material = new THREE.MeshBasicMaterial({
+            color: 0x00ff00,
+            transparent: true,
+            opacity: 0.5,
+            depthWrite: false,
+          })
+        }
+        if ((obj as THREE.PointLight).isLight) obj.visible = false
+      })
+      const size = entity.entity.sizeInTiles
 
       root.frustumCulled = false
       root.traverse((obj) => { obj.frustumCulled = false })
 
       highlightMesh.scale.set(world!.tileSize * size, world!.tileSize * size, 1)
 
-      // Initialise position — pas d'easing au premier affichage
       if (placementStore.hoveredTile) {
         const { x, z } = tileToWorld(placementStore.hoveredTile.tileX, placementStore.hoveredTile.tileZ, size)
         currentPos.current.set(x, yOffsetRef.current, z)
         targetPos.current.set(x, yOffsetRef.current, z)
         root.position.copy(currentPos.current)
-        const canPlace = world!.canSpawn(placementStore.hoveredTile.tileX, placementStore.hoveredTile.tileZ, size)
+        const canPlace = world!.tilesFactory.canSpawn(placementStore.hoveredTile.tileX, placementStore.hoveredTile.tileZ, size)
         setGhostColor(root, canPlace)
         highlightMesh.position.set(x, 0.02, z)
         highlightMesh.material = canPlace ? highlightMatOk : highlightMatBad
@@ -114,7 +113,6 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
         root.position.copy(currentPos.current)
       }
 
-      // Initialise rotation — pas d'easing au premier affichage
       const initRot = THREE.MathUtils.degToRad(placementStore.rotation)
       currentRotY.current = initRot
       targetRotY.current  = initRot
@@ -124,22 +122,17 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
       ghostRef.current = root
       placementStore.ghostMesh = root
 
-      // Boucle d'easing position + rotation
       cancelAnimationFrame(rafRef.current)
       function animateGhost() {
         rafRef.current = requestAnimationFrame(animateGhost)
         if (!ghostRef.current) return
-      
         currentPos.current.lerp(targetPos.current, 0.35)
         ghostRef.current.position.copy(currentPos.current)
-      
         currentRotY.current += (targetRotY.current - currentRotY.current) * 0.3
         ghostRef.current.rotation.y = currentRotY.current
-      
-        // Animation torche dans le ghost
         if (ghostRef.current.userData.isTorch) {
           const now = performance.now() / 1000
-          ;(ghostRef.current as any).updateTorch(now, 0) // intensité 0 — pas de lumière dans le ghost
+          ;(ghostRef.current as any).updateTorch(now, 0)
         }
       }
       animateGhost()
@@ -171,8 +164,6 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
     // onMouseMove
     // ----------------------------------------------------------------
     function onMouseMove(e: MouseEvent) {
-      if (!placementStore.selectedItem) return
-
       const rect = renderer.domElement.getBoundingClientRect()
       mouse.current.set(
         ((e.clientX - rect.left) / rect.width)  *  2 - 1,
@@ -182,29 +173,29 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
       raycaster.current.setFromCamera(mouse.current, camera)
       const hits = raycaster.current.intersectObject(groundPlane)
       if (!hits.length) return
+      
+      const { tileX, tileZ } = snapToTile(hits[0].point.x, hits[0].point.z)
 
-      const hit = hits[0].point
-      const { tileX, tileZ } = snapToTile(hit.x, hit.z)
-      const size = Math.max(1, Math.ceil(placementStore.selectedItem.entity.sizeInTiles ?? 1))
-      const canPlace = world!.canSpawn(tileX, tileZ, size)
-
+      // Toujours mis à jour, même sans item sélectionné
       placementStore.hoveredTile = { tileX, tileZ }
-      placementStore.canPlace    = canPlace
+
+      if (!placementStore.selectedItem) return
+
+      const size     = Math.max(1, Math.ceil(placementStore.selectedItem.entity.sizeInTiles ?? 1))
+      const canPlace = world!.tilesFactory.canSpawn(tileX, tileZ, size)
+      placementStore.canPlace = canPlace
 
       const { x, z } = tileToWorld(tileX, tileZ, size)
-
       if (ghostRef.current) {
         targetPos.current.set(x, yOffsetRef.current, z)
         setGhostColor(ghostRef.current, canPlace)
       }
-
       highlightMesh.visible = true
       highlightMesh.position.set(x, 0.02, z)
       highlightMesh.material = canPlace ? highlightMatOk : highlightMatBad
     }
 
     let clickAudio: HTMLAudioElement | null = null
-
     const playClickSound = () => {
       try {
         if (!clickAudio) {
@@ -214,16 +205,13 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
         }
         clickAudio.currentTime = 0
         clickAudio.play().catch(() => {})
-      } catch {
-        // on ignore les erreurs audio
-      }
+      } catch {}
     }
 
     // ----------------------------------------------------------------
-    // onClick — avec détection de drag
+    // onClick
     // ----------------------------------------------------------------
     let mouseDownPos = { x: 0, y: 0 }
-
     function onMouseDown(e: MouseEvent) {
       mouseDownPos = { x: e.clientX, y: e.clientY }
     }
@@ -233,7 +221,6 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
       if (!placementStore.selectedItem || !placementStore.hoveredTile) return
       if (!placementStore.canPlace) return
 
-      // Si la souris a bougé de plus de 5px entre mousedown et click, c'est un drag — on ignore
       const dx = e.clientX - mouseDownPos.x
       const dy = e.clientY - mouseDownPos.y
       if (Math.sqrt(dx * dx + dy * dy) > 5) return
@@ -246,6 +233,14 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
       if (!entity) return
 
       entity.rotation.y = targetRotY.current
+      // Enregistre dans l'historique
+      historyStore.push({
+        type: "place",
+        entityObject: entity,
+        tileX,
+        tileZ,
+        tileSize: size,
+      })
 
       playClickSound()
     }
@@ -259,26 +254,23 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
         removeGhost()
         return
       }
-
       if ((e.key === "r" || e.key === "R") && placementStore.selectedItem) {
         placementStore.rotate()
         targetRotY.current += THREE.MathUtils.degToRad(90)
       }
+      // Ctrl+Z géré globalement par EntityPopups via applyUndo()
     }
 
     // ----------------------------------------------------------------
-    // Abonnement store — reconstruire le ghost uniquement si l'item change
+    // Abonnement store
     // ----------------------------------------------------------------
     let lastSelectedId: string | null = null
     const unsubscribe = placementStore.subscribe(() => {
       const currentId = placementStore.selectedItem?.id ?? null
       if (currentId !== lastSelectedId) {
         lastSelectedId = currentId
-        if (!placementStore.selectedItem) {
-          removeGhost()
-        } else {
-          buildGhost(placementStore.selectedItem)
-        }
+        if (!placementStore.selectedItem) removeGhost()
+        else buildGhost(placementStore.selectedItem)
       }
     })
 

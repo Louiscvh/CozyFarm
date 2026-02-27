@@ -21,6 +21,9 @@ const INVENTORY_ITEMS: InventoryItem[] = [
   { id: "torch",  label: "Torche",  icon: "🔥", entity: TorchEntity },
 ]
 
+// Touches physiques 1–7, indépendantes du layout clavier (AZERTY, QWERTY, etc.)
+const SLOT_CODES = INVENTORY_ITEMS.map((_, i) => `Digit${i + 1}`)
+
 export function InventoryBar() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [rotation, setRotation] = useState(0)
@@ -35,21 +38,20 @@ export function InventoryBar() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return
+
       if (e.key === "Escape") {
         setSelectedId(null)
         placementStore.cancel()
+        return
       }
 
-      // Sélection via touches 1-7
-      if (/^[1-7]$/.test(e.key)) {
-        const index = parseInt(e.key, 10) - 1
+      const index = SLOT_CODES.indexOf(e.code)
+      if (index !== -1) {
         const item = INVENTORY_ITEMS[index]
         if (item) {
-          if (selectedId === item.id) {
-            placementStore.cancel()
-          } else {
-            placementStore.select(item)
-          }
+          if (selectedId === item.id) placementStore.cancel()
+          else placementStore.select(item)
         }
       }
     }
@@ -58,11 +60,8 @@ export function InventoryBar() {
   }, [selectedId])
 
   function handleSelect(item: InventoryItem) {
-    if (selectedId === item.id) {
-      placementStore.cancel()
-    } else {
-      placementStore.select(item)
-    }
+    if (selectedId === item.id) placementStore.cancel()
+    else placementStore.select(item)
   }
 
   return (
