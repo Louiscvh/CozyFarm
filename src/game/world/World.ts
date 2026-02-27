@@ -27,13 +27,14 @@ export class World {
 
     this.tilesFactory = new TileFactory(scene, this.size, tileSize)
 
+    // 🔧 DEBUG — retire cette ligne une fois le corner-based vérifié
+    this.tilesFactory.addDebugCornerTile()
+
     this.initialize()
   }
 
   // ─── Camera & Weather ─────────────────────────────────────────────────────
 
-  // La camera n'est pas dispo dans le constructeur dans certains setups,
-  // donc on initialise Weather dès qu'elle est assignée.
   setCamera(camera: THREE.Camera) {
     this.camera = camera
   }
@@ -70,6 +71,23 @@ export class World {
       tileX: Math.floor((worldX + this.tileSize / 2) / this.tileSize + this.size / 2),
       tileZ: Math.floor((worldZ + this.tileSize / 2) / this.tileSize + this.size / 2),
     }
+  }
+
+  // ─── Terrain checks ───────────────────────────────────────────────────────
+
+  /**
+   * Vérifie que toute la zone de spawn est sur un terrain valide (pas d'eau).
+   * On utilise le type dominant du tile, pas les coins, pour la logique gameplay.
+   */
+  private isValidSpawnTerrain(tileX: number, tileZ: number, size: number): boolean {
+    const gridSize = Math.max(1, Math.ceil(size))
+    for (let dx = 0; dx < gridSize; dx++) {
+      for (let dz = 0; dz < gridSize; dz++) {
+        const type = this.tilesFactory.getTileType(tileX + dx, tileZ + dz)
+        if (type === "water") return false
+      }
+    }
+    return true
   }
 
   // ─── Entity spawning ──────────────────────────────────────────────────────
@@ -121,6 +139,9 @@ export class World {
         const tileZ = Math.floor(Math.random() * this.size)
         const type  = cat.types[Math.floor(Math.random() * cat.types.length)]
         const size  = (type as any).sizeInTiles ?? 1
+
+        // Pas de spawn sur l'eau
+        if (!this.isValidSpawnTerrain(tileX, tileZ, size)) continue
 
         const ok = await this.spawnEntitySafe(type, tileX, tileZ, size)
         if (ok) placed++
