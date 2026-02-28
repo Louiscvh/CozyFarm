@@ -8,6 +8,21 @@
   animation: popupFadeIn 180ms ease-out forwards;
 }
 
+/* 🔺 Zone pont invisible */
+.entity-popup-bridge {
+  position: absolute;
+  top: 100%;             
+  left: 50%;
+  transform: translateX(-50%);
+  width: 80px;
+  height: 40px;
+  background: transparent;
+  outline: transparent;
+  pointer-events: auto;
+  clip-path: polygon(0% 0%, 100% 0%, 50% 100%);
+}
+
+
 @keyframes popupFadeIn {
   from {
     opacity: 0;

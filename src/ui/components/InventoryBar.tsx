@@ -279,7 +279,7 @@ export function InventoryBar() {
               onDragLeave={() => setDragOver(null)}
               onDrop={onDropExtra}
             >
-              <div className="extra-drop-hint">Glisse ici pour retirer de la hotbar</div>
+              <div className="extra-drop-hint">Glisser déposer ici pour modifier</div>
               <div className="inventory-row extra-row">
                 {extraItems.map(item => renderExtraItem(item))}
                 {/* Slot vide pour accueillir un drop quand extra est vide */}

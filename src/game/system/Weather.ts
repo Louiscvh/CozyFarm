@@ -125,7 +125,7 @@ export class Weather {
       Math.max(0, sunY) * radius,
       50
     )
-    this.sun.intensity  = this.daylight
+    this.sun.intensity = this.daylight * 2
     this.sun.color      = new THREE.Color("#001133").lerp(new THREE.Color("#ffb347"), this.daylight)
     this.backSun.intensity = this.daylight * 0.4
 

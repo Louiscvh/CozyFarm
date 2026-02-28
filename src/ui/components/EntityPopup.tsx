@@ -218,8 +218,14 @@ export function EntityPopups() {
     <div
       className="entity-popup"
       ref={popupRef}
-      onMouseEnter={() => { isOverPopup.current = true;  cancelClose()     }}
-      onMouseLeave={() => { isOverPopup.current = false; scheduleClose()   }}
+      onMouseEnter={() => {
+        isOverPopup.current = true
+        cancelClose()
+      }}
+      onMouseLeave={() => {
+        isOverPopup.current = false
+        scheduleClose()
+      }}
       style={{
         position: "absolute",
         display: "flex",
@@ -229,8 +235,22 @@ export function EntityPopups() {
         transform: "translate(-50%, -50%)",
       }}
     >
-      <UIButton className="rotate-btn" onClick={() => handleRotate(hoveredPopup)}>↻</UIButton>
-      <UIButton className="delete-btn" onClick={() => handleDelete(hoveredPopup)}>🗑️</UIButton>
+      {/* 🔺 Triangle */}
+      <div className="entity-popup-bridge" />
+  
+      <UIButton
+        className="rotate-btn"
+        onClick={() => handleRotate(hoveredPopup)}
+      >
+        ↻
+      </UIButton>
+  
+      <UIButton
+        className="delete-btn"
+        onClick={() => handleDelete(hoveredPopup)}
+      >
+        🗑️
+      </UIButton>
     </div>
   )
 }
