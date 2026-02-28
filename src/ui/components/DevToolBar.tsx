@@ -1,20 +1,29 @@
+// src/ui/components/DevToolBar.tsx
 import { useEffect, useState } from "react"
 import { Time } from "../../game/core/Time"
 import { UIButton } from "./UIButton"
 import { World } from "../../game/world/World"
 import "./DevToolBar.css"
 import { toggleDebugHitbox } from "../../game/entity/EntityFactory"
+import { toggleDebugGrid } from "../hooks/usePlacement"
 
 export const DevToolBar = () => {
-  const [visible, setVisible] = useState(false)
-  const [, forceUpdate] = useState(0)
-  const [isRaining, setIsRaining] = useState(World.current?.weather.getRainIntensity() != 'none')
-  const [lastSpeed, setLastSpeed] = useState(1)
+  const [visible, setVisible]         = useState(false)
+  const [, forceUpdate]               = useState(0)
+  const [isRaining, setIsRaining]     = useState(World.current?.weather.getRainIntensity() != 'none')
+  const [lastSpeed, setLastSpeed]     = useState(1)
+  const [footprintVisible, setFootprintVisible] = useState(false)
   const [hitboxVisible, setHitboxVisible] = useState(false)
+  const [gridVisible, setGridVisible] = useState(false)
 
   const toggleHitbox = () => {
     toggleDebugHitbox()
     setHitboxVisible(v => !v)
+  }
+
+  const handleToggleGrid = () => {
+    toggleDebugGrid()
+    setGridVisible(v => !v)
   }
 
   const setSpeed = (v: number) => {
@@ -39,7 +48,10 @@ export const DevToolBar = () => {
     return () => window.removeEventListener("keydown", onKey)
   }, [])
 
-  const toggleDebugMarkers = () => World.current?.toggleDebugMarkers()
+  const toggleDebugMarkers = () => {
+    World.current?.tilesFactory.toggleDebugMarkers()
+    setFootprintVisible(v => !v)
+  }
   const goDay   = () => Time.jumpToDayT(0.5, 2)
   const goNight = () => Time.jumpToDayT(0.0, 2)
 
@@ -53,40 +65,39 @@ export const DevToolBar = () => {
   return (
     <div className={`dev-toolbar ${visible ? "visible" : ""}`}>
       <div className="line">
-      <section>
-        <UIButton
-          className={isPaused ? "selected" : ""}
-          onClick={togglePause}
-        >
-          {isPaused ? "▶️" : "⏸️"}
-        </UIButton>
-
-        {[1, 5, 10].map(v => (
+        <section>
           <UIButton
-            key={v}
-            className={Time.timeScale === v ? "selected" : ""}
-            onClick={() => setSpeed(v)}
+            className={isPaused ? "selected" : ""}
+            onClick={togglePause}
           >
-            x{v}
+            {isPaused ? "▶️" : "⏸️"}
           </UIButton>
-        ))}
-      </section>
 
-      <section>
-        <UIButton onClick={goDay}>🌞</UIButton>
-        <UIButton onClick={goNight}>🌙</UIButton>
-        <UIButton onClick={toggleRain} className={isRaining ? "selected" : ""}>☔️</UIButton>
-      </section>
+          {[1, 5, 10].map(v => (
+            <UIButton
+              key={v}
+              className={Time.timeScale === v ? "selected" : ""}
+              onClick={() => setSpeed(v)}
+            >
+              x{v}
+            </UIButton>
+          ))}
+        </section>
 
-     
+        <section>
+          <UIButton onClick={goDay}>🌞</UIButton>
+          <UIButton onClick={goNight}>🌙</UIButton>
+          <UIButton onClick={toggleRain} className={isRaining ? "selected" : ""}>☔️</UIButton>
+        </section>
       </div>
+
       <div className="line">
-      <section>
-        <UIButton onClick={toggleDebugMarkers}>🚧</UIButton>
-        <UIButton onClick={toggleHitbox} className={hitboxVisible ? "selected" : ""}>📦</UIButton>
-      </section>
+        <section>
+          <UIButton onClick={toggleDebugMarkers} className={footprintVisible ? "selected" : ""}>🚧</UIButton>
+          <UIButton onClick={toggleHitbox} className={hitboxVisible ? "selected" : ""}>📦</UIButton>
+          <UIButton onClick={handleToggleGrid} className={gridVisible ? "selected" : ""} title="Afficher grille complète">🔲</UIButton>
+        </section>
       </div>
-      
     </div>
   )
 }

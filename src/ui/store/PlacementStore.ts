@@ -5,7 +5,7 @@ import type { Entity } from "../../game/entity/Entity"
 export interface InventoryItem {
   id: string
   label: string
-  icon: string       // emoji ou chemin vers une icône
+  icon: string
   entity: Entity
 }
 
@@ -13,18 +13,16 @@ type PlacementListener = () => void
 
 class PlacementStore {
   selectedItem: InventoryItem | null = null
-  rotation: number = 0          // 0, 90, 180, 270
+  rotation: number = 0
   ghostMesh: THREE.Object3D | null = null
-  hoveredTile: { tileX: number; tileZ: number } | null = null
+  hoveredCell: { cellX: number; cellZ: number } | null = null  // ← était tileX/tileZ
   canPlace: boolean = false
 
   private listeners = new Set<PlacementListener>()
 
   subscribe(fn: PlacementListener) {
     this.listeners.add(fn)
-    return () => {
-      this.listeners.delete(fn)
-    }
+    return () => { this.listeners.delete(fn) }
   }
 
   notify() {

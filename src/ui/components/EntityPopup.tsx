@@ -13,12 +13,26 @@ interface PopupInfo {
   screenPos: { x: number; y: number }
 }
 
+function isMouseOverElement(el: HTMLElement | null, e: { clientX: number; clientY: number }): boolean {
+  if (!el) return false
+  const rect = el.getBoundingClientRect()
+  return (
+    e.clientX >= rect.left &&
+    e.clientX <= rect.right &&
+    e.clientY >= rect.top  &&
+    e.clientY <= rect.bottom
+  )
+}
+
 export function EntityPopups() {
   const [hoveredPopup, setHoveredPopup] = useState<PopupInfo | null>(null)
   const rotRafRef   = useRef<number>(0)
   const currentRotY = useRef<number>(0)
   const targetRotY  = useRef<number>(0)
-  const popupRef = useRef<HTMLDivElement | null>(null)
+  const popupRef    = useRef<HTMLDivElement | null>(null)
+
+  // On garde une ref de la position souris pour le cameraController
+  const lastMouseEvent = useRef<{ clientX: number; clientY: number } | null>(null)
 
   useEffect(() => {
     const r = Renderer.instance
@@ -26,26 +40,28 @@ export function EntityPopups() {
 
     const prev = r.cameraController.onUpdate
     r.cameraController.onUpdate = () => {
-
-      const mouse = Renderer.instance!.mouse  // ← déjà trackée
+      const mouse = Renderer.instance!.mouse
       const w = World.current
       if (!w) return
-    
+
       setHoveredPopup(current => {
         if (!current) return null
         if (!w.entities.includes(current.entityObject)) return null
-    
-        // Vérifie si la souris est toujours sur l'hitbox
+
+        // ← Si la souris est sur la popup, on ne ferme pas
+        if (isMouseOverElement(popupRef.current, lastMouseEvent.current ?? { clientX: 0, clientY: 0 })) {
+          return current
+        }
+
         const raycaster = new THREE.Raycaster()
-        raycaster.setFromCamera(mouse, w.camera) // mouse = THREE.Vector2 du Renderer
-    
+        raycaster.setFromCamera(mouse, w.camera)
+
         const hitbox = current.entityObject.getObjectByName("__hitbox__")
         if (!hitbox) return null
-    
+
         const intersects = raycaster.intersectObject(hitbox, false)
-        if (intersects.length === 0) return null  // ← ferme la popup
-    
-        // Repositionne
+        if (intersects.length === 0) return null
+
         const box = new THREE.Box3().setFromObject(hitbox)
         const topCenter = new THREE.Vector3(
           (box.min.x + box.max.x) / 2,
@@ -53,10 +69,10 @@ export function EntityPopups() {
           (box.min.z + box.max.z) / 2
         )
         topCenter.project(w.camera)
-    
+
         const x = (topCenter.x + 1) / 2 * window.innerWidth
         const y = (-topCenter.y + 1) / 2 * window.innerHeight
-    
+
         if (Math.abs(x - current.screenPos.x) < 0.5 && Math.abs(y - current.screenPos.y) < 0.5) return current
         return { ...current, screenPos: { x, y } }
       })
@@ -70,68 +86,57 @@ export function EntityPopups() {
     const mouse = new THREE.Vector2()
 
     function onMouseMove(e: MouseEvent) {
+      lastMouseEvent.current = { clientX: e.clientX, clientY: e.clientY }
+
       const w = World.current
       if (!w || !w.camera) return
-      const cam = w.camera
-    
+
       if (placementStore.selectedItem) {
         setHoveredPopup(null)
         return
       }
-    
-      // 🔥 Priorité absolue à la popup — si on est dessus, on ne fait rien
-      if (popupRef.current) {
-        const rect = popupRef.current.getBoundingClientRect()
-        const inside =
-          e.clientX >= rect.left &&
-          e.clientX <= rect.right &&
-          e.clientY >= rect.top &&
-          e.clientY <= rect.bottom
-        if (inside) return
-      }
-    
-      mouse.x = (e.clientX / window.innerWidth) * 2 - 1
-      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1
-    
+
+      // Si la souris est sur la popup, on ne fait rien — elle reste ouverte
+      if (isMouseOverElement(popupRef.current, e)) return
+
+      const cam = w.camera
+      mouse.x = (e.clientX / window.innerWidth)  *  2 - 1
+      mouse.y = -(e.clientY / window.innerHeight) *  2 + 1
+
       raycaster.setFromCamera(mouse, cam)
-    
+
       const hitboxes: THREE.Object3D[] = []
       for (const entity of w.entities) {
         const hitbox = entity.getObjectByName("__hitbox__")
         if (hitbox) hitboxes.push(hitbox)
       }
-    
+
       const intersects = raycaster.intersectObjects(hitboxes, false)
-    
+
       if (intersects.length > 0) {
-        const hit = intersects[0].object
+        const hit    = intersects[0].object
         const entity = hit.parent!
-    
+
         const box = new THREE.Box3().setFromObject(hit)
         const topCenter = new THREE.Vector3(
           (box.min.x + box.max.x) / 2,
-          box.max.y,
+          box.max.y + 0.3,
           (box.min.z + box.max.z) / 2
         )
-        topCenter.y += 0.3
         topCenter.project(cam)
-    
+
         const x = (topCenter.x + 1) / 2 * window.innerWidth
         const y = (-topCenter.y + 1) / 2 * window.innerHeight
-    
+
         setHoveredPopup({ entityObject: entity, id: entity.uuid, screenPos: { x, y } })
         return
       }
-    
+
       setHoveredPopup(null)
     }
 
-
     window.addEventListener("mousemove", onMouseMove)
-
-    return () => {
-      window.removeEventListener("mousemove", onMouseMove)
-    }
+    return () => { window.removeEventListener("mousemove", onMouseMove) }
   }, [])
 
   const handleDelete = (popup: PopupInfo) => {
@@ -139,24 +144,22 @@ export function EntityPopups() {
     if (!w) return
     const e = popup.entityObject
 
-    const tileX    = e.userData.tileX    as number
-    const tileZ    = e.userData.tileZ    as number
-    const tileSize = (e.userData.tileSize as number) ?? 1
+    const cellX       = e.userData.cellX       as number
+    const cellZ       = e.userData.cellZ       as number
+    const sizeInCells = (e.userData.sizeInCells as number) ?? 1
 
-    const occupiedTiles: { x: number; z: number; size: number }[] = []
-    for (let dx = 0; dx < tileSize; dx++) {
-      for (let dz = 0; dz < tileSize; dz++) {
-        occupiedTiles.push({ x: tileX + dx, z: tileZ + dz, size: 1 })
-      }
-    }
+    const occupiedCells: { x: number; z: number }[] = []
+    for (let dx = 0; dx < sizeInCells; dx++)
+      for (let dz = 0; dz < sizeInCells; dz++)
+        occupiedCells.push({ x: cellX + dx, z: cellZ + dz })
 
     const startY     = e.position.y
     const startScale = e.scale.clone()
     const startRot   = e.rotation.clone()
     const duration   = 400
     const startTime  = performance.now()
-    let   cancelled  = false
-    let   rafId      = 0
+    let cancelled    = false
+    let rafId        = 0
 
     function cancelAnimation() {
       cancelled = true
@@ -166,18 +169,19 @@ export function EntityPopups() {
     historyStore.push({
       type: "delete",
       entityObject: e,
-      occupiedTiles,
-      savedHoveredTile: placementStore.hoveredTile,
+      occupiedCells,
+      sizeInCells,
+      savedHoveredCell: placementStore.hoveredCell,
       cancelAnimation,
-      originalY: startY,
-      originalScale: startScale,
+      originalY:        startY,
+      originalScale:    startScale,
       originalRotation: startRot,
     })
 
     w.entities = w.entities.filter(en => en !== e)
-    occupiedTiles.forEach(t => w.tilesFactory.markFree(t.x, t.z, t.size))
-    placementStore.hoveredTile = null
-    placementStore.canPlace = true
+    occupiedCells.forEach(c => w.tilesFactory.markFree(c.x, c.z, 1))
+    placementStore.hoveredCell = null
+    placementStore.canPlace    = true
     setHoveredPopup(null)
 
     function animate(now: number) {
@@ -191,7 +195,6 @@ export function EntityPopups() {
         w?.scene.remove(e)
       }
     }
-
     rafId = requestAnimationFrame(animate)
   }
 
@@ -227,7 +230,7 @@ export function EntityPopups() {
       style={{
         position: "absolute",
         display: "flex",
-        gap: '4px',
+        gap: "4px",
         left: hoveredPopup.screenPos.x,
         top: hoveredPopup.screenPos.y,
         transform: "translate(-50%, -50%)",

@@ -1,10 +1,10 @@
 // src/game/entity/TorchEntity.ts
 import type { Entity } from "./Entity"
 
-export const TorchEntity: Entity & { sizeInTiles: number } = {
+export const TorchEntity: Entity  = {
   id: "torch",
   model: "procedural:torch",  // flag spécial intercepté par EntityFactory
-  sizeInTiles: 1,
+  modelSize: 1,
   castShadow: false,
   receiveShadow: false,
 }

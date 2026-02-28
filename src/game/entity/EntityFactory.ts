@@ -2,7 +2,7 @@
 import * as THREE from "three"
 import type { Entity } from "./Entity"
 import { assetManager } from "../../render/AssetManager"
-import { scaleModelToTiles } from "./utils/scaleModelToTiles"
+import { scaleModelToCells } from "./utils/scaleModelToCells"
 import { applyRotation } from "./utils/applyRotation"
 import { createTorchMesh } from "./TorchMesh"
 import { World } from "../world/World"
@@ -36,15 +36,12 @@ export function attachHitBox(root: THREE.Object3D): void {
 
   const box = new THREE.Box3().setFromObject(root)
 
-  const size = new THREE.Vector3()
+  const size   = new THREE.Vector3()
   const center = new THREE.Vector3()
   box.getSize(size)
   box.getCenter(center)
 
-  // ← Corrige le Y AVANT de remettre le scale
-  // box.min.y est en espace non-scalé (scale=1), donc pas besoin de multiplier
   root.position.y -= box.min.y * originalScale.y
-  // On remet le scale
   root.scale.copy(originalScale)
   root.updateMatrixWorld(true)
 
@@ -74,6 +71,9 @@ export async function createEntity(
   def: Entity,
   tileSize: number
 ): Promise<THREE.Object3D> {
+  // cellSize = tileSize / 2 — modelSize est en cellules, pas en tiles
+  const cellSize = tileSize / 2
+
   if (def.model === "procedural:torch") {
     const root = createTorchMesh()
     const scale = tileSize * 0.4
@@ -84,15 +84,18 @@ export async function createEntity(
 
   const gltf = await assetManager.loadGLTF(def.model)
   const root = gltf.scene.clone(true)
-  scaleModelToTiles(root, def.sizeInTiles, tileSize)
+
+  // ← cellSize au lieu de tileSize : modelSize=6 cellules × cellSize=1u = 6u monde
+  //   avant : modelSize=6 × tileSize=2u = 12u monde (doublement)
+  scaleModelToCells(root, def.modelSize, cellSize)
   applyRotation(root, def.rotation)
 
-  const cast = def.castShadow !== undefined ? def.castShadow : true
+  const cast    = def.castShadow    !== undefined ? def.castShadow    : true
   const receive = def.receiveShadow !== undefined ? def.receiveShadow : true
 
   root.traverse((obj: THREE.Object3D) => {
     if ((obj as THREE.Mesh).isMesh) {
-      obj.castShadow = cast
+      obj.castShadow    = cast
       obj.receiveShadow = receive
     }
   })

@@ -1,11 +1,19 @@
+// src/entity/utils/scaleModelToCells.ts
 import * as THREE from "three"
 
-export function scaleModelToTiles(
+/**
+ * Scale un modèle 3D pour que son empreinte au sol corresponde
+ * à modelSize cellules en unités monde.
+ *
+ * @param root       - L'objet racine du modèle
+ * @param modelSize  - Taille cible en cellules (ex: 2 = 1 tile, 6 = 3 tiles)
+ * @param cellSize   - Taille d'une cellule en unités monde (= tileSize / 2)
+ */
+export function scaleModelToCells(
   root: THREE.Object3D,
-  sizeInTiles: number,
-  tileSize: number
+  modelSize: number,
+  cellSize: number
 ) {
-  // Force le calcul des matrices locales avant de mesurer
   root.updateMatrixWorld(true)
 
   const box = new THREE.Box3()
@@ -37,8 +45,8 @@ export function scaleModelToTiles(
   const size = new THREE.Vector3()
   box.getSize(size)
 
-  const maxFootprint = Math.max(size.x, size.z)
-  const targetWorldSize = sizeInTiles * tileSize
-  const scale = targetWorldSize / maxFootprint
+  const maxFootprint    = Math.max(size.x, size.z)
+  const targetWorldSize = modelSize * cellSize   // ex: 6 cellules × 1u = 6u monde
+  const scale           = targetWorldSize / maxFootprint
   root.scale.setScalar(scale)
 }

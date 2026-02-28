@@ -8,6 +8,7 @@ import {
   tileTypeAt,
   computeAllCorners,
 } from "./Tile"
+import { getFootprint } from "../entity/Entity"
 import type { Entity } from "../entity/Entity"
 import { FarmEntity } from "../entity/FarmEntity"
 import { WheatField } from "../entity/WheatField"
@@ -23,25 +24,28 @@ export interface DecorCategory { types: Entity[]; density: number }
 export interface FixedEntityDef { def: Entity; tileX: number; tileZ: number; size: number }
 
 export const DECOR_CATEGORIES: DecorCategory[] = [
-  { types: [Tree1Entity, Tree2Entity, Tree3Entity], density: 30 / 400 },
+  { types: [Tree1Entity, Tree2Entity, Tree3Entity], density: 40 / 400 },
   { types: [Rock1Entity],                           density: 10 / 400 },
   { types: [Flower1Entity],                         density: 60 / 400 },
 ]
 
 export function getFixedEntities(worldCenter: number): FixedEntityDef[] {
   const c = worldCenter
-  const offset = Math.floor(FarmEntity.sizeInTiles / 2)
+
+  // footprint en cellules → tiles = /2 → offset de centrage = /2
+  const farmFootprintInTiles = getFootprint(FarmEntity) / 2
+  const farmOffset = Math.floor(farmFootprintInTiles / 2)
+
   return [
-    { def: FarmEntity, tileX: c - offset, tileZ: c - offset, size: FarmEntity.sizeInTiles },
-    { def: WheatField, tileX: c + 2, tileZ: c - 2, size: WheatField.sizeInTiles },
-    { def: WheatField, tileX: c + 3, tileZ: c + 0, size: WheatField.sizeInTiles },
-    { def: WheatField, tileX: c + 3, tileZ: c - 2, size: WheatField.sizeInTiles },
-    { def: WheatField, tileX: c + 2, tileZ: c - 1, size: WheatField.sizeInTiles },
+    { def: FarmEntity, tileX: c - farmOffset, tileZ: c - farmOffset, size: getFootprint(FarmEntity) },
+    { def: WheatField, tileX: c + 2, tileZ: c - 2, size: getFootprint(WheatField) },
+    { def: WheatField, tileX: c + 3, tileZ: c + 0, size: getFootprint(WheatField) },
+    { def: WheatField, tileX: c + 3, tileZ: c - 2, size: getFootprint(WheatField) },
+    { def: WheatField, tileX: c + 2, tileZ: c - 1, size: getFootprint(WheatField) },
   ]
 }
 
-// ─── Offsets des 4 sous-tiles dans un tile ────────────────────────────────────
-// [TL, TR, BL, BR] — en fraction de tileSize
+// ─── Offsets des 4 coins dans un tile ─────────────────────────────────────────
 const CORNER_OFFSETS: [number, number][] = [
   [-0.25, -0.25], // TL
   [ 0.25, -0.25], // TR
@@ -55,24 +59,24 @@ export class TileFactory {
   private scene: THREE.Scene
   readonly worldSize: number
   readonly tileSize: number
+  readonly cellSize: number
+  readonly worldSizeInCells: number
 
-  private occupiedPositions = new Set<string>()
+  private occupiedCells = new Set<string>()
   private debugMarkers: THREE.Mesh[] = []
   private debugMarkersVisible = false
 
-  // Un InstancedMesh par type — mais maintenant pour des sous-tiles (tileSize/2)
-  // 4 sous-tiles par tile, donc jusqu'à 4 * worldSize² instances au total,
-  // réparties entre les 4 types. C'est toujours 4 draw calls.
   private instancedMeshes: Map<TileType, THREE.InstancedMesh> = new Map()
-
-  // Accès aux données de tile par coordonnées
   private tileMap: Map<string, Tile> = new Map()
 
   constructor(scene: THREE.Scene, worldSize: number, tileSize: number) {
-    this.scene = scene
-    this.worldSize = worldSize
-    this.tileSize = tileSize
+    this.scene            = scene
+    this.worldSize        = worldSize
+    this.tileSize         = tileSize
+    this.cellSize         = tileSize / 2
+    this.worldSizeInCells = worldSize * 2
     this.generateGrid()
+    //this.addDebugCornerTile()
   }
 
   // ─── Accès aux données ───────────────────────────────────────────────────────
@@ -85,12 +89,23 @@ export class TileFactory {
     return this.getTile(tileX, tileZ)?.type
   }
 
+  cellToTile(cellX: number, cellZ: number): { tileX: number; tileZ: number } {
+    return {
+      tileX: Math.floor(cellX / 2),
+      tileZ: Math.floor(cellZ / 2),
+    }
+  }
+
+  getTileTypeAtCell(cellX: number, cellZ: number): TileType | undefined {
+    const { tileX, tileZ } = this.cellToTile(cellX, cellZ)
+    return this.getTileType(tileX, tileZ)
+  }
+
   // ─── Grid generation ─────────────────────────────────────────────────────────
 
   generateGrid(): Tile[] {
     const tiles: Tile[] = []
 
-    // 1. Génère la grille de types via Perlin
     const typeGrid: TileType[][] = []
     for (let x = 0; x < this.worldSize; x++) {
       typeGrid[x] = []
@@ -99,18 +114,12 @@ export class TileFactory {
       }
     }
 
-    // 2. Calcule les coins pour chaque tile
     const cornersGrid = computeAllCorners(typeGrid, this.worldSize)
-
-    // 3. Construit les Tiles et compte les sous-tiles par type
-    //    (chaque coin = 1 sous-tile, donc on compte les corners par type)
     const countPerType: Record<TileType, number> = { grass: 0, water: 0, sand: 0, stone: 0 }
 
     for (let x = 0; x < this.worldSize; x++) {
       for (let z = 0; z < this.worldSize; z++) {
         const corners = cornersGrid[x][z]
-
-        // Type dominant = le plus fréquent parmi les 4 coins
         const freq: Record<TileType, number> = { grass: 0, water: 0, sand: 0, stone: 0 }
         for (const c of corners) freq[c]++
         const dominant = (Object.keys(freq) as TileType[])
@@ -119,37 +128,29 @@ export class TileFactory {
         const tile: Tile = { type: dominant, corners, tileX: x, tileZ: z }
         tiles.push(tile)
         this.tileMap.set(`${x}|${z}`, tile)
-
-        // On compte chaque coin comme un sous-tile
         for (const c of corners) countPerType[c]++
       }
     }
 
-    // 4. Crée un InstancedMesh par type — géométrie = demi-tile
-    const subSize = this.tileSize / 2
+    const subSize = this.cellSize
     const dummy = new THREE.Object3D()
     const indexPerType: Record<TileType, number> = { grass: 0, water: 0, sand: 0, stone: 0 }
 
     for (const type of TILE_TYPES) {
       const { color, roughness, metalness } = TILE_VISUALS[type]
-      // Sous-tile légèrement surélevé selon le type pour éviter le z-fighting
-      const yOffset = type === "water" ? -0.02 : 0
       const geometry = new THREE.BoxGeometry(subSize, 0.1, subSize)
       const material = new THREE.MeshStandardMaterial({ color, roughness, metalness })
       const mesh = new THREE.InstancedMesh(geometry, material, Math.max(1, countPerType[type]))
       mesh.receiveShadow = true
       mesh.castShadow = false
-      mesh.position.y = yOffset
+      if (type === "water") mesh.position.y = -0.02
       this.instancedMeshes.set(type, mesh)
       this.scene.add(mesh)
     }
 
-    // 5. Positionne chaque sous-tile
     for (let x = 0; x < this.worldSize; x++) {
       for (let z = 0; z < this.worldSize; z++) {
         const corners = cornersGrid[x][z]
-
-        // Centre du tile en coordonnées monde
         const centerX = (x - this.worldSize / 2) * this.tileSize
         const centerZ = (z - this.worldSize / 2) * this.tileSize
 
@@ -170,7 +171,6 @@ export class TileFactory {
       }
     }
 
-    // 6. Flush GPU
     for (const mesh of this.instancedMeshes.values()) {
       mesh.instanceMatrix.needsUpdate = true
     }
@@ -178,7 +178,7 @@ export class TileFactory {
     return tiles
   }
 
-  // ─── Debug markers ────────────────────────────────────────────────────────────
+  // ─── Debug ───────────────────────────────────────────────────────────────────
 
   toggleDebugMarkers() {
     this.debugMarkersVisible = !this.debugMarkersVisible
@@ -194,91 +194,81 @@ export class TileFactory {
     this.debugMarkers = []
   }
 
-  private createDebugMarker(tileX: number, tileZ: number, size: number) {
-    const geometry = new THREE.BoxGeometry(this.tileSize * size, 0.5, this.tileSize * size)
+  private createDebugMarker(cellX: number, cellZ: number) {
+    const geometry = new THREE.BoxGeometry(this.cellSize, 0.5, this.cellSize)
     const material = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.3 })
     const marker   = new THREE.Mesh(geometry, material)
-
-    const worldX = (tileX - this.worldSize / 2) * this.tileSize + (size / 2) * this.tileSize
-    const worldZ = (tileZ - this.worldSize / 2) * this.tileSize + (size / 2) * this.tileSize
-    marker.position.set(worldX - this.tileSize / 2, 0.25, worldZ - this.tileSize / 2)
+  
+    const halfCells = this.worldSizeInCells / 2
+  
+    // (cellX - halfCells) * cellSize = bord gauche de la cellule
+    // + cellSize / 2 = centre de la cellule
+    marker.position.set(
+      (cellX - halfCells) * this.cellSize + this.cellSize / 2,
+      0.25,
+      (cellZ - halfCells) * this.cellSize + this.cellSize / 2,
+    )
     marker.visible = this.debugMarkersVisible
-    marker.userData.tileKey = `${tileX}|${tileZ}`
-
+    marker.userData.cellKey = `${cellX}|${cellZ}`
+  
     this.debugMarkers.push(marker)
     this.scene.add(marker)
   }
 
-  // ─── Debug corner tile ───────────────────────────────────────────────────────
-
-  /**
-   * Place une tile de test au centre de la map avec les 4 coins de types différents.
-   * Utile pour vérifier que le rendu corner-based fonctionne.
-   * À appeler depuis World après generateGrid(), retirer en prod.
-   *
-   *   TL = water (bleu)  |  TR = stone (gris)
-   *   BL = sand  (sable) |  BR = grass (vert)
-   */
   addDebugCornerTile() {
     const cx = Math.floor(this.worldSize / 2)
     const cz = Math.floor(this.worldSize / 2)
-
     const forcedCorners: [TileType, TileType, TileType, TileType] = ["water", "stone", "sand", "grass"]
-    const subSize = this.tileSize / 2
-
+    const subSize = this.cellSize
     const centerX = (cx - this.worldSize / 2) * this.tileSize
     const centerZ = (cz - this.worldSize / 2) * this.tileSize
 
-    // On crée 4 Mesh individuels (pas instanciés) bien visibles au-dessus du terrain
     forcedCorners.forEach((type, i) => {
       const { color } = TILE_VISUALS[type]
       const [ox, oz] = CORNER_OFFSETS[i]
-
-      const geo = new THREE.BoxGeometry(subSize, 0.3, subSize)
-      const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.8, metalness: 0 })
+      const geo  = new THREE.BoxGeometry(subSize, 0.3, subSize)
+      const mat  = new THREE.MeshStandardMaterial({ color, roughness: 0.8, metalness: 0 })
       const mesh = new THREE.Mesh(geo, mat)
-
       mesh.position.set(
-        centerX + ox * this.tileSize,
-        0.2, // surélevé pour être bien visible au-dessus
-        centerZ + oz * this.tileSize,
+        centerX + ox * this.tileSize, 
+        0,
+        centerZ + oz * this.tileSize
       )
-      mesh.castShadow = false
-      mesh.receiveShadow = false
-      mesh.userData.isDebugCorner = true
-
       this.scene.add(mesh)
     })
   }
 
-  // ─── Tile occupancy ───────────────────────────────────────────────────────────
+  // ─── Cell occupancy ───────────────────────────────────────────────────────────
 
-  canSpawn(tileX: number, tileZ: number, size: number = 1): boolean {
-    const gridSize = Math.max(1, Math.ceil(size))
-    if (tileX < 0 || tileZ < 0 || tileX + gridSize > this.worldSize || tileZ + gridSize > this.worldSize) return false
-    for (let dx = 0; dx < gridSize; dx++)
-      for (let dz = 0; dz < gridSize; dz++)
-        if (this.occupiedPositions.has(`${tileX + dx}|${tileZ + dz}`)) return false
+  canSpawn(cellX: number, cellZ: number, sizeInCells: number = 1): boolean {
+    if (
+      cellX < 0 || cellZ < 0 ||
+      cellX + sizeInCells > this.worldSizeInCells ||
+      cellZ + sizeInCells > this.worldSizeInCells
+    ) return false
+
+    for (let dx = 0; dx < sizeInCells; dx++)
+      for (let dz = 0; dz < sizeInCells; dz++)
+        if (this.occupiedCells.has(`${cellX + dx}|${cellZ + dz}`)) return false
+
     return true
   }
 
-  markOccupied(tileX: number, tileZ: number, size: number = 1) {
-    const gridSize = Math.max(1, Math.ceil(size))
-    for (let dx = 0; dx < gridSize; dx++)
-      for (let dz = 0; dz < gridSize; dz++) {
-        this.occupiedPositions.add(`${tileX + dx}|${tileZ + dz}`)
-        this.createDebugMarker(tileX + dx, tileZ + dz, 1)
+  markOccupied(cellX: number, cellZ: number, sizeInCells: number = 1) {
+    for (let dx = 0; dx < sizeInCells; dx++)
+      for (let dz = 0; dz < sizeInCells; dz++) {
+        this.occupiedCells.add(`${cellX + dx}|${cellZ + dz}`)
+        this.createDebugMarker(cellX + dx, cellZ + dz)
       }
   }
 
-  markFree(tileX: number, tileZ: number, size: number = 1) {
-    const gridSize = Math.max(1, Math.ceil(size))
-    for (let dx = 0; dx < gridSize; dx++)
-      for (let dz = 0; dz < gridSize; dz++) {
-        const key = `${tileX + dx}|${tileZ + dz}`
-        this.occupiedPositions.delete(key)
+  markFree(cellX: number, cellZ: number, sizeInCells: number = 1) {
+    for (let dx = 0; dx < sizeInCells; dx++)
+      for (let dz = 0; dz < sizeInCells; dz++) {
+        const key = `${cellX + dx}|${cellZ + dz}`
+        this.occupiedCells.delete(key)
 
-        const idx = this.debugMarkers.findIndex(m => m.userData.tileKey === key)
+        const idx = this.debugMarkers.findIndex(m => m.userData.cellKey === key)
         if (idx !== -1) {
           const marker = this.debugMarkers.splice(idx, 1)[0]
           this.scene.remove(marker)

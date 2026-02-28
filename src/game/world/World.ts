@@ -2,7 +2,8 @@
 import * as THREE from "three"
 import { TileFactory, getFixedEntities, DECOR_CATEGORIES } from "./TileFactory"
 import { createEntity } from "../entity/EntityFactory"
-import { placeOnTile } from "../entity/utils/placeOnTile"
+import { placeOnCell } from "../entity/utils/placeOnCell"
+import { getFootprint } from "../entity/Entity"
 import type { Entity } from "../entity/Entity"
 import { Weather } from "../system/Weather"
 
@@ -11,6 +12,8 @@ export class World {
 
   readonly size: number = 80
   readonly tileSize: number
+  readonly cellSize: number
+  readonly sizeInCells: number
 
   public entities: THREE.Object3D[] = []
   public weather!: Weather
@@ -21,14 +24,13 @@ export class World {
   public tilesFactory: TileFactory
 
   constructor(scene: THREE.Scene, tileSize: number = 2) {
-    World.current = this
-    this.scene = scene
-    this.tileSize = tileSize
+    World.current    = this
+    this.scene       = scene
+    this.tileSize    = tileSize
+    this.cellSize    = tileSize / 2
+    this.sizeInCells = this.size * 2
 
     this.tilesFactory = new TileFactory(scene, this.size, tileSize)
-
-    // 🔧 DEBUG — retire cette ligne une fois le corner-based vérifié
-    this.tilesFactory.addDebugCornerTile()
 
     this.initialize()
   }
@@ -47,7 +49,6 @@ export class World {
 
   update(deltaTime: number) {
     if (!this.weather) return
-
     this.weather.update(deltaTime)
 
     const now = performance.now() / 1000
@@ -61,29 +62,30 @@ export class World {
 
   // ─── Debug markers ────────────────────────────────────────────────────────
 
-  public toggleDebugMarkers() { this.tilesFactory.toggleDebugMarkers() }
-  clearDebugMarkers()          { this.tilesFactory.clearDebugMarkers() }
 
-  // ─── Tile occupancy ───────────────────────────────────────────────────────
+  // ─── Coordonnées ──────────────────────────────────────────────────────────
 
-  worldToTileIndex(worldX: number, worldZ: number): { tileX: number; tileZ: number } {
+  worldToCellIndex(worldX: number, worldZ: number): { cellX: number; cellZ: number } {
+    // Formule correcte : floor(worldX / cellSize + halfCells)
+    // L'ancienne formule avait + cellSize/2 dans le numérateur, ce qui
+    // décalait le seuil de snap de 0.5 cellule — le ghost sautait une cellule trop tôt.
+    const halfCells = this.sizeInCells / 2
     return {
-      tileX: Math.floor((worldX + this.tileSize / 2) / this.tileSize + this.size / 2),
-      tileZ: Math.floor((worldZ + this.tileSize / 2) / this.tileSize + this.size / 2),
+      cellX: Math.floor(worldX / this.cellSize + halfCells),
+      cellZ: Math.floor(worldZ / this.cellSize + halfCells),
     }
+  }
+
+  tileToCell(tileX: number, tileZ: number): { cellX: number; cellZ: number } {
+    return { cellX: tileX * 2, cellZ: tileZ * 2 }
   }
 
   // ─── Terrain checks ───────────────────────────────────────────────────────
 
-  /**
-   * Vérifie que toute la zone de spawn est sur un terrain valide (pas d'eau).
-   * On utilise le type dominant du tile, pas les coins, pour la logique gameplay.
-   */
-  private isValidSpawnTerrain(tileX: number, tileZ: number, size: number): boolean {
-    const gridSize = Math.max(1, Math.ceil(size))
-    for (let dx = 0; dx < gridSize; dx++) {
-      for (let dz = 0; dz < gridSize; dz++) {
-        const type = this.tilesFactory.getTileType(tileX + dx, tileZ + dz)
+  private isValidSpawnTerrain(cellX: number, cellZ: number, sizeInCells: number): boolean {
+    for (let dx = 0; dx < sizeInCells; dx++) {
+      for (let dz = 0; dz < sizeInCells; dz++) {
+        const type = this.tilesFactory.getTileTypeAtCell(cellX + dx, cellZ + dz)
         if (type === "water") return false
       }
     }
@@ -92,19 +94,24 @@ export class World {
 
   // ─── Entity spawning ──────────────────────────────────────────────────────
 
-  async spawnEntitySafe(def: Entity, tileX: number, tileZ: number, size: number = 1): Promise<THREE.Object3D | null> {
-    const gridSize = Math.max(1, Math.ceil(size))
-    if (!this.tilesFactory.canSpawn(tileX, tileZ, gridSize)) return null
+  async spawnEntitySafe(
+    def: Entity,
+    cellX: number,
+    cellZ: number,
+    sizeInCells?: number
+  ): Promise<THREE.Object3D | null> {
+    const cells = sizeInCells ?? getFootprint(def)
 
-    this.tilesFactory.markOccupied(tileX, tileZ, gridSize)
+    if (!this.tilesFactory.canSpawn(cellX, cellZ, cells)) return null
+    this.tilesFactory.markOccupied(cellX, cellZ, cells)
 
     const entity = await createEntity(def, this.tileSize)
-    entity.userData.id       = def.id
-    entity.userData.tileX    = tileX
-    entity.userData.tileZ    = tileZ
-    entity.userData.tileSize = gridSize
+    entity.userData.id          = def.id
+    entity.userData.cellX       = cellX
+    entity.userData.cellZ       = cellZ
+    entity.userData.sizeInCells = cells
 
-    placeOnTile(entity, tileX, tileZ, this.tileSize, this.size, gridSize)
+    placeOnCell(entity, cellX, cellZ, this.cellSize, this.sizeInCells, cells)
     this.scene.add(entity)
     this.entities.push(entity)
 
@@ -118,16 +125,16 @@ export class World {
   }
 
   private async populateDecor() {
-    const center = this.size / 2
-
-    for (const e of getFixedEntities(center)) {
-      await this.spawnEntitySafe(e.def, e.tileX, e.tileZ, e.size)
+    for (const e of getFixedEntities(this.size / 2)) {
+      const { cellX, cellZ } = this.tileToCell(e.tileX, e.tileZ)
+      // e.size est déjà en cellules via getFootprint() — pas de conversion
+      await this.spawnEntitySafe(e.def, cellX, cellZ, e.size)
     }
 
-    const area = this.size * this.size
+    const totalCells = this.sizeInCells * this.sizeInCells
 
     for (const cat of DECOR_CATEGORIES) {
-      const count = Math.round(area * cat.density)
+      const count = Math.round(totalCells * cat.density / 4)
       let placed = 0
       let attempts = 0
       const maxAttempts = count * 50
@@ -135,15 +142,14 @@ export class World {
       while (placed < count && attempts < maxAttempts) {
         attempts++
 
-        const tileX = Math.floor(Math.random() * this.size)
-        const tileZ = Math.floor(Math.random() * this.size)
+        const cellX = Math.floor(Math.random() * this.sizeInCells)
+        const cellZ = Math.floor(Math.random() * this.sizeInCells)
         const type  = cat.types[Math.floor(Math.random() * cat.types.length)]
-        const size  = (type as any).sizeInTiles ?? 1
+        const cells = getFootprint(type)
 
-        // Pas de spawn sur l'eau
-        if (!this.isValidSpawnTerrain(tileX, tileZ, size)) continue
+        if (!this.isValidSpawnTerrain(cellX, cellZ, cells)) continue
 
-        const ok = await this.spawnEntitySafe(type, tileX, tileZ, size)
+        const ok = await this.spawnEntitySafe(type, cellX, cellZ, cells)
         if (ok) placed++
       }
     }
