@@ -41,7 +41,7 @@ export function attachHitBox(root: THREE.Object3D): void {
   box.getSize(size)
   box.getCenter(center)
 
-  root.position.y -= box.min.y * originalScale.y
+  root.position.y -= box.min.y * originalScale.y - 0.05
   root.scale.copy(originalScale)
   root.updateMatrixWorld(true)
 

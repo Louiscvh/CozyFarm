@@ -246,11 +246,20 @@ export class TileFactory {
       cellX + sizeInCells > this.worldSizeInCells ||
       cellZ + sizeInCells > this.worldSizeInCells
     ) return false
-
-    for (let dx = 0; dx < sizeInCells; dx++)
-      for (let dz = 0; dz < sizeInCells; dz++)
-        if (this.occupiedCells.has(`${cellX + dx}|${cellZ + dz}`)) return false
-
+  
+    for (let dx = 0; dx < sizeInCells; dx++) {
+      for (let dz = 0; dz < sizeInCells; dz++) {
+        const cx = cellX + dx
+        const cz = cellZ + dz
+  
+        // Bloque sur l'eau
+        if (this.getTileTypeAtCell(cx, cz) === "water") return false
+  
+        // Bloque sur cellule occupée
+        if (this.occupiedCells.has(`${cx}|${cz}`)) return false
+      }
+    }
+  
     return true
   }
 

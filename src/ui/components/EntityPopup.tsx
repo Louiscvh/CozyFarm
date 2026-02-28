@@ -13,26 +13,27 @@ interface PopupInfo {
   screenPos: { x: number; y: number }
 }
 
-function isMouseOverElement(el: HTMLElement | null, e: { clientX: number; clientY: number }): boolean {
-  if (!el) return false
-  const rect = el.getBoundingClientRect()
-  return (
-    e.clientX >= rect.left &&
-    e.clientX <= rect.right &&
-    e.clientY >= rect.top  &&
-    e.clientY <= rect.bottom
-  )
-}
-
 export function EntityPopups() {
   const [hoveredPopup, setHoveredPopup] = useState<PopupInfo | null>(null)
-  const rotRafRef   = useRef<number>(0)
-  const currentRotY = useRef<number>(0)
-  const targetRotY  = useRef<number>(0)
-  const popupRef    = useRef<HTMLDivElement | null>(null)
-
-  // On garde une ref de la position souris pour le cameraController
+  const rotRafRef      = useRef<number>(0)
+  const currentRotY    = useRef<number>(0)
+  const targetRotY     = useRef<number>(0)
+  const popupRef       = useRef<HTMLDivElement | null>(null)
+  const closeTimer     = useRef<ReturnType<typeof setTimeout> | null>(null)
   const lastMouseEvent = useRef<{ clientX: number; clientY: number } | null>(null)
+
+  // ← Source de vérité : la souris est-elle physiquement sur la popup ?
+  // Mis à jour par onMouseEnter/onMouseLeave — jamais de faux négatif.
+  const isOverPopup = useRef(false)
+
+  const cancelClose = () => {
+    if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null }
+  }
+
+  const scheduleClose = () => {
+    cancelClose()
+    closeTimer.current = setTimeout(() => setHoveredPopup(null), 300)
+  }
 
   useEffect(() => {
     const r = Renderer.instance
@@ -47,11 +48,7 @@ export function EntityPopups() {
       setHoveredPopup(current => {
         if (!current) return null
         if (!w.entities.includes(current.entityObject)) return null
-
-        // ← Si la souris est sur la popup, on ne ferme pas
-        if (isMouseOverElement(popupRef.current, lastMouseEvent.current ?? { clientX: 0, clientY: 0 })) {
-          return current
-        }
+        if (isOverPopup.current) return current  // souris sur la popup → ne pas fermer
 
         const raycaster = new THREE.Raycaster()
         raycaster.setFromCamera(mouse, w.camera)
@@ -92,16 +89,20 @@ export function EntityPopups() {
       if (!w || !w.camera) return
 
       if (placementStore.selectedItem) {
+        cancelClose()
         setHoveredPopup(null)
         return
       }
 
-      // Si la souris est sur la popup, on ne fait rien — elle reste ouverte
-      if (isMouseOverElement(popupRef.current, e)) return
+      // ← Vérification par ref — fiable même si le DOM n'est pas encore mis à jour
+      if (isOverPopup.current) {
+        cancelClose()
+        return
+      }
 
       const cam = w.camera
-      mouse.x = (e.clientX / window.innerWidth)  *  2 - 1
-      mouse.y = -(e.clientY / window.innerHeight) *  2 + 1
+      mouse.x =  (e.clientX / window.innerWidth)  * 2 - 1
+      mouse.y = -(e.clientY / window.innerHeight)  * 2 + 1
 
       raycaster.setFromCamera(mouse, cam)
 
@@ -128,18 +129,21 @@ export function EntityPopups() {
         const x = (topCenter.x + 1) / 2 * window.innerWidth
         const y = (-topCenter.y + 1) / 2 * window.innerHeight
 
+        cancelClose()
         setHoveredPopup({ entityObject: entity, id: entity.uuid, screenPos: { x, y } })
         return
       }
 
-      setHoveredPopup(null)
+      scheduleClose()
     }
 
     window.addEventListener("mousemove", onMouseMove)
-    return () => { window.removeEventListener("mousemove", onMouseMove) }
+    return () => { window.removeEventListener("mousemove", onMouseMove); cancelClose() }
   }, [])
 
   const handleDelete = (popup: PopupInfo) => {
+    cancelClose()
+    isOverPopup.current = false
     const w = World.current
     if (!w) return
     const e = popup.entityObject
@@ -161,21 +165,12 @@ export function EntityPopups() {
     let cancelled    = false
     let rafId        = 0
 
-    function cancelAnimation() {
-      cancelled = true
-      cancelAnimationFrame(rafId)
-    }
+    function cancelAnimation() { cancelled = true; cancelAnimationFrame(rafId) }
 
     historyStore.push({
-      type: "delete",
-      entityObject: e,
-      occupiedCells,
-      sizeInCells,
-      savedHoveredCell: placementStore.hoveredCell,
-      cancelAnimation,
-      originalY:        startY,
-      originalScale:    startScale,
-      originalRotation: startRot,
+      type: "delete", entityObject: e, occupiedCells, sizeInCells,
+      savedHoveredCell: placementStore.hoveredCell, cancelAnimation,
+      originalY: startY, originalScale: startScale, originalRotation: startRot,
     })
 
     w.entities = w.entities.filter(en => en !== e)
@@ -189,16 +184,14 @@ export function EntityPopups() {
       const t = Math.min((now - startTime) / duration, 1)
       e.position.y = startY + Math.sin(t * Math.PI) * 0.3 + t * t * -3
       e.scale.setScalar(startScale.x * (1 - t * 0.7))
-      if (t < 1) {
-        rafId = requestAnimationFrame(animate)
-      } else {
-        w?.scene.remove(e)
-      }
+      if (t < 1) rafId = requestAnimationFrame(animate)
+      else w?.scene.remove(e)
     }
     rafId = requestAnimationFrame(animate)
   }
 
   const handleRotate = (popup: PopupInfo) => {
+    cancelClose()
     const e = popup.entityObject
 
     if (Math.abs(targetRotY.current - e.rotation.y) > 0.01) {
@@ -212,11 +205,9 @@ export function EntityPopups() {
     function animateRot() {
       currentRotY.current += (targetRotY.current - currentRotY.current) * 0.3
       e.rotation.y = currentRotY.current
-      if (Math.abs(targetRotY.current - currentRotY.current) > 0.001) {
+      if (Math.abs(targetRotY.current - currentRotY.current) > 0.001)
         rotRafRef.current = requestAnimationFrame(animateRot)
-      } else {
-        e.rotation.y = targetRotY.current
-      }
+      else e.rotation.y = targetRotY.current
     }
     animateRot()
   }
@@ -227,12 +218,14 @@ export function EntityPopups() {
     <div
       className="entity-popup"
       ref={popupRef}
+      onMouseEnter={() => { isOverPopup.current = true;  cancelClose()     }}
+      onMouseLeave={() => { isOverPopup.current = false; scheduleClose()   }}
       style={{
         position: "absolute",
         display: "flex",
         gap: "4px",
         left: hoveredPopup.screenPos.x,
-        top: hoveredPopup.screenPos.y,
+        top:  hoveredPopup.screenPos.y,
         transform: "translate(-50%, -50%)",
       }}
     >

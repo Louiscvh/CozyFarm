@@ -196,6 +196,7 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
         setGhostColor(canPlace)
         highlightMesh.scale.set(footprint*world!.cellSize, footprint*world!.cellSize, 1)
         highlightMesh.position.set(x,0.055,z)
+        revealGroup.position.set(x, 0.056, z)
         highlightMesh.material = canPlace ? highlightMatOk : highlightMatBad
         highlightMesh.visible = true
         if (!_debugForceGrid) staticGridGroup.visible = true
