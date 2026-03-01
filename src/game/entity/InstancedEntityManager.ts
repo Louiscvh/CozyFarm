@@ -65,7 +65,15 @@ export class InstancedEntityManager {
    */
   async preparePool(def: Entity, tileSize: number, maxCount: number): Promise<PoolInfo> {
     const k = InstancedEntityManager.key(def)
-    if (this.pools.has(k)) return this.pools.get(k)!.info
+
+    // If pool exists but is too small, discard it so it gets rebuilt at the right size
+    const existing = this.pools.get(k)
+    if (existing) {
+      if (existing.maxCount >= maxCount) return existing.info
+      // Remove old InstancedMeshes from scene before rebuilding
+      for (const e of existing.entries) this.scene.remove(e.mesh)
+      this.pools.delete(k)
+    }
 
     const cellSize = tileSize / 2
     const gltf     = await assetManager.loadGLTF(def.model)
@@ -84,7 +92,7 @@ export class InstancedEntityManager {
     box.getCenter(boxCtr)
 
     const info: PoolInfo = {
-      yOffset  : -box.min.y + 0.05,   // shift so model bottom == y:0
+      yOffset  : -box.min.y + 0.05,   // shift so model bottom sits just above ground (mirrors attachHitBox)
       boxSize  : boxSz.clone(),
       boxCenter: boxCtr.clone(),
     }
@@ -137,7 +145,9 @@ export class InstancedEntityManager {
     for (let i = 0; i < pool.highWater; i++) {
       if (!pool.active[i]) { slot = i; break }
     }
-    if (slot >= pool.maxCount) throw new Error(`InstancedMesh pool full: ${InstancedEntityManager.key(def)}`)
+
+    // Pool full — grow by 50% so subsequent adds don't thrash
+    if (slot >= pool.maxCount) this._grow(pool)
 
     pool.active[slot] = true
     pool.highWater    = Math.max(pool.highWater, slot + 1)
@@ -145,6 +155,39 @@ export class InstancedEntityManager {
     this._write(pool, slot, worldPos, rotY, 1)
     this._flush(pool)
     return slot
+  }
+
+  /** Double the capacity of a pool by replacing each InstancedMesh with a larger one. */
+  private _grow(pool: Pool): void {
+    const newMax = Math.ceil(pool.maxCount * 1.5)
+
+    for (const e of pool.entries) {
+      const old = e.mesh
+
+      const grown = new THREE.InstancedMesh(old.geometry, old.material, newMax)
+      grown.castShadow    = old.castShadow
+      grown.receiveShadow = old.receiveShadow
+      grown.frustumCulled = false
+      grown.count         = old.count
+
+      // Copy existing matrices
+      for (let i = 0; i < old.count; i++) {
+        const m = new THREE.Matrix4()
+        old.getMatrixAt(i, m)
+        grown.setMatrixAt(i, m)
+      }
+      // Zero-fill the new slots
+      for (let i = old.count; i < newMax; i++) grown.setMatrixAt(i, _zero)
+      grown.instanceMatrix.needsUpdate = true
+
+      this.scene.remove(old)
+      this.scene.add(grown)
+      e.mesh = grown
+    }
+
+    // Extend the active array with false for new slots
+    for (let i = pool.maxCount; i < newMax; i++) pool.active.push(false)
+    pool.maxCount = newMax
   }
 
   /** Hide a slot (scale = 0, marked free). */

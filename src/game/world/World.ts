@@ -12,7 +12,7 @@ import { debugHitboxEnabled } from "../entity/EntityFactory"
 export class World {
   static current: World | null = null
 
-  readonly size: number = 50
+  readonly size: number = 80
   readonly tileSize: number
   readonly cellSize: number
   readonly sizeInCells: number

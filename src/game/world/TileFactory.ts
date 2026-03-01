@@ -26,10 +26,10 @@ export interface DecorCategory { types: Entity[]; density: number }
 export interface FixedEntityDef { def: Entity; tileX: number; tileZ: number; size: number }
 
 export const DECOR_CATEGORIES: DecorCategory[] = [
-  { types: [Tree1Entity, Tree2Entity, Tree3Entity, TreeOrangeEntity], density: 20 / 400 },
+  { types: [Tree1Entity, Tree2Entity, Tree3Entity, TreeOrangeEntity], density: 30 / 400 },
   { types: [Rock1Entity],                           density: 1.5 / 400 },
   { types: [Flower1Entity, TulipEntity],                         density: 20 / 400 },
-  { types: [GrassEntity],                         density: 20 / 400 },
+  { types: [GrassEntity],                         density: 50 / 400 },
 
 ]
 

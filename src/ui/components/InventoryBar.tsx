@@ -19,6 +19,7 @@ import { TreeOrangeEntity } from "../../game/entity/TreeOrange"
 import { GrassEntity } from "../../game/entity/Grass"
 import { WindMillEntity } from "../../game/entity/WindMill"
 import { World } from "../../game/world/World"
+import { BenchEntity } from "../../game/entity/Bench"
 
 const ALL_ITEMS: InventoryItem[] = [
   { id: "tree1",      label: "Pin",      icon: "🌲", entity: Tree1Entity },
@@ -35,6 +36,8 @@ const ALL_ITEMS: InventoryItem[] = [
   { id: "wood_fence", label: "Barrière", icon: "🪜", entity: WoodFenceEntity },
   { id: "tree_orange",label: "Oranger",  icon: "🍊", entity: TreeOrangeEntity },
   { id: "grass",      label: "Herbe",    icon: "🌱", entity: GrassEntity },
+  { id: "bench",      label: "Banc",    icon: "🪑", entity: BenchEntity },
+
 ]
 
 // Entities to pre-warm as InstancedMesh pools (one pool per entity type).
@@ -58,6 +61,7 @@ inventoryStore.register([
   { id: "wood_fence", maxQty: 16 },
   { id: "grass",      maxQty: 64 },
   { id: "wind_mill",  maxQty: 4  },
+  { id : "bench",     maxQty: 8}
 ])
 
 const HOTBAR_SIZE = 9
