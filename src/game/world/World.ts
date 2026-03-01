@@ -10,7 +10,7 @@ import { Weather } from "../system/Weather"
 export class World {
   static current: World | null = null
 
-  readonly size: number = 80
+  readonly size: number = 50
   readonly tileSize: number
   readonly cellSize: number
   readonly sizeInCells: number

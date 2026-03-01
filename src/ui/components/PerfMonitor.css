@@ -1,0 +1,130 @@
+/* src/ui/components/PerfMonitor.css */
+
+.pm-panel {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    width: 260px;
+    background: rgba(8, 8, 12, 0.88);
+    backdrop-filter: blur(16px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    padding: 10px 12px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 999;
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    animation: pm-in 0.18s ease;
+  }
+  
+  @keyframes pm-in {
+    from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+    to   { opacity: 1; transform: translateY(0)    scale(1);    }
+  }
+  
+  .pm-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .pm-title {
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    color: rgba(255,255,255,0.3);
+    flex: 1;
+  }
+  
+  .pm-fps {
+    display: flex;
+    align-items: baseline;
+    gap: 3px;
+    transition: color 0.3s;
+  }
+  .pm-fps-n   { font-size: 20px; font-weight: 700; line-height: 1; }
+  .pm-fps-u   { font-size: 10px; opacity: 0.6; }
+  .pm-fps-tag {
+    font-size: 8px;
+    letter-spacing: 0.1em;
+    padding: 1px 5px;
+    border-radius: 3px;
+    background: none;
+    color: #fff !important;
+    opacity: 0.9;
+    font-weight: 700;
+    align-self: center;
+  }
+  
+  .pm-close {
+    background: none;
+    border: none;
+    color: rgba(255,255,255,0.25);
+    cursor: pointer;
+    font-size: 11px;
+    padding: 2px 4px;
+    border-radius: 4px;
+    transition: color 0.15s, background 0.15s;
+    line-height: 1;
+  }
+  .pm-close:hover {
+    color: rgba(255,255,255,0.8);
+    background: rgba(255,255,255,0.08);
+  }
+  
+  .pm-graph {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .pm-graph-head {
+    display: flex;
+    justify-content: space-between;
+    font-size: 8px;
+    letter-spacing: 0.1em;
+    color: rgba(255,255,255,0.25);
+  }
+  
+  .pm-canvas {
+    width: 100%;
+    height: 44px;
+    display: block;
+    border-radius: 4px;
+    border: 1px solid rgba(255,255,255,0.04);
+  }
+  
+  .pm-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 6px 4px;
+    padding-top: 4px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+  
+  .pm-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  
+  .pm-stat span {
+    font-size: 7.5px;
+    letter-spacing: 0.06em;
+    color: rgba(255,255,255,0.25);
+    text-transform: uppercase;
+  }
+  
+  .pm-stat b {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.85);
+  }
+  
+  .pm-stat b em {
+    font-size: 9px;
+    font-style: normal;
+    color: rgba(255,255,255,0.35);
+    margin-left: 1px;
+  }

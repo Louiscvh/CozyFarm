@@ -86,7 +86,7 @@ class PerlinNoise {
 // ─── Génération terrain ───────────────────────────────────────────────────────
 
 const THRESHOLDS = {
-  water: -0.25,
+  water: -0.30,
   sand:  -0.05,
   stone:  0.55,
 }

@@ -6,15 +6,17 @@ import { World } from "../../game/world/World"
 import "./DevToolBar.css"
 import { toggleDebugHitbox } from "../../game/entity/EntityFactory"
 import { toggleDebugGrid } from "../hooks/usePlacement"
+import { PerfMonitor } from "./PerfMonitor"
 
 export const DevToolBar = () => {
-  const [visible, setVisible]         = useState(false)
-  const [, forceUpdate]               = useState(0)
-  const [isRaining, setIsRaining]     = useState(World.current?.weather.getRainIntensity() != 'none')
-  const [lastSpeed, setLastSpeed]     = useState(1)
+  const [visible, setVisible]                   = useState(false)
+  const [, forceUpdate]                         = useState(0)
+  const [isRaining, setIsRaining]               = useState(World.current?.weather.getRainIntensity() != 'none')
+  const [lastSpeed, setLastSpeed]               = useState(1)
   const [footprintVisible, setFootprintVisible] = useState(false)
-  const [hitboxVisible, setHitboxVisible] = useState(false)
-  const [gridVisible, setGridVisible] = useState(false)
+  const [hitboxVisible, setHitboxVisible]       = useState(false)
+  const [gridVisible, setGridVisible]           = useState(false)
+  const [perfOpen, setPerfOpen]                 = useState(false)
 
   const toggleHitbox = () => {
     toggleDebugHitbox()
@@ -63,41 +65,38 @@ export const DevToolBar = () => {
   const isPaused = Time.timeScale === 0
 
   return (
-    <div className={`dev-toolbar ${visible ? "visible" : ""}`}>
-      <div className="line">
-        <section>
-          <UIButton
-            className={isPaused ? "selected" : ""}
-            onClick={togglePause}
-          >
-            {isPaused ? "▶️" : "⏸️"}
-          </UIButton>
-
-          {[1, 5, 10].map(v => (
-            <UIButton
-              key={v}
-              className={Time.timeScale === v ? "selected" : ""}
-              onClick={() => setSpeed(v)}
-            >
-              x{v}
+    <>
+      <div className={`dev-toolbar ${visible ? "visible" : ""}`}>
+        <div className="line">
+          <section>
+            <UIButton className={isPaused ? "selected" : ""} onClick={togglePause}>
+              {isPaused ? "▶️" : "⏸️"}
             </UIButton>
-          ))}
-        </section>
+            {[1, 5, 10].map(v => (
+              <UIButton key={v} className={Time.timeScale === v ? "selected" : ""} onClick={() => setSpeed(v)}>
+                x{v}
+              </UIButton>
+            ))}
+          </section>
 
-        <section>
-          <UIButton onClick={goDay}>🌞</UIButton>
-          <UIButton onClick={goNight}>🌙</UIButton>
-          <UIButton onClick={toggleRain} className={isRaining ? "selected" : ""}>☔️</UIButton>
-        </section>
+          <section>
+            <UIButton onClick={goDay}>🌞</UIButton>
+            <UIButton onClick={goNight}>🌙</UIButton>
+            <UIButton onClick={toggleRain} className={isRaining ? "selected" : ""}>☔️</UIButton>
+          </section>
+        </div>
+
+        <div className="line">
+          <section>
+            <UIButton onClick={toggleDebugMarkers} className={footprintVisible ? "selected" : ""}>🚧</UIButton>
+            <UIButton onClick={toggleHitbox} className={hitboxVisible ? "selected" : ""}>📦</UIButton>
+            <UIButton onClick={handleToggleGrid} className={gridVisible ? "selected" : ""} title="Afficher grille complète">🔲</UIButton>
+            <UIButton onClick={() => setPerfOpen(v => !v)} className={perfOpen ? "selected" : ""} title="Moniteur performances">📊</UIButton>
+          </section>
+        </div>
       </div>
 
-      <div className="line">
-        <section>
-          <UIButton onClick={toggleDebugMarkers} className={footprintVisible ? "selected" : ""}>🚧</UIButton>
-          <UIButton onClick={toggleHitbox} className={hitboxVisible ? "selected" : ""}>📦</UIButton>
-          <UIButton onClick={handleToggleGrid} className={gridVisible ? "selected" : ""} title="Afficher grille complète">🔲</UIButton>
-        </section>
-      </div>
-    </div>
+      {perfOpen && <PerfMonitor onClose={() => setPerfOpen(false)} />}
+    </>
   )
 }

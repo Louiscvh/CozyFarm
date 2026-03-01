@@ -26,10 +26,9 @@ highlightMesh.position.y = 0.055
 highlightMesh.visible    = false
 
 // ── Grille statique ───────────────────────────────────────────
-const STATIC_OPACITY = 0.06
-const STATIC_RADIUS  = 40
+const STATIC_OPACITY = 0.1
 const staticGridGroup = new THREE.Group()
-staticGridGroup.position.y = 0.055
+staticGridGroup.position.y = 0.055  // pas d'offset X/Z
 staticGridGroup.visible = false
 let staticGridBuilt = false
 
@@ -37,14 +36,27 @@ function buildStaticGrid(cellSize: number) {
   if (staticGridBuilt) return
   staticGridBuilt = true
 
-  const mat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: STATIC_OPACITY, depthWrite: false })
-  const min = -STATIC_RADIUS * cellSize
-  const max =  STATIC_RADIUS * cellSize
+  const world = World.current
+  if (!world) return
 
-  for (let i = -STATIC_RADIUS; i <= STATIC_RADIUS; i++) {
+  const halfWorld = world.sizeInCells / 2
+  const min = -halfWorld * cellSize
+  const max =  halfWorld * cellSize
+
+  const mat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: STATIC_OPACITY, depthWrite: false })
+
+  for (let i = -halfWorld; i <= halfWorld; i++) {
     const pos = i * cellSize
-    staticGridGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(min,0,pos), new THREE.Vector3(max,0,pos)]), mat.clone()))
-    staticGridGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(pos,0,min), new THREE.Vector3(pos,0,max)]), mat.clone()))
+    // Lignes horizontales
+    staticGridGroup.add(new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(min, 0, pos), new THREE.Vector3(max, 0, pos)]),
+      mat.clone()
+    ))
+    // Lignes verticales
+    staticGridGroup.add(new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(pos, 0, min), new THREE.Vector3(pos, 0, max)]),
+      mat.clone()
+    ))
   }
 }
 
@@ -111,7 +123,7 @@ export function toggleDebugGrid() {
     // On cast en LineBasicMaterial pour accéder à .opacity
     const mat = line.material as THREE.LineBasicMaterial
     if (mat) {
-      mat.opacity = _debugForceGrid ? 0.6 : STATIC_OPACITY
+      mat.opacity = _debugForceGrid ? STATIC_OPACITY : 0
     }
   })
 }

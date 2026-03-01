@@ -15,6 +15,9 @@ import { UIButton } from "./UIButton"
 import { Tree3Entity } from "../../game/entity/Tree3"
 import { WoodPlankEntity } from "../../game/entity/WoodPlank"
 import { WoodFenceEntity } from "../../game/entity/WoodFence"
+import { TreeOrangeEntity } from "../../game/entity/TreeOrange"
+import { GrassEntity } from "../../game/entity/Grass"
+import { WindMillEntity } from "../../game/entity/WindMill"
 
 const ALL_ITEMS: InventoryItem[] = [
   { id: "tree1",      label: "Pin",      icon: "🌲", entity: Tree1Entity },
@@ -25,15 +28,20 @@ const ALL_ITEMS: InventoryItem[] = [
   { id: "farm",       label: "Ferme",    icon: "🏚️", entity: FarmEntity },
   { id: "wheatField", label: "Blé",      icon: "🌾", entity: WheatField },
   { id: "cabana",     label: "Cabane",   icon: "🛖", entity: CabanaEntity },
+  { id: "wind_mill",  label: "Moulin",   icon: "💨", entity: WindMillEntity },
   { id: "torch",      label: "Torche",   icon: "🔥", entity: TorchEntity },
   { id: "wood_plank", label: "Planche",  icon: "🪵", entity: WoodPlankEntity },
   { id: "wood_fence", label: "Barrière", icon: "🪜", entity: WoodFenceEntity },
+  { id: "tree_orange",label: "Oranger",  icon: "🍊", entity: TreeOrangeEntity },
+  { id: "grass",      label: "Herbe",    icon: "🌱", entity: GrassEntity },
+
 ]
 
 inventoryStore.register([
   { id: "tree1",      maxQty: 16 },
   { id: "tree2",      maxQty: 16 },
   { id: "tree3",      maxQty: 16 },
+  { id: "tree_orange",maxQty: 4 },
   { id: "rock1",      maxQty: 32 },
   { id: "flower1",    maxQty: 64 },
   { id: "farm",       maxQty: 4  },
@@ -42,6 +50,8 @@ inventoryStore.register([
   { id: "torch",      maxQty: 32 },
   { id: "wood_plank", maxQty: 32 },
   { id: "wood_fence", maxQty: 16 },
+  { id: "grass", maxQty: 64 },
+  { id: "wind_mill", maxQty: 4 },
 ])
 
 const HOTBAR_SIZE = 9

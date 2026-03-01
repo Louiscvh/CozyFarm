@@ -11,12 +11,14 @@ import {
 import { getFootprint } from "../entity/Entity"
 import type { Entity } from "../entity/Entity"
 import { FarmEntity } from "../entity/FarmEntity"
-import { WheatField } from "../entity/WheatField"
 import { Tree1Entity } from "../entity/Tree1"
 import { Tree2Entity } from "../entity/Tree2"
 import { Flower1Entity } from "../entity/Flower1"
 import { Rock1Entity } from "../entity/Rock1"
 import { Tree3Entity } from "../entity/Tree3"
+import { TreeOrangeEntity } from "../entity/TreeOrange"
+import { TulipEntity } from "../entity/Tulip"
+import { GrassEntity } from "../entity/Grass"
 
 // ─── Decor definitions ────────────────────────────────────────────────────────
 
@@ -24,9 +26,11 @@ export interface DecorCategory { types: Entity[]; density: number }
 export interface FixedEntityDef { def: Entity; tileX: number; tileZ: number; size: number }
 
 export const DECOR_CATEGORIES: DecorCategory[] = [
-  { types: [Tree1Entity, Tree2Entity, Tree3Entity], density: 40 / 400 },
-  { types: [Rock1Entity],                           density: 10 / 400 },
-  { types: [Flower1Entity],                         density: 60 / 400 },
+  { types: [Tree1Entity, Tree2Entity, Tree3Entity, TreeOrangeEntity], density: 20 / 400 },
+  { types: [Rock1Entity],                           density: 1.5 / 400 },
+  { types: [Flower1Entity, TulipEntity],                         density: 20 / 400 },
+  { types: [GrassEntity],                         density: 20 / 400 },
+
 ]
 
 export function getFixedEntities(worldCenter: number): FixedEntityDef[] {
@@ -38,10 +42,6 @@ export function getFixedEntities(worldCenter: number): FixedEntityDef[] {
 
   return [
     { def: FarmEntity, tileX: c - farmOffset, tileZ: c - farmOffset, size: getFootprint(FarmEntity) },
-    { def: WheatField, tileX: c + 2, tileZ: c - 2, size: getFootprint(WheatField) },
-    { def: WheatField, tileX: c + 3, tileZ: c + 0, size: getFootprint(WheatField) },
-    { def: WheatField, tileX: c + 3, tileZ: c - 2, size: getFootprint(WheatField) },
-    { def: WheatField, tileX: c + 2, tileZ: c - 1, size: getFootprint(WheatField) },
   ]
 }
 
@@ -161,9 +161,9 @@ export class TileFactory {
           const [ox, oz] = CORNER_OFFSETS[i]
 
           dummy.position.set(
-            centerX + ox * this.tileSize,
+            centerX + ox * this.tileSize + this.cellSize,  // + this.cellSize
             0,
-            centerZ + oz * this.tileSize,
+            centerZ + oz * this.tileSize + this.cellSize,  // + this.cellSize
           )
           dummy.updateMatrix()
           mesh.setMatrixAt(idx, dummy.matrix)
@@ -238,6 +238,22 @@ export class TileFactory {
     })
   }
 
+  getCornerTypeAtCell(cellX: number, cellZ: number): TileType | undefined {
+    const { tileX, tileZ } = this.cellToTile(cellX, cellZ)
+    const tile = this.getTile(tileX, tileZ)
+    if (!tile) return undefined
+  
+    // Quel corner de ce tile correspond à cette cellule ?
+    // cellX pair → colonne gauche (TL/BL), impair → colonne droite (TR/BR)
+    // cellZ pair → ligne haut (TL/TR),    impair → ligne bas  (BL/BR)
+    // corners = [TL, TR, BL, BR] = index 0,1,2,3
+    const col = cellX % 2   // 0 = gauche, 1 = droite
+    const row = cellZ % 2   // 0 = haut,   1 = bas
+    const cornerIndex = col + row * 2  // 0=TL, 1=TR, 2=BL, 3=BR
+  
+    return tile.corners[cornerIndex]
+  }
+
   // ─── Cell occupancy ───────────────────────────────────────────────────────────
 
   canSpawn(cellX: number, cellZ: number, sizeInCells: number = 1): boolean {
@@ -252,10 +268,7 @@ export class TileFactory {
         const cx = cellX + dx
         const cz = cellZ + dz
   
-        // Bloque sur l'eau
-        if (this.getTileTypeAtCell(cx, cz) === "water") return false
-  
-        // Bloque sur cellule occupée
+        if (this.getCornerTypeAtCell(cx, cz) === "water") return false
         if (this.occupiedCells.has(`${cx}|${cz}`)) return false
       }
     }

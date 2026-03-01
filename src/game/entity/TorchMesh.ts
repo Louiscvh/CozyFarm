@@ -4,7 +4,7 @@ import * as THREE from "three"
 const EMBER_COUNT = 6
 
 export interface TorchObject3D extends THREE.Group {
-  updateTorch(now: number, torchIntensity: number): void
+  updateTorch(now: number, torchIntensity: number, camera?: THREE.Camera): void
 }
 
 export function createTorchMesh(): TorchObject3D {
@@ -57,6 +57,8 @@ export function createTorchMesh(): TorchObject3D {
     })
     const mesh = new THREE.Mesh(geo, mat)
     mesh.position.y = 0.97 + offsetY
+    mesh.castShadow = false
+    mesh.receiveShadow = false
     return mesh
   }
 
@@ -65,72 +67,69 @@ export function createTorchMesh(): TorchObject3D {
   const flame2 = makeFlameLayer(0.4, 1.4, 0.14, 0.45)
   root.add(flame0, flame1, flame2)
 
-  // --- Particules braises ---
+  // --- Particules braises (THREE.Points) ---
   const emberPositions = new Float32Array(EMBER_COUNT * 3)
   for (let i = 0; i < EMBER_COUNT; i++) {
     emberPositions[i * 3 + 0] = (Math.random() - 0.5) * 0.1
     emberPositions[i * 3 + 1] = 1.05 + Math.random() * 0.15
     emberPositions[i * 3 + 2] = (Math.random() - 0.5) * 0.1
   }
-  // --- Particules braises — sprites world-space ---
-const emberSprites: THREE.Sprite[] = []
-for (let i = 0; i < EMBER_COUNT; i++) {
-  const mat = new THREE.SpriteMaterial({
+  const emberGeometry = new THREE.BufferGeometry()
+  emberGeometry.setAttribute("position", new THREE.BufferAttribute(emberPositions, 3))
+
+  const emberMaterial = new THREE.PointsMaterial({
     color: 0xff9900,
+    size: 1,
     transparent: true,
     opacity: 0.9,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
   })
-  const sprite = new THREE.Sprite(mat)
-  sprite.scale.set(0.02, 0.02, 0.02)
-  sprite.position.set(
-    (Math.random() - 0.5) * 0.1,
-    1.05 + Math.random() * 0.15,
-    (Math.random() - 0.5) * 0.1
-  )
-  root.add(sprite)
-  emberSprites.push(sprite)
-}
 
+  const emberPoints = new THREE.Points(emberGeometry, emberMaterial)
+  root.add(emberPoints)
+
+  // --- Lumière ---
   const light = new THREE.PointLight(0xff7200, 0, 10)
   light.position.y = 1.1
   light.castShadow = false
   root.add(light)
 
-  // --- Tags ---
+  // --- Tag ---
   root.userData.isTorch = true
 
-  // --- Méthode d'animation — tout est encapsulé ici ---
-  root.updateTorch = function(now: number, torchIntensity: number) {
+  // --- Animation ---
+  root.updateTorch = function(now: number, torchIntensity: number, camera?: THREE.Camera) {
     const id = root.id
     const flicker = Math.sin(now * 13 + id) * 0.15
                   + Math.sin(now * 7.7 + id * 1.3) * 0.08
                   + Math.sin(now * 23 + id * 2.1) * 0.04
 
-    // Lumière
-    light.intensity = torchIntensity * (2.5 + flicker * 1.2)
+    // --- Lumière optimisée ---
+    if (!camera || root.position.distanceTo(camera.position) < 10) {
+      light.intensity = torchIntensity * (2.5 + flicker * 1.2)
+    } else {
+      light.intensity = 0
+    }
 
-    // Flammes
+    // --- Flammes ---
     flame0.scale.set(1 + flicker * 0.3, 1 + flicker * 0.2, 1 + flicker * 0.3)
     flame1.scale.set(1 + flicker * 0.4, 1 - flicker * 0.1, 1 + flicker * 0.4)
     flame2.scale.set(1 + flicker * 0.2, 1 + flicker * 0.5, 1 + flicker * 0.2)
     flame2.position.y = 1.11 + flicker * 0.03
 
-    // Braises — remontent et se réinitialisent
+    // --- Braises ---
+    const positions = emberPoints.geometry.attributes.position.array as Float32Array
     for (let i = 0; i < EMBER_COUNT; i++) {
-        const s = emberSprites[i]
-        s.position.y += 0.008 + Math.random() * 0.004
-        s.position.x += (Math.random() - 0.5) * 0.004
-        if (s.position.y > 1.35) {
-          s.position.set(
-            (Math.random() - 0.5) * 0.08,
-            1.02,
-            (Math.random() - 0.5) * 0.08
-          )
-        }
+      positions[i * 3 + 1] += 0.008 + Math.random() * 0.004
+      positions[i * 3 + 0] += (Math.random() - 0.5) * 0.004
+      if (positions[i * 3 + 1] > 1.35) {
+        positions[i * 3 + 0] = (Math.random() - 0.5) * 0.08
+        positions[i * 3 + 1] = 1.02
+        positions[i * 3 + 2] = (Math.random() - 0.5) * 0.08
       }
-
+    }
+    emberPoints.geometry.attributes.position.needsUpdate = true
   }
 
   return root
