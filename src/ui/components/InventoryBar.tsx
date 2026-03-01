@@ -18,6 +18,7 @@ import { WoodFenceEntity } from "../../game/entity/WoodFence"
 import { TreeOrangeEntity } from "../../game/entity/TreeOrange"
 import { GrassEntity } from "../../game/entity/Grass"
 import { WindMillEntity } from "../../game/entity/WindMill"
+import { World } from "../../game/world/World"
 
 const ALL_ITEMS: InventoryItem[] = [
   { id: "tree1",      label: "Pin",      icon: "🌲", entity: Tree1Entity },
@@ -34,8 +35,13 @@ const ALL_ITEMS: InventoryItem[] = [
   { id: "wood_fence", label: "Barrière", icon: "🪜", entity: WoodFenceEntity },
   { id: "tree_orange",label: "Oranger",  icon: "🍊", entity: TreeOrangeEntity },
   { id: "grass",      label: "Herbe",    icon: "🌱", entity: GrassEntity },
-
 ]
+
+// Entities to pre-warm as InstancedMesh pools (one pool per entity type).
+// TorchEntity is excluded — it's procedural and stays as a full mesh.
+const POOL_DEFS = ALL_ITEMS
+  .filter(i => i.id !== "torch")
+  .map(i => ({ entity: i.entity, maxQty: inventoryStore.getMax(i.id) || 64 }))
 
 inventoryStore.register([
   { id: "tree1",      maxQty: 16 },
@@ -50,13 +56,12 @@ inventoryStore.register([
   { id: "torch",      maxQty: 32 },
   { id: "wood_plank", maxQty: 32 },
   { id: "wood_fence", maxQty: 16 },
-  { id: "grass", maxQty: 64 },
-  { id: "wind_mill", maxQty: 4 },
+  { id: "grass",      maxQty: 64 },
+  { id: "wind_mill",  maxQty: 4  },
 ])
 
 const HOTBAR_SIZE = 9
 
-// État initial : les 9 premiers items dans la hotbar, le reste dans extra
 const INITIAL_HOTBAR: (string | null)[] = [
   ...ALL_ITEMS.slice(0, HOTBAR_SIZE).map(i => i.id),
   ...Array(Math.max(0, HOTBAR_SIZE - ALL_ITEMS.length)).fill(null),
@@ -64,7 +69,6 @@ const INITIAL_HOTBAR: (string | null)[] = [
 
 const itemById = (id: string | null) => id ? ALL_ITEMS.find(i => i.id === id) ?? null : null
 
-// ── Drag state (ref partagée, pas de re-render) ───────────────────────────────
 type DragSource =
   | { zone: "hotbar"; index: number }
   | { zone: "extra";  id: string    }
@@ -74,16 +78,33 @@ export function InventoryBar() {
   const [rotation, setRotation]     = useState(0)
   const [, forceUpdate]             = useState(0)
   const [expanded, setExpanded]     = useState(false)
+  const [hotbar, setHotbar]         = useState<(string | null)[]>(INITIAL_HOTBAR)
 
-  // hotbar : 9 slots, chaque slot = id ou null
-  const [hotbar, setHotbar] = useState<(string | null)[]>(INITIAL_HOTBAR)
-
-  // extra : items pas dans la hotbar
   const extraItems = ALL_ITEMS.filter(i => !hotbar.includes(i.id))
 
-  // drag
-  const dragSrc = useRef<DragSource | null>(null)
+  const dragSrc  = useRef<DragSource | null>(null)
   const [dragOver, setDragOver] = useState<{ zone: "hotbar"; index: number } | { zone: "extra"; id: string } | null>(null)
+
+  // ── Pre-warm InstancedMesh pools for all inventory entity types ─────────────
+  // Runs once after mount, polls until World is ready (it initialises async).
+  useEffect(() => {
+    let cancelled = false
+
+    async function prepare() {
+      // World may not be ready yet — wait for it
+      let w = World.current
+      while (!w) {
+        if (cancelled) return
+        await new Promise(r => setTimeout(r, 50))
+        w = World.current
+      }
+      if (cancelled) return
+      await w.preparePoolsForEntities(POOL_DEFS)
+    }
+
+    prepare()
+    return () => { cancelled = true }
+  }, [])
 
   useEffect(() => placementStore.subscribe(() => {
     setSelectedId(placementStore.selectedItem?.id ?? null)
@@ -92,7 +113,6 @@ export function InventoryBar() {
 
   useEffect(() => inventoryStore.subscribe(() => forceUpdate(n => n + 1)), [])
 
-  // Raccourcis clavier → hotbar
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey) return
@@ -122,65 +142,34 @@ export function InventoryBar() {
     else placementStore.select(item)
   }
 
-  // ── Drag handlers ────────────────────────────────────────────────────────
-
-  function onDragStartHotbar(index: number) {
-    dragSrc.current = { zone: "hotbar", index }
-  }
-
-  function onDragStartExtra(id: string) {
-    dragSrc.current = { zone: "extra", id }
-  }
+  function onDragStartHotbar(index: number) { dragSrc.current = { zone: "hotbar", index } }
+  function onDragStartExtra(id: string)     { dragSrc.current = { zone: "extra",  id    } }
 
   function onDropHotbar(targetIndex: number) {
     const src = dragSrc.current
     if (!src) return
-
     setHotbar(prev => {
       const next = [...prev]
-
       if (src.zone === "hotbar") {
-        // Hotbar → Hotbar : swap
-        const tmp = next[targetIndex]
-        next[targetIndex] = next[src.index]
-        next[src.index]   = tmp
+        const tmp = next[targetIndex]; next[targetIndex] = next[src.index]; next[src.index] = tmp
       } else {
-        // Extra → Hotbar : place l'item dans le slot
-        // Si le slot était occupé, l'ancien item retourne en extra (disparaît de hotbar)
         next[targetIndex] = src.id
       }
-
       return next
     })
-
-    setDragOver(null)
-    dragSrc.current = null
+    setDragOver(null); dragSrc.current = null
   }
 
   function onDropExtra() {
     const src = dragSrc.current
     if (!src) return
-
     if (src.zone === "hotbar") {
-      // Hotbar → Extra : vide le slot
-      setHotbar(prev => {
-        const next = [...prev]
-        next[src.index] = null
-        return next
-      })
+      setHotbar(prev => { const next = [...prev]; next[src.index] = null; return next })
     }
-    // Extra → Extra : pas d'action nécessaire
-
-    setDragOver(null)
-    dragSrc.current = null
+    setDragOver(null); dragSrc.current = null
   }
 
-  function cancelDrag() {
-    setDragOver(null)
-    dragSrc.current = null
-  }
-
-  // ── Render slot ──────────────────────────────────────────────────────────
+  function cancelDrag() { setDragOver(null); dragSrc.current = null }
 
   function renderHotbarSlot(id: string | null, index: number) {
     const item  = itemById(id)
@@ -200,7 +189,7 @@ export function InventoryBar() {
             className={["inv-slot", selectedId === item.id ? "selected" : "", qty <= 0 ? "empty" : ""].filter(Boolean).join(" ")}
             onClick={() => handleSelect(item)}
             title={item.label}
-            onMouseDown={e => e.stopPropagation()}   // ← bloque la caméra
+            onMouseDown={e => e.stopPropagation()}
             disabled={qty <= 0}
             draggable
             onDragStart={() => onDragStartHotbar(index)}
@@ -236,7 +225,7 @@ export function InventoryBar() {
           className={["inv-slot", selectedId === item.id ? "selected" : "", qty <= 0 ? "empty" : ""].filter(Boolean).join(" ")}
           onClick={() => handleSelect(item)}
           title={item.label}
-          onMouseDown={e => e.stopPropagation()}   // ← bloque la caméra
+          onMouseDown={e => e.stopPropagation()}
           disabled={qty <= 0}
           draggable
           onDragStart={() => onDragStartExtra(item.id)}
@@ -275,12 +264,10 @@ export function InventoryBar() {
         )}
 
         <div id="inventory-slots">
-          {/* Hotbar — toujours visible */}
           <div className="inventory-row">
             {INITIAL_HOTBAR.map((_, i) => renderHotbarSlot(hotbar[i], i))}
           </div>
 
-          {/* Extra items — zone droppable + révélable */}
           {hasExtra && (
             <div
               id="inventory-extra-rows"
@@ -292,7 +279,6 @@ export function InventoryBar() {
               <div className="extra-drop-hint">Glisser déposer ici pour modifier</div>
               <div className="inventory-row extra-row">
                 {extraItems.map(item => renderExtraItem(item))}
-                {/* Slot vide pour accueillir un drop quand extra est vide */}
                 {extraItems.length === 0 && (
                   <div className="inv-slot inv-slot-empty extra-empty-hint">
                     <span style={{ fontSize: 10, opacity: 0.4 }}>vide</span>

@@ -5,8 +5,8 @@ import { UIButton } from "./UIButton"
 import { World } from "../../game/world/World"
 import "./DevToolBar.css"
 import { toggleDebugHitbox } from "../../game/entity/EntityFactory"
-import { toggleDebugGrid } from "../hooks/usePlacement"
 import { PerfMonitor } from "./PerfMonitor"
+import { toggleDebugGrid } from "../../game/system/Grid"
 
 export const DevToolBar = () => {
   const [visible, setVisible]                   = useState(false)

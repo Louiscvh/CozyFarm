@@ -5,6 +5,14 @@ import { placementStore } from "../store/PlacementStore"
 import { historyStore } from "../store/HistoryStore"
 import { World } from "../../game/world/World"
 import { getFootprint } from "../../game/entity/Entity"
+import {
+  staticGridGroup,
+  buildStaticGrid,
+  showGridForGhost,
+  hideGridForGhost,
+  revealGroup,
+  buildRevealGrid,
+} from "../../game/system/Grid"
 
 interface UsePlacementOptions {
   camera: THREE.Camera
@@ -25,73 +33,6 @@ highlightMesh.rotation.x = -Math.PI / 2
 highlightMesh.position.y = 0.055
 highlightMesh.visible    = false
 
-// ── Grille statique ───────────────────────────────────────────
-const STATIC_OPACITY = 0.1
-const staticGridGroup = new THREE.Group()
-staticGridGroup.position.y = 0.055  // pas d'offset X/Z
-staticGridGroup.visible = false
-let staticGridBuilt = false
-
-function buildStaticGrid(cellSize: number) {
-  if (staticGridBuilt) return
-  staticGridBuilt = true
-
-  const world = World.current
-  if (!world) return
-
-  const halfWorld = world.sizeInCells / 2
-  const min = -halfWorld * cellSize
-  const max =  halfWorld * cellSize
-
-  const mat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: STATIC_OPACITY, depthWrite: false })
-
-  for (let i = -halfWorld; i <= halfWorld; i++) {
-    const pos = i * cellSize
-    // Lignes horizontales
-    staticGridGroup.add(new THREE.Line(
-      new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(min, 0, pos), new THREE.Vector3(max, 0, pos)]),
-      mat.clone()
-    ))
-    // Lignes verticales
-    staticGridGroup.add(new THREE.Line(
-      new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(pos, 0, min), new THREE.Vector3(pos, 0, max)]),
-      mat.clone()
-    ))
-  }
-}
-
-// ── Grille reveal ─────────────────────────────────────────────
-const REVEAL_RADIUS = 4
-const SEGMENTS = 8
-const revealGroup = new THREE.Group()
-revealGroup.position.y = 0.055
-revealGroup.visible = false
-
-function buildRevealGrid(cellSize: number, footprint: number = 1) {
-  revealGroup.clear?.() || revealGroup.children.splice(0) // enlever les anciens
-  const lineOffset = footprint % 2 !== 0 ? -cellSize/2 : 0
-  const maxDist = Math.max(footprint * cellSize, 2.5)
-  const segSize = maxDist / SEGMENTS
-
-  for (let i=-REVEAL_RADIUS; i<=REVEAL_RADIUS; i++) {
-    const linePos = i*cellSize + lineOffset
-    const perp = Math.sqrt(maxDist*maxDist - linePos*linePos)
-    if (!perp) continue
-    const segCount = Math.ceil((perp*2)/segSize)
-
-    for (let j=0;j<segCount;j++) {
-      const segStart = -perp + j*segSize
-      const segEnd   = Math.min(segStart+segSize, perp)
-      const segMid   = (segStart+segEnd)/2
-      const t        = Math.min(Math.sqrt(segMid*segMid+linePos*linePos)/maxDist,1)
-      const opacity  = Math.max((1-t*t)*0.6, 0.1)
-      const mat = new THREE.LineBasicMaterial({ color:0xffffff, transparent:true, opacity, depthWrite:false })
-      revealGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(segStart,0,linePos), new THREE.Vector3(segEnd,0,linePos)]), mat))
-      revealGroup.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(linePos,0,segStart), new THREE.Vector3(linePos,0,segEnd)]), mat.clone()))
-    }
-  }
-}
-
 // ── Ghost ─────────────────────────────────────────────────────
 const ghostMat = new THREE.MeshBasicMaterial({ color:0x00ff00, transparent:true, opacity:0.5, depthWrite:false, depthTest:false })
 function applyGhostMaterials(root: THREE.Object3D) {
@@ -110,22 +51,6 @@ function applyGhostMaterials(root: THREE.Object3D) {
 
 function setGhostColor(canPlace: boolean) {
   ghostMat.color.set(canPlace ? 0x00ff00 : 0xff2244)
-}
-
-// ── Debug toggle ───────────────────────────────────────────────
-let _debugForceGrid = false
-export function toggleDebugGrid() {
-  _debugForceGrid = !_debugForceGrid
-  staticGridGroup.visible = _debugForceGrid
-  
-  staticGridGroup.children.forEach((child) => {
-    const line = child as THREE.Line
-    // On cast en LineBasicMaterial pour accéder à .opacity
-    const mat = line.material as THREE.LineBasicMaterial
-    if (mat) {
-      mat.opacity = _debugForceGrid ? STATIC_OPACITY : 0
-    }
-  })
 }
 
 // ── Hook principal ────────────────────────────────────────────
@@ -183,7 +108,7 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
       yOffsetRef.current = 0
       highlightMesh.visible = false
       revealGroup.visible = false
-      if (!_debugForceGrid) staticGridGroup.visible = false
+      hideGridForGhost()
     }
 
     async function buildGhost(entity: typeof placementStore.selectedItem) {
@@ -207,11 +132,11 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
         const canPlace = world!.tilesFactory.canSpawn(placeCellX, placeCellZ, footprint)
         setGhostColor(canPlace)
         highlightMesh.scale.set(footprint*world!.cellSize, footprint*world!.cellSize, 1)
-        highlightMesh.position.set(x,0.055,z)
+        highlightMesh.position.set(x, 0.055, z)
         revealGroup.position.set(x, 0.056, z)
         highlightMesh.material = canPlace ? highlightMatOk : highlightMatBad
         highlightMesh.visible = true
-        if (!_debugForceGrid) staticGridGroup.visible = true
+        showGridForGhost()
       } else {
         targetPos.current.set(0,-9999,0)
         highlightMesh.visible = false
@@ -278,15 +203,13 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
     const onClick = async (e: MouseEvent) => {
       if ((e.target as HTMLElement).closest("#ui-root")) return
       if (!placementStore.selectedItem || !placementStore.hoveredCell) return
-      
-      // Calcul de la distance du clic pour éviter de placer en scrollant/dragant
+
       const dx = e.clientX - mouseDownPos.x
       const dy = e.clientY - mouseDownPos.y
       if (Math.sqrt(dx * dx + dy * dy) > 5) return
 
-      // --- VERIFICATION DE PLACEMENT ---
       if (!placementStore.canPlace) {
-        playSound(true) // JOUE click_error.mp3
+        playSound(true)
         return
       }
 
@@ -296,26 +219,34 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
       const { placeCellX, placeCellZ } = getPlaceCells(cellX, cellZ, footprint)
 
       const entity = await world!.spawnEntitySafe(item.entity, placeCellX, placeCellZ, footprint)
-      
+
       if (!entity) {
-        playSound(true) // Échec du spawn (cas rare si canPlace était vrai)
+        playSound(true)
         return
       }
 
-      // Succès !
-      entity.rotation.y = targetRotY.current
+      if (entity.userData.isInstanced) {
+        const def  = entity.userData.def  as typeof placementStore.selectedItem extends { entity: infer E } ? E : never
+        const slot = entity.userData.instanceSlot as number
+        entity.userData.rotY = targetRotY.current
+        entity.rotation.y    = targetRotY.current
+        world!.instanceManager.setTransform(def as any, slot, entity.position, targetRotY.current)
+      } else {
+        entity.rotation.y = targetRotY.current
+      }
+
       historyStore.push({
-        type: "place", 
-        entityObject: entity, 
-        cellX: placeCellX, 
-        cellZ: placeCellZ,
-        sizeInCells: footprint, 
-        originalY: entity.position.y,
-        originalScale: entity.scale.clone(), 
-        originalRotation: entity.rotation.clone()
+        type           : "place",
+        entityObject   : entity,
+        cellX          : placeCellX,
+        cellZ          : placeCellZ,
+        sizeInCells    : footprint,
+        originalY      : entity.position.y,
+        originalScale  : entity.scale.clone(),
+        originalRotation: entity.rotation.clone(),
       })
 
-      playSound(false) // JOUE click.mp3
+      playSound(false)
     }
 
     const playSound = (isError: boolean) => {
@@ -323,7 +254,7 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
         const file = isError ? "click_error.mp3" : "click.mp3"
         const url = new URL(`../../assets/${file}`, import.meta.url).href
         const audio = new Audio(url)
-        audio.volume = isError ? 0.4 : 0.6 // On baisse un peu l'erreur car c'est souvent plus strident
+        audio.volume = isError ? 0.4 : 0.6
         audio.play().catch(() => {})
       } catch (err) {
         console.warn("Audio play failed", err)
@@ -337,7 +268,6 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
       }
     }
 
-    // ── Subscription store ───────────────────────────────────
     let lastSelectedId: string|null = null
     const unsubscribe = placementStore.subscribe(()=>{
       const currentId = placementStore.selectedItem?.id ?? null

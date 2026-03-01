@@ -24,6 +24,18 @@ interface DeleteAction {
   originalY: number
   originalScale: THREE.Vector3
   originalRotation: THREE.Euler
+
+  /**
+   * Instanced-entity: owns the visual APPEAR animation on undo-delete.
+   * Called AFTER the proxy is re-added to scene + entities.
+   */
+  onRestore?: (w: NonNullable<typeof World.current>) => void
+
+  /**
+   * Instanced-entity: owns the visual REMOVE animation on redo-delete.
+   * Called AFTER the proxy is removed from entities + cells freed.
+   */
+  onRemove?: (w: NonNullable<typeof World.current>) => void
 }
 
 export type HistoryAction = PlaceAction | DeleteAction
@@ -40,7 +52,6 @@ class HistoryStore {
     return () => { this.listeners = this.listeners.filter(l => l !== fn) }
   }
 
-  /** Lecture seule — utilisé par InventoryStore pour recompter les qtés */
   get undoStack(): readonly HistoryAction[] { return this._undoStack }
 
   push(action: HistoryAction) {
@@ -67,7 +78,7 @@ class HistoryStore {
 
 export const historyStore = new HistoryStore()
 
-// ─── Animations ───────────────────────────────────────────────────────────────
+// ─── Standard mesh animations ─────────────────────────────────────────────────
 
 function animateRemove(w: NonNullable<typeof World.current>, e: THREE.Object3D): () => void {
   const startY     = e.position.y
@@ -96,6 +107,7 @@ function animateAppear(
   originalScale: THREE.Vector3,
   originalRotation: THREE.Euler
 ) {
+  // Caller guarantees en.scale is already 0 and en.position.y is below target
   const duration  = 350
   const startTime = performance.now()
   const fromScale = en.scale.x
@@ -118,27 +130,55 @@ function animateAppear(
 
 function restoreEntity(w: NonNullable<typeof World.current>, action: DeleteAction) {
   action.cancelAnimation()
-  const { entityObject: en, occupiedCells, sizeInCells, savedHoveredCell, originalY, originalScale, originalRotation } = action
+  const {
+    entityObject: en, occupiedCells, sizeInCells,
+    savedHoveredCell, originalY, originalScale, originalRotation,
+  } = action
 
-  en.scale.setScalar(0)
-  en.position.y = originalY - 2
-  w.scene.add(en)
-  w.entities.push(en)
-  occupiedCells.forEach(c => w.tilesFactory.markOccupied(c.x, c.z, 1))
-
-  placementStore.hoveredCell = savedHoveredCell
-  if (savedHoveredCell) {
-    placementStore.canPlace = w.tilesFactory.canSpawn(savedHoveredCell.cellX, savedHoveredCell.cellZ, sizeInCells)
+  if (action.onRestore) {
+    // ── Instanced path ──────────────────────────────────────────────────────
+    // The callback owns both the visual restore AND the appear animation.
+    // We only handle bookkeeping here.
+    w.scene.add(en)
+    w.entities.push(en)
+    occupiedCells.forEach(c => w.tilesFactory.markOccupied(c.x, c.z, 1))
+    placementStore.hoveredCell = savedHoveredCell
+    if (savedHoveredCell) {
+      placementStore.canPlace = w.tilesFactory.canSpawn(
+        savedHoveredCell.cellX, savedHoveredCell.cellZ, sizeInCells
+      )
+    }
+    action.onRestore(w)
+  } else {
+    // ── Standard (full-mesh) path ───────────────────────────────────────────
+    // Set scale to 0 BEFORE scene.add so the entity never flashes at old scale.
+    en.scale.setScalar(0)
+    en.position.y = originalY - 2
+    w.scene.add(en)
+    w.entities.push(en)
+    occupiedCells.forEach(c => w.tilesFactory.markOccupied(c.x, c.z, 1))
+    placementStore.hoveredCell = savedHoveredCell
+    if (savedHoveredCell) {
+      placementStore.canPlace = w.tilesFactory.canSpawn(
+        savedHoveredCell.cellX, savedHoveredCell.cellZ, sizeInCells
+      )
+    }
+    animateAppear(en, originalY, originalScale, originalRotation)
   }
-
-  animateAppear(en, originalY, originalScale, originalRotation)
 }
 
 function removeEntity(w: NonNullable<typeof World.current>, action: DeleteAction) {
   const e = action.entityObject
   w.entities = w.entities.filter(en => en !== e)
   action.occupiedCells.forEach(c => w.tilesFactory.markFree(c.x, c.z, 1))
-  action.cancelAnimation = animateRemove(w, e)
+
+  if (action.onRemove) {
+    // Instanced path: callback owns the visual animation
+    action.onRemove(w)
+  } else {
+    // Standard path: animate the full mesh shrinking + disappearing
+    action.cancelAnimation = animateRemove(w, e)
+  }
 }
 
 // ─── Undo / Redo ──────────────────────────────────────────────────────────────
@@ -166,6 +206,7 @@ export function applyRedo() {
 
   if (action.type === "place") {
     const { entityObject: e, originalY, originalScale, originalRotation } = action
+    // Scale to 0 BEFORE scene.add — no flash frame
     e.scale.setScalar(0)
     e.position.y = originalY - 2
     w.scene.add(e)
