@@ -2,6 +2,9 @@
 import * as THREE from "three"
 import { World } from "../../game/world/World"
 import { placementStore } from "./PlacementStore"
+import { animateRemove, animateAppear, animateRotate } from "../../game/entity/EntityAnimation"
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface PlaceAction {
   type: "place"
@@ -24,21 +27,20 @@ interface DeleteAction {
   originalY: number
   originalScale: THREE.Vector3
   originalRotation: THREE.Euler
-
-  /**
-   * Instanced-entity: owns the visual APPEAR animation on undo-delete.
-   * Called AFTER the proxy is re-added to scene + entities.
-   */
   onRestore?: (w: NonNullable<typeof World.current>) => void
-
-  /**
-   * Instanced-entity: owns the visual REMOVE animation on redo-delete.
-   * Called AFTER the proxy is removed from entities + cells freed.
-   */
-  onRemove?: (w: NonNullable<typeof World.current>) => void
+  onRemove?:  (w: NonNullable<typeof World.current>) => void
 }
 
-export type HistoryAction = PlaceAction | DeleteAction
+interface RotateAction {
+  type: "rotate"
+  entityObject: THREE.Object3D
+  prevRotY: number
+  nextRotY: number
+}
+
+export type HistoryAction = PlaceAction | DeleteAction | RotateAction
+
+// ─── Store ────────────────────────────────────────────────────────────────────
 
 class HistoryStore {
   private _undoStack: HistoryAction[] = []
@@ -53,6 +55,8 @@ class HistoryStore {
   }
 
   get undoStack(): readonly HistoryAction[] { return this._undoStack }
+  get canUndo() { return this._undoStack.length > 0 }
+  get canRedo()  { return this._redoStack.length > 0 }
 
   push(action: HistoryAction) {
     this._undoStack.push(action)
@@ -60,125 +64,64 @@ class HistoryStore {
     this.notify()
   }
 
-  undo(): HistoryAction | undefined {
+  undo() {
     const action = this._undoStack.pop()
     if (action) { this._redoStack.push(action); this.notify() }
     return action
   }
 
-  redo(): HistoryAction | undefined {
+  redo() {
     const action = this._redoStack.pop()
     if (action) { this._undoStack.push(action); this.notify() }
     return action
   }
-
-  get canUndo() { return this._undoStack.length > 0 }
-  get canRedo()  { return this._redoStack.length > 0 }
 }
 
 export const historyStore = new HistoryStore()
+export { animateRemove, animateAppear, animateRotate }
 
-// ─── Standard mesh animations ─────────────────────────────────────────────────
+// ─── Delete helper ────────────────────────────────────────────────────────────
 
-function animateRemove(w: NonNullable<typeof World.current>, e: THREE.Object3D): () => void {
-  const startY     = e.position.y
-  const startScale = e.scale.x
-  const duration   = 400
-  const startTime  = performance.now()
-  let cancelled    = false
-  let rafId        = 0
-
-  function animate(now: number) {
-    if (cancelled) return
-    const t = Math.min((now - startTime) / duration, 1)
-    e.position.y = startY + Math.sin(t * Math.PI) * 0.3 + t * t * -3
-    e.scale.setScalar(startScale * (1 - t * 0.7))
-    if (t < 1) { rafId = requestAnimationFrame(animate) }
-    else w.scene.remove(e)
-  }
-  rafId = requestAnimationFrame(animate)
-
-  return () => { cancelled = true; cancelAnimationFrame(rafId) }
-}
-
-function animateAppear(
-  en: THREE.Object3D,
-  originalY: number,
-  originalScale: THREE.Vector3,
-  originalRotation: THREE.Euler
+export function pushDeleteAction(
+  w: NonNullable<typeof World.current>,
+  e: THREE.Object3D,
+  savedHoveredCell: { cellX: number; cellZ: number } | null
 ) {
-  // Caller guarantees en.scale is already 0 and en.position.y is below target
-  const duration  = 350
-  const startTime = performance.now()
-  const fromScale = en.scale.x
-  const fromY     = en.position.y
-  en.rotation.copy(originalRotation)
+  const cellX       = e.userData.cellX       as number
+  const cellZ       = e.userData.cellZ       as number
+  const sizeInCells = (e.userData.sizeInCells as number) ?? 1
+  const originalY        = e.position.y
+  const originalScale    = e.scale.clone()
+  const originalRotation = e.rotation.clone()
 
-  function animateIn(now: number) {
-    const t         = Math.min((now - startTime) / duration, 1)
-    const ease      = 1 - Math.pow(1 - t, 3)
-    const overshoot = Math.sin(t * Math.PI) * 0.2
-    en.scale.setScalar(fromScale + (originalScale.x - fromScale) * ease)
-    en.position.y = fromY + (originalY - fromY) * ease + overshoot
-    if (t < 1) requestAnimationFrame(animateIn)
-    else { en.scale.copy(originalScale); en.position.y = originalY }
-  }
-  requestAnimationFrame(animateIn)
-}
+  const occupiedCells: { x: number; z: number }[] = []
+  for (let dx = 0; dx < sizeInCells; dx++)
+    for (let dz = 0; dz < sizeInCells; dz++)
+      occupiedCells.push({ x: cellX + dx, z: cellZ + dz })
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-function restoreEntity(w: NonNullable<typeof World.current>, action: DeleteAction) {
-  action.cancelAnimation()
-  const {
-    entityObject: en, occupiedCells, sizeInCells,
-    savedHoveredCell, originalY, originalScale, originalRotation,
-  } = action
-
-  if (action.onRestore) {
-    // ── Instanced path ──────────────────────────────────────────────────────
-    // The callback owns both the visual restore AND the appear animation.
-    // We only handle bookkeeping here.
-    w.scene.add(en)
-    w.entities.push(en)
-    occupiedCells.forEach(c => w.tilesFactory.markOccupied(c.x, c.z, 1))
-    placementStore.hoveredCell = savedHoveredCell
-    if (savedHoveredCell) {
-      placementStore.canPlace = w.tilesFactory.canSpawn(
-        savedHoveredCell.cellX, savedHoveredCell.cellZ, sizeInCells
-      )
-    }
-    action.onRestore(w)
-  } else {
-    // ── Standard (full-mesh) path ───────────────────────────────────────────
-    // Set scale to 0 BEFORE scene.add so the entity never flashes at old scale.
-    en.scale.setScalar(0)
-    en.position.y = originalY - 2
-    w.scene.add(en)
-    w.entities.push(en)
-    occupiedCells.forEach(c => w.tilesFactory.markOccupied(c.x, c.z, 1))
-    placementStore.hoveredCell = savedHoveredCell
-    if (savedHoveredCell) {
-      placementStore.canPlace = w.tilesFactory.canSpawn(
-        savedHoveredCell.cellX, savedHoveredCell.cellZ, sizeInCells
-      )
-    }
-    animateAppear(en, originalY, originalScale, originalRotation)
-  }
-}
-
-function removeEntity(w: NonNullable<typeof World.current>, action: DeleteAction) {
-  const e = action.entityObject
   w.entities = w.entities.filter(en => en !== e)
-  action.occupiedCells.forEach(c => w.tilesFactory.markFree(c.x, c.z, 1))
+  occupiedCells.forEach(c => w.tilesFactory.markFree(c.x, c.z, 1))
 
-  if (action.onRemove) {
-    // Instanced path: callback owns the visual animation
-    action.onRemove(w)
-  } else {
-    // Standard path: animate the full mesh shrinking + disappearing
-    action.cancelAnimation = animateRemove(w, e)
+  const action: DeleteAction = {
+    type: "delete", entityObject: e, occupiedCells, sizeInCells,
+    savedHoveredCell, originalY, originalScale, originalRotation,
+    cancelAnimation: () => {},
   }
+
+  action.cancelAnimation = animateRemove(w, e)
+  historyStore.push(action)
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function addToScene(w: NonNullable<typeof World.current>, e: THREE.Object3D, originalY: number) {
+  e.scale.setScalar(0)
+  e.position.y = originalY - 2
+  if (e.userData.isInstanced) {
+    w.instanceManager.setTransform(e.userData.def, e.userData.instanceSlot, e.position, e.userData.rotY ?? 0, 0)
+  }
+  w.scene.add(e)
+  w.entities.push(e)
 }
 
 // ─── Undo / Redo ──────────────────────────────────────────────────────────────
@@ -195,7 +138,29 @@ export function applyUndo() {
     animateRemove(w, action.entityObject)
   }
 
-  if (action.type === "delete") restoreEntity(w, action)
+  if (action.type === "rotate") {
+    animateRotate(w, action.entityObject, action.prevRotY)
+  }
+
+  if (action.type === "delete") {
+    action.cancelAnimation()
+    const { entityObject: en, occupiedCells, sizeInCells, savedHoveredCell, originalY, originalScale, originalRotation } = action
+
+    if (action.onRestore) {
+      w.scene.add(en)
+      w.entities.push(en)
+      action.onRestore(w)
+    } else {
+      addToScene(w, en, originalY)
+      animateAppear(w, en, originalY, originalScale, originalRotation)
+    }
+
+    occupiedCells.forEach(c => w.tilesFactory.markOccupied(c.x, c.z, 1))
+    placementStore.hoveredCell = savedHoveredCell
+    if (savedHoveredCell) {
+      placementStore.canPlace = w.tilesFactory.canSpawn(savedHoveredCell.cellX, savedHoveredCell.cellZ, sizeInCells)
+    }
+  }
 }
 
 export function applyRedo() {
@@ -206,14 +171,23 @@ export function applyRedo() {
 
   if (action.type === "place") {
     const { entityObject: e, originalY, originalScale, originalRotation } = action
-    // Scale to 0 BEFORE scene.add — no flash frame
-    e.scale.setScalar(0)
-    e.position.y = originalY - 2
-    w.scene.add(e)
-    w.entities.push(e)
+    addToScene(w, e, originalY)
     w.tilesFactory.markOccupied(action.cellX, action.cellZ, action.sizeInCells)
-    animateAppear(e, originalY, originalScale, originalRotation)
+    animateAppear(w, e, originalY, originalScale, originalRotation)
   }
 
-  if (action.type === "delete") removeEntity(w, action)
+  if (action.type === "rotate") {
+    animateRotate(w, action.entityObject, action.nextRotY)
+  }
+
+  if (action.type === "delete") {
+    const { entityObject: e, occupiedCells } = action
+    w.entities = w.entities.filter(en => en !== e)
+    occupiedCells.forEach(c => w.tilesFactory.markFree(c.x, c.z, 1))
+    if (action.onRemove) {
+      action.onRemove(w)
+    } else {
+      action.cancelAnimation = animateRemove(w, e)
+    }
+  }
 }
