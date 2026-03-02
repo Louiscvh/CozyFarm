@@ -2,7 +2,7 @@
 import { useEffect, useRef } from "react"
 import * as THREE from "three"
 import { placementStore } from "../store/PlacementStore"
-import { historyStore } from "../store/HistoryStore"
+//import { historyStore } from "../store/HistoryStore"
 import { World } from "../../game/world/World"
 import { getFootprint } from "../../game/entity/Entity"
 import {
@@ -22,7 +22,7 @@ interface UsePlacementOptions {
 // ── Meshs de base ─────────────────────────────────────────────
 const groundPlane = new THREE.Mesh(
   new THREE.PlaneGeometry(10000, 10000),
-  new THREE.MeshBasicMaterial({ visible: true, wireframe: true, side: THREE.DoubleSide })
+  new THREE.MeshBasicMaterial({ visible: true, side: THREE.DoubleSide })
 )
 groundPlane.rotation.x = -Math.PI / 2
 
@@ -70,14 +70,6 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
     const world = World.current
     if (!world) return
 
-  
-  // On ajuste la géométrie du groundPlane pour qu'elle fasse 2x la taille du monde
-    if (world) {
-      const worldSize = world.sizeInCells * world.cellSize;
-      groundPlane.geometry.dispose();
-      // On lui donne exactement la taille du monde (ou un tout petit peu plus pour le confort)
-      groundPlane.geometry = new THREE.PlaneGeometry(worldSize, worldSize);
-    }
     world.scene.add(groundPlane, highlightMesh, staticGridGroup, revealGroup)
     buildStaticGrid(world.cellSize)
 
@@ -141,7 +133,7 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
     
       // On synchronise le store immédiatement
       placementStore.rotation = initialRotationDeg
-  const targetRotRad = THREE.MathUtils.degToRad(initialRotationDeg)
+      const targetRotRad = THREE.MathUtils.degToRad(initialRotationDeg)
 
       removeGhost()
       const { createEntity } = await import("../../game/entity/EntityFactory")
@@ -267,7 +259,7 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
       
         // 2. ENREGISTRER DANS L'HISTORIQUE (AVANT de muter l'objet)
         // On utilise origin.pos pour le "from" et newPos pour le "to"
-        historyStore.push({
+        /*historyStore.push({
           type: "move",
           entityObject: ent,
           fromCell: { x: origin.cellX, z: origin.cellZ },
@@ -275,7 +267,7 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
           fromRot: origin.rotY,
           toRot: newRotY,
           size: footprint
-        })
+        })*/
       
         // 3. MAINTENANT, on applique les changements physiques
         ent.position.copy(newPos)

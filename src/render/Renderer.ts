@@ -2,6 +2,7 @@
 import * as THREE from "three"
 import { CameraController } from "./CameraController"
 import { World } from "../game/world/World"
+import { OutlineSystem } from "./OutlineSystem"
 
 export class Renderer {
   static instance: Renderer | null = null
@@ -17,7 +18,7 @@ export class Renderer {
   renderer: THREE.WebGLRenderer
   cameraController: CameraController
   world: World
-
+  outlineSystem: OutlineSystem
   mouse = new THREE.Vector2()
   private ambientAudio: HTMLAudioElement | null = null
 
@@ -52,6 +53,9 @@ export class Renderer {
     this.world = new World(this.scene, 1)
     this.world.setCamera(this.camera)
     this.world.setWeather();
+
+    this.outlineSystem = new OutlineSystem(this.renderer, this.scene, this.camera)
+
 
     // --- Ambiance sonore ---
     this.setupAmbientAudio()
@@ -91,7 +95,7 @@ export class Renderer {
 
   render() {
     this.cameraController.update()
-    this.renderer.render(this.scene, this.camera)
+    this.outlineSystem.render()  // remplace this.renderer.render(this.scene, this.camera)
   }
 
   resetCameraToHome() {

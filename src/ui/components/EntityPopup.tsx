@@ -8,6 +8,7 @@ import { animateRotate, pushDeleteAction, historyStore } from "../store/HistoryS
 import { Renderer } from "../../render/Renderer"
 import { getFootprint } from "../../game/entity/Entity"
 import type { Entity } from "../../game/entity/Entity"
+import { OutlineSystem } from "../../render/OutlineSystem"
 
 interface PopupInfo {
   entityObject: THREE.Object3D
@@ -19,6 +20,7 @@ export function EntityPopups() {
   const [hoveredPopup, setHoveredPopup] = useState<PopupInfo | null>(null)
   const targetRotY  = useRef<number>(0)
   const rotRafRef   = useRef<number>(0)
+  const prevEntityRef = useRef<THREE.Object3D | null>(null)
   const popupRef    = useRef<HTMLDivElement | null>(null)
   const closeTimer  = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isOverPopup = useRef(false)
@@ -31,6 +33,20 @@ export function EntityPopups() {
     cancelClose()
     closeTimer.current = setTimeout(() => setHoveredPopup(null), 300)
   }
+
+  useEffect(() => {
+    if (prevEntityRef.current && prevEntityRef.current !== hoveredPopup?.entityObject) {
+      OutlineSystem.instance?.setHovered(null)
+    }
+  
+    if (hoveredPopup) {
+      OutlineSystem.instance?.setHovered(hoveredPopup.entityObject)
+      prevEntityRef.current = hoveredPopup.entityObject
+    } else {
+      OutlineSystem.instance?.setHovered(null)
+      prevEntityRef.current = null
+    }
+  }, [hoveredPopup])
 
   useEffect(() => {
     const r = Renderer.instance
@@ -145,9 +161,7 @@ export function EntityPopups() {
 
     const originalPos  = e.position.clone()
     const originalRotY = e.userData.isInstanced ? (e.userData.rotY ?? 0) : e.rotation.y
-    console.log(
-      THREE.MathUtils.radToDeg(originalRotY), 
-    );
+  
     // Remove from world — hide visually but keep the Object3D alive
     w.entities = w.entities.filter(en => en !== e)
     // Free all cells occupied by this entity

@@ -264,4 +264,10 @@ export class InstancedEntityManager {
       e.mesh.instanceMatrix.needsUpdate = true
     }
   }
+
+  getSubMeshEntries(def: Entity): { geometry: THREE.BufferGeometry; localMat: THREE.Matrix4 }[] | undefined {
+    const pool = this.pools.get(InstancedEntityManager.key(def))
+    if (!pool) return undefined
+    return pool.entries.map(e => ({ geometry: e.mesh.geometry, localMat: e.localMat }))
+  }
 }
