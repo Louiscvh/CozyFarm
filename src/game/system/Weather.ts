@@ -16,7 +16,8 @@ export class Weather {
   private moon:    THREE.DirectionalLight
   private backSun: THREE.DirectionalLight
   private ambient: THREE.AmbientLight
-
+  public temperature: number = 15
+  private targetTemperature: number = 15
   private rain:    Rain
 
   public daylight: number = 1
@@ -53,8 +54,14 @@ export class Weather {
     return this.currentRainIntensity;
   }
 
+  getTemperature() {
+    return this.temperature
+  }
+
   update(deltaTime: number) {
     this._updateSun()
+    this._updateTemperature(deltaTime)
+  
     const camPos = this.camera.position
     this.rain.update(deltaTime, camPos)
   }
@@ -65,6 +72,37 @@ export class Weather {
     this.scene.remove(this.backSun)
     this.scene.remove(this.ambient)
     this.rain.dispose()
+  }
+
+  private _updateTemperature(deltaTime: number) {
+    // Température de base selon lumière du jour
+    // Nuit ≈ 8°C
+    // Jour plein ≈ 22°C
+    const minTemp = 8
+    const maxTemp = 22
+  
+    let baseTemp = THREE.MathUtils.lerp(minTemp, maxTemp, this.daylight)
+  
+    // Refroidissement pluie
+    if (this.currentRainIntensity === "heavy") {
+      baseTemp -= 4
+    } else if (this.currentRainIntensity === "moderate") {
+      baseTemp -= 2
+    }
+  
+    // Petite variation naturelle
+    const timeT = Time.getVisualDayT()
+    const variation = Math.sin(timeT * Math.PI * 2) * 1.5
+    baseTemp += variation
+  
+    this.targetTemperature = baseTemp
+  
+    // Transition douce (inertie thermique)
+    this.temperature = THREE.MathUtils.lerp(
+      this.temperature,
+      this.targetTemperature,
+      deltaTime * 0.5
+    )
   }
 
   // ─── Light setup ─────────────────────────────────────────────────────────────

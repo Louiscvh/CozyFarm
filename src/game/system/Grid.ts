@@ -5,7 +5,7 @@ import { World } from "../../game/world/World"
 // ─── Static grid — 1 draw call ────────────────────────────────────────────────
 
 const STATIC_OPACITY = 0.1
-const DEBUG_OPACITY  = 0.5
+const DEBUG_OPACITY  = 0.2
 
 export const staticGridGroup = new THREE.Group()
 staticGridGroup.position.y = 0.055

@@ -14,7 +14,8 @@ export class Time {
   private static visualDuration = 0
 
   static update(dt: number) {
-    this.delta = dt * this.timeScale
+    const safeDt = Math.min(dt, 0.1)   // cap à 100ms max
+    this.delta = safeDt * this.timeScale
     this.elapsed += this.delta
 
     if (this.visualFrom !== null && this.visualTo !== null) {

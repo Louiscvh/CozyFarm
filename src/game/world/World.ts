@@ -12,7 +12,7 @@ import { debugHitboxEnabled } from "../entity/EntityFactory"
 export class World {
   static current: World | null = null
 
-  readonly size: number = 80
+  readonly size: number = 50
   readonly tileSize: number
   readonly cellSize: number
   readonly sizeInCells: number
@@ -156,15 +156,21 @@ export class World {
     const proxy   = new THREE.Group()
     proxy.position.copy(worldPos)
 
-    const hitGeo  = new THREE.BoxGeometry(info.boxSize.x, info.boxSize.y, info.boxSize.z)
-    const hitMesh = new THREE.Mesh(hitGeo, new THREE.MeshBasicMaterial({ visible: false }))
+    // Reuse the shared geometry from the pool — no new BoxGeometry per instance
+    const hitMesh = new THREE.Mesh(
+      info.hitboxGeo,
+      new THREE.MeshBasicMaterial({ visible: false })
+    )
     hitMesh.position.copy(info.boxCenter)
     hitMesh.name              = "__hitbox__"
     hitMesh.userData.isHitBox = true
 
-    const wire = new THREE.WireframeGeometry(hitGeo)
+    // WireframeGeometry is also shared per pool
+    if (!info.hitboxGeo.userData.wireframe) {
+      info.hitboxGeo.userData.wireframe = new THREE.WireframeGeometry(info.hitboxGeo)
+    }
     const line = new THREE.LineSegments(
-      wire,
+      info.hitboxGeo.userData.wireframe as THREE.WireframeGeometry,
       new THREE.LineBasicMaterial({ color: 0xffffff, depthTest: false })
     )
     line.visible = debugHitboxEnabled

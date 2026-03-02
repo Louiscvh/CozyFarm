@@ -14,6 +14,11 @@ export interface PoolInfo {
   boxSize: THREE.Vector3
   /** Bounding-box center in model-local space (before yOffset) */
   boxCenter: THREE.Vector3
+  /**
+   * Shared BoxGeometry for proxy hitboxes — one per pool instead of one per instance.
+   * All proxies of the same entity type reuse this geometry.
+   */
+  hitboxGeo: THREE.BoxGeometry
 }
 
 interface SubMeshEntry {
@@ -92,9 +97,11 @@ export class InstancedEntityManager {
     box.getCenter(boxCtr)
 
     const info: PoolInfo = {
-      yOffset  : -box.min.y + 0.05,   // shift so model bottom sits just above ground (mirrors attachHitBox)
-      boxSize  : boxSz.clone(),
-      boxCenter: boxCtr.clone(),
+      yOffset   : -box.min.y + 0.05,   // shift so model bottom sits just above ground (mirrors attachHitBox)
+      boxSize   : boxSz.clone(),
+      boxCenter : boxCtr.clone(),
+      // Shared geometry — created once per pool, reused by every proxy of this type
+      hitboxGeo : new THREE.BoxGeometry(boxSz.x, boxSz.y, boxSz.z),
     }
 
     const cast    = def.castShadow    !== false
@@ -111,6 +118,8 @@ export class InstancedEntityManager {
       im.receiveShadow = receive
       im.count         = 0
       im.frustumCulled = false          // spans the whole world
+      // Static decor: tell Three.js the instance matrices won't change every frame
+      im.instanceMatrix.setUsage(THREE.StaticDrawUsage)
       // Pre-fill with zero-scale matrices so empty slots are invisible
       for (let i = 0; i < maxCount; i++) im.setMatrixAt(i, _zero)
       im.instanceMatrix.needsUpdate = true

@@ -12,6 +12,7 @@ import { placementStore } from "./ui/store/PlacementStore"
 import { Renderer } from "./render/Renderer"
 import { EntityPopups } from "./ui/components/EntityPopup"
 import { RollBackBar } from "./ui/components/RollBackBar"
+import { Temperature } from "./ui/components/Temperature"
 
 export const App = () => {
   return (
@@ -23,6 +24,7 @@ export const App = () => {
         <header>
           <HomeButton />
           <GameClock />
+          <Temperature />
         </header>
         <EntityPopups />
 

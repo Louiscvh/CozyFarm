@@ -30,6 +30,8 @@ export class Renderer {
 
     // --- Renderer ---
     this.renderer = new THREE.WebGLRenderer({ antialias: true })
+    this.renderer.domElement.style.willChange = "transform"
+
     this.renderer.setSize(window.innerWidth, window.innerHeight)
     this.renderer.setPixelRatio(window.devicePixelRatio)
     this.renderer.shadowMap.enabled = true

@@ -13,7 +13,8 @@
     opacity: 0;
     transform: translateY(150%) scale(0.95);
     pointer-events: none;
-  
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+
     /* transition pour apparition + bump */
     transition: 
       opacity 0.3s cubic-bezier(0.2, 1, 0.3, 1),

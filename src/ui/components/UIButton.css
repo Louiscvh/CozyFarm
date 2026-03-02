@@ -9,7 +9,6 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  text-transform: uppercase;
   cursor: pointer;
   pointer-events: auto;
   transition:
@@ -52,6 +51,22 @@
     0 0 12px rgba(255, 255, 255, 0.3),
     inset 0 0 8px rgba(255, 255, 255, 0.08)!important;
   transform: translateY(-3px)!important;
+}
+
+.ui-button--primary.static {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: rgba(255, 255, 255, 0.65);
+  font-size: 11px;
+  font-weight: 500;
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  cursor: default;
+  pointer-events: none;
+  transition: none;
 }
 
 .ui-button--primary.disabled {
