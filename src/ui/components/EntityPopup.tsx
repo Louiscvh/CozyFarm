@@ -6,6 +6,8 @@ import { UIButton } from "./UIButton"
 import { placementStore } from "../store/PlacementStore"
 import { animateRotate, pushDeleteAction, historyStore } from "../store/HistoryStore"
 import { Renderer } from "../../render/Renderer"
+import { getFootprint } from "../../game/entity/Entity"
+import type { Entity } from "../../game/entity/Entity"
 
 interface PopupInfo {
   entityObject: THREE.Object3D
@@ -33,7 +35,6 @@ export function EntityPopups() {
   useEffect(() => {
     const r = Renderer.instance
     if (!r) return
-
     const prev = r.cameraController.onUpdate
     r.cameraController.onUpdate = () => {
       const mouse = Renderer.instance!.mouse
@@ -47,26 +48,22 @@ export function EntityPopups() {
 
         const raycaster = new THREE.Raycaster()
         raycaster.setFromCamera(mouse, w.camera)
-
         const hitbox = current.entityObject.getObjectByName("__hitbox__")
         if (!hitbox) return null
         if (raycaster.intersectObject(hitbox, false).length === 0) return null
 
         const box = new THREE.Box3().setFromObject(hitbox)
         const topCenter = new THREE.Vector3(
-          (box.min.x + box.max.x) / 2,
-          box.max.y + 0.3,
-          (box.min.z + box.max.z) / 2
+          (box.min.x + box.max.x) / 2, box.max.y + 0.3, (box.min.z + box.max.z) / 2
         ).project(w.camera)
 
         const x = (topCenter.x + 1) / 2 * window.innerWidth
         const y = (-topCenter.y + 1) / 2 * window.innerHeight
-
-        if (Math.abs(x - current.screenPos.x) < 0.5 && Math.abs(y - current.screenPos.y) < 0.5) return current
+        if (Math.abs(x - current.screenPos.x) < 0.5 && Math.abs(y - current.screenPos.y) < 0.5)
+          return current
         return { ...current, screenPos: { x, y } }
       })
     }
-
     return () => { r.cameraController.onUpdate = prev }
   }, [])
 
@@ -77,7 +74,6 @@ export function EntityPopups() {
     function onMouseMove(e: MouseEvent) {
       const w = World.current
       if (!w || !w.camera) return
-
       if (placementStore.selectedItem) { cancelClose(); setHoveredPopup(null); return }
       if (isOverPopup.current)         { cancelClose(); return }
 
@@ -88,25 +84,25 @@ export function EntityPopups() {
       const hitboxes = w.entities
         .map(en => en.getObjectByName("__hitbox__"))
         .filter(Boolean) as THREE.Object3D[]
-
       const intersects = raycaster.intersectObjects(hitboxes, false)
 
       if (intersects.length === 0) { scheduleClose(); return }
 
-      const hit    = intersects[0].object
-      const entity = hit.parent!
-      const box    = new THREE.Box3().setFromObject(hit)
+      const entity = intersects[0].object.parent!
+      const box    = new THREE.Box3().setFromObject(intersects[0].object)
       const topCenter = new THREE.Vector3(
-        (box.min.x + box.max.x) / 2,
-        box.max.y + 0.3,
-        (box.min.z + box.max.z) / 2
+        (box.min.x + box.max.x) / 2, box.max.y + 0.3, (box.min.z + box.max.z) / 2
       ).project(w.camera)
 
-      const x = (topCenter.x + 1) / 2 * window.innerWidth
-      const y = (-topCenter.y + 1) / 2 * window.innerHeight
-
       cancelClose()
-      setHoveredPopup({ entityObject: entity, id: entity.uuid, screenPos: { x, y } })
+      setHoveredPopup({
+        entityObject: entity,
+        id          : entity.uuid,
+        screenPos   : {
+          x: (topCenter.x + 1) / 2 * window.innerWidth,
+          y: (-topCenter.y + 1) / 2 * window.innerHeight,
+        },
+      })
     }
 
     window.addEventListener("mousemove", onMouseMove)
@@ -129,6 +125,56 @@ export function EntityPopups() {
     pushDeleteAction(w, popup.entityObject, savedHoveredCell)
   }
 
+  // ─── Move ─────────────────────────────────────────────────────────────────
+
+  const handleMove = (popup: PopupInfo) => {
+    cancelClose()
+    isOverPopup.current = false
+    setHoveredPopup(null)
+    const w = World.current
+    if (!w) return
+    const e           = popup.entityObject
+    const def         = e.userData.def as Entity
+    const cellX       = e.userData.cellX as number
+    const cellZ       = e.userData.cellZ as number
+
+    // Derive footprint from the definition — never rely solely on userData.sizeInCells
+    const sizeInCells = getFootprint(def)
+
+    if (!def || cellX === undefined || cellZ === undefined) return
+
+    const originalPos  = e.position.clone()
+    const originalRotY = e.userData.isInstanced ? (e.userData.rotY ?? 0) : e.rotation.y
+    console.log(
+      THREE.MathUtils.radToDeg(originalRotY), 
+    );
+    // Remove from world — hide visually but keep the Object3D alive
+    w.entities = w.entities.filter(en => en !== e)
+    // Free all cells occupied by this entity
+    w.tilesFactory.markFree(cellX, cellZ, sizeInCells)
+
+    // Always remove proxy from scene (removes hitbox too — prevents raycaster hits during move)
+    if (e.userData.isInstanced) w.instanceManager.hide(def, e.userData.instanceSlot)
+    w.scene.remove(e)
+
+    // Called if the player presses Escape — restores everything
+    const onCancel = () => {
+      w.tilesFactory.markOccupied(cellX, cellZ, sizeInCells)
+      e.userData.cellX = cellX
+      e.userData.cellZ = cellZ
+      e.position.copy(originalPos)
+      e.rotation.y = originalRotY
+
+      if (e.userData.isInstanced) {
+        w.instanceManager.show(def, e.userData.instanceSlot, originalPos, originalRotY)
+      }
+      w.scene.add(e)
+      w.entities.push(e)
+    }
+
+    placementStore.startMove(def, e, cellX, cellZ, originalRotY, onCancel)
+  }
+
   // ─── Rotate ───────────────────────────────────────────────────────────────
 
   const handleRotate = (popup: PopupInfo) => {
@@ -138,13 +184,11 @@ export function EntityPopups() {
     if (!w) return
 
     const prevRotY = e.userData.isInstanced ? (e.userData.rotY ?? 0) : e.rotation.y
-
     if (Math.abs(targetRotY.current - prevRotY) > 0.01) targetRotY.current = prevRotY
     const nextRotY = targetRotY.current + THREE.MathUtils.degToRad(90)
     targetRotY.current = nextRotY
 
     historyStore.push({ type: "rotate", entityObject: e, prevRotY, nextRotY })
-
     cancelAnimationFrame(rotRafRef.current)
     animateRotate(w, e, nextRotY)
   }
@@ -167,6 +211,7 @@ export function EntityPopups() {
       }}
     >
       <div className="entity-popup-bridge" />
+      <UIButton className="move-btn"   onClick={() => handleMove(hoveredPopup)}>✥</UIButton>
       <UIButton className="rotate-btn" onClick={() => handleRotate(hoveredPopup)}>↻</UIButton>
       <UIButton className="delete-btn" onClick={() => handleDelete(hoveredPopup)}>🗑️</UIButton>
     </div>

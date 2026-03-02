@@ -3,7 +3,6 @@ import * as THREE from "three"
 import type { Entity } from "./Entity"
 import { assetManager } from "../../render/AssetManager"
 import { scaleModelToCells } from "./utils/scaleModelToCells"
-import { applyRotation } from "./utils/applyRotation"
 import { createTorchMesh } from "./entities/torch/TorchMesh"
 import { World } from "../world/World"
 
@@ -88,7 +87,7 @@ export async function createEntity(
   // ← cellSize au lieu de tileSize : modelSize=6 cellules × cellSize=1u = 6u monde
   //   avant : modelSize=6 × tileSize=2u = 12u monde (doublement)
   scaleModelToCells(root, def.modelSize, cellSize)
-  applyRotation(root, def.rotation)
+  //applyRotation(root, def.rotation)
 
   const cast    = def.castShadow    !== undefined ? def.castShadow    : true
   const receive = def.receiveShadow !== undefined ? def.receiveShadow : true

@@ -2,6 +2,7 @@
 import * as THREE from "three"
 import { KeyboardInput } from "../input/KeyboardInput"
 import { MouseDrag } from "../input/MouseDrag"
+import { World } from "../game/world/World"
 
 export class CameraController {
   camera: THREE.OrthographicCamera
@@ -111,6 +112,8 @@ export class CameraController {
 
     this.moveVelocity.multiplyScalar(this.moveFriction)
     this.target.addScaledVector(this.moveVelocity, cameraDelta)
+
+    this.clampTarget()
 }
 
   private handleZoom() {
@@ -127,11 +130,24 @@ export class CameraController {
     const t = this.returnT
 
     this.target.lerpVectors(this.returnStartTarget, this.homeTarget, t)
+    this.clampTarget()
     this.distance = THREE.MathUtils.lerp(this.returnStartDistance, this.homeDistance, t)
     this.azimuth = THREE.MathUtils.lerp(this.returnStartAzimuth, this.homeAzimuth, t)
     this.elevation = THREE.MathUtils.lerp(this.returnStartElevation, this.homeElevation, t)
 
     if (t >= 1) this.isReturningHome = false
+  }
+
+  private clampTarget() {
+    const world = World.current; // Importe la classe World en haut du fichier
+    if (!world) return;
+  
+    // world.sizeInCells / 2 * world.cellSize donne le rayon exact du monde depuis le centre
+    const limit = (world.sizeInCells / 2) * world.cellSize;
+  
+    // On bloque le target
+    this.target.x = THREE.MathUtils.clamp(this.target.x, -limit, limit);
+    this.target.z = THREE.MathUtils.clamp(this.target.z, -limit, limit);
   }
 
   private updateCamera() {

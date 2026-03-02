@@ -2,7 +2,6 @@
 import * as THREE from "three"
 import { assetManager } from "../../render/AssetManager"
 import { scaleModelToCells } from "./utils/scaleModelToCells"
-import { applyRotation as applyEntityRotation } from "./utils/applyRotation"
 import type { Entity } from "./Entity"
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -86,7 +85,7 @@ export class InstancedEntityManager {
     // Build a throw-away template just to extract geometry + matrices
     const tmpl = gltf.scene.clone(true)
     scaleModelToCells(tmpl, def.modelSize, cellSize)
-    applyEntityRotation(tmpl, def.rotation)
+    //applyRotation(tmpl, def.rotation)
     tmpl.updateMatrixWorld(true)
 
     // Bounding box (model at world origin, no yOffset yet)

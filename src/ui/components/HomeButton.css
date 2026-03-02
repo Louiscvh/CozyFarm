@@ -1,6 +1,6 @@
 .ui-home-button {
   position: absolute;
-
+  z-index: 10000;
 }
 
 .ui-home-icon {

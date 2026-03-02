@@ -90,6 +90,54 @@ export class World {
     return true
   }
 
+  moveEntitySafe(
+    entity: THREE.Object3D,
+    newCellX: number,
+    newCellZ: number
+  ): boolean {
+    const size = entity.userData.sizeInCells
+  
+    if (!this.tilesFactory.canSpawn(newCellX, newCellZ, size)) {
+      return false
+    }
+  
+    // 1️⃣ Libérer anciennes tiles
+    this.tilesFactory.markFree(
+      entity.userData.cellX,
+      entity.userData.cellZ,
+      size
+    )
+  
+    // 2️⃣ Marquer nouvelles tiles
+    this.tilesFactory.markOccupied(newCellX, newCellZ, size)
+  
+    // 3️⃣ Update userData
+    entity.userData.cellX = newCellX
+    entity.userData.cellZ = newCellZ
+  
+    const half   = this.sizeInCells / 2
+    const worldX = (newCellX - half + size / 2) * this.cellSize
+    const worldZ = (newCellZ - half + size / 2) * this.cellSize
+  
+    // 4️⃣ Instanced
+    if (entity.userData.isInstanced) {
+      entity.position.set(worldX, entity.position.y, worldZ)
+  
+      this.instanceManager.setTransform(
+        entity.userData.def,
+        entity.userData.instanceSlot,
+        entity.position,
+        entity.userData.rotY ?? 0
+      )
+    }
+    // 5️⃣ Normal mesh
+    else {
+      entity.position.set(worldX, entity.position.y, worldZ)
+    }
+  
+    return true
+  }
+
   // ─── Standard entity spawn (user-placed + fixed decor) ────────────────────
 
   async spawnEntitySafe(
@@ -112,6 +160,10 @@ export class World {
     this.tilesFactory.markOccupied(cellX, cellZ, cells)
 
     const entity = await createEntity(def, this.tileSize)
+
+    const defaultRotDeg = def.rotation?.y || 0
+    entity.rotation.y = THREE.MathUtils.degToRad(defaultRotDeg)
+
     entity.userData.id          = def.id
     entity.userData.cellX       = cellX
     entity.userData.cellZ       = cellZ
@@ -146,16 +198,19 @@ export class World {
     const info = this.instanceManager.getInfo(def)
     if (!info) return null
 
+    const defaultRotDeg = def.rotation?.y || 0
+    const rotY = THREE.MathUtils.degToRad(defaultRotDeg)
+
     const half     = this.sizeInCells / 2
     const worldX   = (cellX - half + sizeInCells / 2) * this.cellSize
     const worldZ   = (cellZ - half + sizeInCells / 2) * this.cellSize
     const worldPos = new THREE.Vector3(worldX, info.yOffset, worldZ)
-
-    const slot = this.instanceManager.add(def, worldPos, 0)
+    const slot = this.instanceManager.add(def, worldPos, rotY)
 
     const proxy   = new THREE.Group()
-    proxy.position.copy(worldPos)
 
+    proxy.position.copy(worldPos)
+    proxy.rotation.y = rotY
     // Reuse the shared geometry from the pool — no new BoxGeometry per instance
     const hitMesh = new THREE.Mesh(
       info.hitboxGeo,
@@ -184,7 +239,7 @@ export class World {
     proxy.userData.sizeInCells  = sizeInCells
     proxy.userData.isInstanced  = true
     proxy.userData.instanceSlot = slot
-    proxy.userData.rotY         = 0
+    proxy.userData.rotY         = rotY // Stocker la rotation actuelle
 
     this.scene.add(proxy)
     this.entities.push(proxy)

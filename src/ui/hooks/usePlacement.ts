@@ -22,7 +22,7 @@ interface UsePlacementOptions {
 // ── Meshs de base ─────────────────────────────────────────────
 const groundPlane = new THREE.Mesh(
   new THREE.PlaneGeometry(10000, 10000),
-  new THREE.MeshBasicMaterial({ visible: false, side: THREE.DoubleSide })
+  new THREE.MeshBasicMaterial({ visible: true, wireframe: true, side: THREE.DoubleSide })
 )
 groundPlane.rotation.x = -Math.PI / 2
 
@@ -35,12 +35,13 @@ highlightMesh.visible    = false
 
 // ── Ghost ─────────────────────────────────────────────────────
 const ghostMat = new THREE.MeshBasicMaterial({ color:0x00ff00, transparent:true, opacity:0.5, depthWrite:false, depthTest:false })
+
 function applyGhostMaterials(root: THREE.Object3D) {
   const toRemove: THREE.Object3D[] = []
   const toReMat: THREE.Mesh[] = []
 
   root.traverse(obj => {
-    if (obj.userData.isHitBox || obj.name==="__hitbox__") { toRemove.push(obj); return }
+    if (obj.userData.isHitBox || obj.name === "__hitbox__") { toRemove.push(obj); return }
     if ((obj as THREE.Mesh).isMesh) toReMat.push(obj as THREE.Mesh)
     if ((obj as THREE.PointLight).isLight) (obj as THREE.PointLight).visible = false
   })
@@ -57,7 +58,7 @@ function setGhostColor(canPlace: boolean) {
 export function usePlacement({ camera, renderer }: UsePlacementOptions) {
   const raycaster   = useRef(new THREE.Raycaster())
   const mouse       = useRef(new THREE.Vector2())
-  const ghostRef    = useRef<THREE.Object3D|null>(null)
+  const ghostRef    = useRef<THREE.Object3D | null>(null)
   const yOffsetRef  = useRef<number>(0)
   const targetPos   = useRef(new THREE.Vector3())
   const currentPos  = useRef(new THREE.Vector3())
@@ -69,37 +70,51 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
     const world = World.current
     if (!world) return
 
+  
+  // On ajuste la géométrie du groundPlane pour qu'elle fasse 2x la taille du monde
+    if (world) {
+      const worldSize = world.sizeInCells * world.cellSize;
+      groundPlane.geometry.dispose();
+      // On lui donne exactement la taille du monde (ou un tout petit peu plus pour le confort)
+      groundPlane.geometry = new THREE.PlaneGeometry(worldSize, worldSize);
+    }
     world.scene.add(groundPlane, highlightMesh, staticGridGroup, revealGroup)
     buildStaticGrid(world.cellSize)
 
-    const snapToCell = (x:number,z:number) => {
-      const half = world!.sizeInCells/2
-      return { cellX: Math.floor(x/world!.cellSize+half), cellZ: Math.floor(z/world!.cellSize+half) }
+    const snapToCell = (x: number, z: number) => {
+      const half = world.sizeInCells / 2
+      return {
+        cellX: Math.floor(x / world.cellSize + half),
+        cellZ: Math.floor(z / world.cellSize + half),
+      }
     }
 
-    const cellToWorld = (cellX:number,cellZ:number,footprint:number) => {
-      const half = world!.sizeInCells/2
-      const startX = (cellX-half)*world!.cellSize
-      const startZ = (cellZ-half)*world!.cellSize
-      return { x: startX + footprint*world!.cellSize/2, z: startZ + footprint*world!.cellSize/2 }
+    const cellToWorld = (cellX: number, cellZ: number, footprint: number) => {
+      const half   = world.sizeInCells / 2
+      const startX = (cellX - half) * world.cellSize
+      const startZ = (cellZ - half) * world.cellSize
+      return {
+        x: startX + footprint * world.cellSize / 2,
+        z: startZ + footprint * world.cellSize / 2,
+      }
     }
 
-    const getPlaceCells = (cellX:number,cellZ:number,footprint:number) => {
-      const half = Math.floor(footprint/2)
-      return { placeCellX:cellX-half, placeCellZ:cellZ-half }
+    const getPlaceCells = (cellX: number, cellZ: number, footprint: number) => {
+      const half = Math.floor(footprint / 2)
+      return { placeCellX: cellX - half, placeCellZ: cellZ - half }
     }
 
     // ── Ghost ──────────────────────────────────────────────
     const removeGhost = () => {
       cancelAnimationFrame(rafRef.current)
       if (ghostRef.current) {
-        world!.scene.remove(ghostRef.current)
+        world.scene.remove(ghostRef.current)
         ghostRef.current.traverse(obj => {
           if ((obj as THREE.Mesh).isMesh) {
             const mesh = obj as THREE.Mesh
             mesh.geometry?.dispose()
             const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-            mats.forEach(m=>{if(m!==ghostMat)m.dispose()})
+            mats.forEach(m => { if (m !== ghostMat) m.dispose() })
           }
         })
         ghostRef.current = null
@@ -112,147 +127,209 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
     }
 
     async function buildGhost(entity: typeof placementStore.selectedItem) {
-      if (!entity) return removeGhost()
+      if (!entity || !world) return removeGhost()
+
+        let initialRotationDeg = 0
+      
+        if (placementStore.moveOrigin) {
+          // Si on déplace, on prend la rotation actuelle de l'objet (en degrés)
+          initialRotationDeg = Math.round(THREE.MathUtils.radToDeg(placementStore.moveOrigin.rotY))
+        } else {
+          // Si c'est un nouvel item, on prend la rotation forcée de la def (ex: 180)
+          initialRotationDeg = entity.entity.rotation?.y || 0
+        }
+    
+      // On synchronise le store immédiatement
+      placementStore.rotation = initialRotationDeg
+  const targetRotRad = THREE.MathUtils.degToRad(initialRotationDeg)
+
       removeGhost()
       const { createEntity } = await import("../../game/entity/EntityFactory")
-      const root = await createEntity(entity.entity, world!.tileSize)
+      const root = await createEntity(entity.entity, world.tileSize)
+
       yOffsetRef.current = root.position.y
       applyGhostMaterials(root)
-      root.frustumCulled = false
-      root.traverse(o=>o.frustumCulled=false)
-      buildRevealGrid(world!.cellSize, getFootprint(entity.entity))
-      revealGroup.visible = true
-
+      
+      // ── 2. SYNCHRONISATION DES REFS ──
+      // On force les refs à la rotation cible pour éviter que le ghost ne tourne 
+      // de 0 vers 180 au moment où il apparaît (téléportation angulaire immédiate)
+      root.rotation.y = targetRotRad 
+      currentRotY.current = targetRotRad
+      targetRotY.current = targetRotRad
+    
       const footprint = getFootprint(entity.entity)
+      buildRevealGrid(world.cellSize, footprint)
+      revealGroup.visible = true
+      
+      // Positionnement initial (si la souris survole déjà une cellule)
       if (placementStore.hoveredCell) {
         const { cellX, cellZ } = placementStore.hoveredCell
         const { placeCellX, placeCellZ } = getPlaceCells(cellX, cellZ, footprint)
         const { x, z } = cellToWorld(placeCellX, placeCellZ, footprint)
+        
         targetPos.current.set(x, yOffsetRef.current, z)
-        const canPlace = world!.tilesFactory.canSpawn(placeCellX, placeCellZ, footprint)
+        currentPos.current.copy(targetPos.current)
+        
+        const canPlace = world.tilesFactory.canSpawn(placeCellX, placeCellZ, footprint)
         setGhostColor(canPlace)
-        highlightMesh.scale.set(footprint*world!.cellSize, footprint*world!.cellSize, 1)
+        
+        highlightMesh.scale.set(footprint * world.cellSize, footprint * world.cellSize, 1)
         highlightMesh.position.set(x, 0.055, z)
-        revealGroup.position.set(x, 0.056, z)
         highlightMesh.material = canPlace ? highlightMatOk : highlightMatBad
         highlightMesh.visible = true
+        revealGroup.position.set(x, 0.056, z)
         showGridForGhost()
-      } else {
-        targetPos.current.set(0,-9999,0)
-        highlightMesh.visible = false
-        revealGroup.visible = false
       }
-
-      const initRot = THREE.MathUtils.degToRad(placementStore.rotation)
-      currentRotY.current = targetRotY.current = initRot
-      root.rotation.y = initRot
+    
       root.position.copy(currentPos.current)
-
-      world!.scene.add(root)
+      world.scene.add(root)
       ghostRef.current = root
       placementStore.ghostMesh = root
-
+    
       const animateGhost = () => {
         rafRef.current = requestAnimationFrame(animateGhost)
         if (!ghostRef.current) return
-        currentPos.current.lerp(targetPos.current,0.35)
+        
+        currentPos.current.lerp(targetPos.current, 0.35)
         ghostRef.current.position.copy(currentPos.current)
-        currentRotY.current += (targetRotY.current-currentRotY.current)*0.3
+        
+        // L'interpolation fluide pour la rotation
+        currentRotY.current += (targetRotY.current - currentRotY.current) * 0.3
         ghostRef.current.rotation.y = currentRotY.current
-        if (highlightMesh.visible) highlightMesh.position.set(currentPos.current.x,0.055,currentPos.current.z)
-        if (ghostRef.current.userData.isTorch) (ghostRef.current as any).updateTorch(performance.now()/1000,0)
+        
+        if (highlightMesh.visible)
+          highlightMesh.position.set(currentPos.current.x, 0.055, currentPos.current.z)
       }
       animateGhost()
     }
 
     // ── Events ───────────────────────────────────────────────
-    const onMouseMove = (e:MouseEvent) => {
+    const onMouseMove = (e: MouseEvent) => {
       const rect = renderer.domElement.getBoundingClientRect()
       mouse.current.set(
-        ((e.clientX-rect.left)/rect.width)*2-1,
-        ((e.clientY-rect.top)/rect.height)*-2+1
+        ((e.clientX - rect.left) / rect.width)  *  2 - 1,
+        ((e.clientY - rect.top)  / rect.height) * -2 + 1
       )
-      raycaster.current.setFromCamera(mouse.current,camera)
+      raycaster.current.setFromCamera(mouse.current, camera)
       const hits = raycaster.current.intersectObject(groundPlane)
       if (!hits.length) return
+
       const { cellX, cellZ } = snapToCell(hits[0].point.x, hits[0].point.z)
       placementStore.hoveredCell = { cellX, cellZ }
 
       if (!placementStore.selectedItem) {
-        revealGroup.visible=false
+        revealGroup.visible = false
         return
       }
 
       const footprint = getFootprint(placementStore.selectedItem.entity)
       const { placeCellX, placeCellZ } = getPlaceCells(cellX, cellZ, footprint)
-      placementStore.canPlace = world!.tilesFactory.canSpawn(placeCellX, placeCellZ, footprint)
+      placementStore.canPlace = world.tilesFactory.canSpawn(placeCellX, placeCellZ, footprint)
 
       const { x, z } = cellToWorld(placeCellX, placeCellZ, footprint)
       targetPos.current.set(x, yOffsetRef.current, z)
       setGhostColor(placementStore.canPlace)
 
       highlightMesh.visible = true
-      highlightMesh.position.set(x,0.055,z)
+      highlightMesh.position.set(x, 0.055, z)
       highlightMesh.material = placementStore.canPlace ? highlightMatOk : highlightMatBad
-      revealGroup.position.set(x,0.056,z)
+      revealGroup.position.set(x, 0.056, z)
       revealGroup.visible = true
     }
 
-    let mouseDownPos = {x:0,y:0}
-    const onMouseDown = (e:MouseEvent) => { mouseDownPos = {x:e.clientX,y:e.clientY} }
+    let mouseDownPos = { x: 0, y: 0 }
+    const onMouseDown = (e: MouseEvent) => { mouseDownPos = { x: e.clientX, y: e.clientY } }
+
     const onClick = async (e: MouseEvent) => {
       if ((e.target as HTMLElement).closest("#ui-root")) return
+      if (skipNextClick) { skipNextClick = false; return }
       if (!placementStore.selectedItem || !placementStore.hoveredCell) return
 
       const dx = e.clientX - mouseDownPos.x
       const dy = e.clientY - mouseDownPos.y
       if (Math.sqrt(dx * dx + dy * dy) > 5) return
+      if (!placementStore.canPlace) { playSound(true); return }
 
-      if (!placementStore.canPlace) {
-        playSound(true)
+      const { cellX, cellZ }           = placementStore.hoveredCell
+      const item                        = placementStore.selectedItem
+      const footprint                   = getFootprint(item.entity)
+      const { placeCellX, placeCellZ }  = getPlaceCells(cellX, cellZ, footprint)
+
+      if (placementStore.moveEntity) {
+        const ent = placementStore.moveEntity
+        const origin = placementStore.moveOrigin!
+        const footprint = getFootprint(ent.userData.def)
+        
+        // 1. CALCULER les nouvelles valeurs
+        const { x: newX, z: newZ } = cellToWorld(placeCellX, placeCellZ, footprint)
+        const newRotY = targetRotY.current
+        const newPos = new THREE.Vector3(newX, yOffsetRef.current || origin.pos.y, newZ)
+      
+        // 2. ENREGISTRER DANS L'HISTORIQUE (AVANT de muter l'objet)
+        // On utilise origin.pos pour le "from" et newPos pour le "to"
+        historyStore.push({
+          type: "move",
+          entityObject: ent,
+          fromCell: { x: origin.cellX, z: origin.cellZ },
+          toCell: { x: placeCellX, z: placeCellZ },
+          fromRot: origin.rotY,
+          toRot: newRotY,
+          size: footprint
+        })
+      
+        // 3. MAINTENANT, on applique les changements physiques
+        ent.position.copy(newPos)
+        ent.rotation.y = newRotY
+        ent.userData.cellX = placeCellX
+        ent.userData.cellZ = placeCellZ
+        ent.userData.rotY = newRotY // Très important pour l'instance manager
+      
+        ent.updateMatrix()
+        ent.updateMatrixWorld(true)
+      
+        if (ent.userData.isInstanced) {
+          world.instanceManager.show(ent.userData.def, ent.userData.instanceSlot, newPos, newRotY)
+        }
+      
+        world.scene.add(ent)
+        if (!world.entities.includes(ent)) world.entities.push(ent)
+        world.tilesFactory.markOccupied(placeCellX, placeCellZ, footprint)
+      
+        placementStore.completeMove()
+        removeGhost()
+        playSound(false)
         return
       }
 
-      const { cellX, cellZ } = placementStore.hoveredCell
-      const item = placementStore.selectedItem
-      const footprint = getFootprint(item.entity)
-      const { placeCellX, placeCellZ } = getPlaceCells(cellX, cellZ, footprint)
+      // ── Normal place from inventory ────────────────────────────────────
+      const entity = await world.spawnEntitySafe(item.entity, placeCellX, placeCellZ, footprint)
+      if (!entity) { playSound(true); return }
 
-      const entity = await world!.spawnEntitySafe(item.entity, placeCellX, placeCellZ, footprint)
-
-      if (!entity) {
-        playSound(true)
-        return
-      }
+      // Stamp cell metadata so handleMove / handleDelete can rely on them
+      entity.userData.cellX       = placeCellX
+      entity.userData.cellZ       = placeCellZ
+      entity.userData.sizeInCells = footprint
 
       if (entity.userData.isInstanced) {
-        const def  = entity.userData.def  as typeof placementStore.selectedItem extends { entity: infer E } ? E : never
-        const slot = entity.userData.instanceSlot as number
         entity.userData.rotY = targetRotY.current
         entity.rotation.y    = targetRotY.current
-        world!.instanceManager.setTransform(def as any, slot, entity.position, targetRotY.current)
+        world.instanceManager.setTransform(
+          entity.userData.def as any,
+          entity.userData.instanceSlot,
+          entity.position,
+          targetRotY.current
+        )
       } else {
         entity.rotation.y = targetRotY.current
       }
-
-      historyStore.push({
-        type           : "place",
-        entityObject   : entity,
-        cellX          : placeCellX,
-        cellZ          : placeCellZ,
-        sizeInCells    : footprint,
-        originalY      : entity.position.y,
-        originalScale  : entity.scale.clone(),
-        originalRotation: entity.rotation.clone(),
-      })
 
       playSound(false)
     }
 
     const playSound = (isError: boolean) => {
       try {
-        const file = isError ? "click_error.mp3" : "click.mp3"
-        const url = new URL(`../../assets/${file}`, import.meta.url).href
+        const file  = isError ? "click_error.mp3" : "click.mp3"
+        const url   = new URL(`../../assets/${file}`, import.meta.url).href
         const audio = new Audio(url)
         audio.volume = isError ? 0.4 : 0.6
         audio.play().catch(() => {})
@@ -261,20 +338,32 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
       }
     }
 
-    const onKeyDown = (e:KeyboardEvent) => {
-      if (e.key==="Escape") { placementStore.cancel(); removeGhost(); return }
-      if ((e.key==="r"||e.key==="R") && placementStore.selectedItem) {
-        placementStore.rotate(); targetRotY.current+=THREE.MathUtils.degToRad(90)
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") { placementStore.cancel(); removeGhost(); return }
+      if ((e.key === "r" || e.key === "R") && placementStore.selectedItem) {
+        placementStore.rotate()
+        targetRotY.current += THREE.MathUtils.degToRad(90)
       }
     }
 
-    let lastSelectedId: string|null = null
-    const unsubscribe = placementStore.subscribe(()=>{
+    let lastSelectedId: string | null = null
+    let skipNextClick = false
+
+    const unsubscribe = placementStore.subscribe(() => {
       const currentId = placementStore.selectedItem?.id ?? null
-      if(currentId!==lastSelectedId){
-        lastSelectedId=currentId
-        if(!placementStore.selectedItem) removeGhost()
-        else buildGhost(placementStore.selectedItem)
+      if (currentId !== lastSelectedId) {
+        lastSelectedId = currentId
+        if (!placementStore.selectedItem) {
+          removeGhost()
+        } else {
+          // Sync targetRotY immediately from moveOrigin so onClick gets the right value
+          // even if buildGhost hasn't finished yet
+          if (placementStore.moveOrigin) {
+            targetRotY.current = placementStore.moveOrigin.rotY
+            skipNextClick = true // ignore the click that triggered startMove
+          }
+          buildGhost(placementStore.selectedItem)
+        }
       }
     })
 

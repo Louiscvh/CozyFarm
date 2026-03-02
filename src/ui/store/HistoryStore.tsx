@@ -2,7 +2,7 @@
 import * as THREE from "three"
 import { World } from "../../game/world/World"
 import { placementStore } from "./PlacementStore"
-import { animateRemove, animateAppear, animateRotate } from "../../game/entity/EntityAnimation"
+import { animateRemove, animateAppear, animateRotate, animateMove } from "../../game/entity/EntityAnimation"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -38,7 +38,17 @@ interface RotateAction {
   nextRotY: number
 }
 
-export type HistoryAction = PlaceAction | DeleteAction | RotateAction
+interface MoveAction {
+  type: "move"
+  entityObject: THREE.Object3D
+  fromCell: { x: number, z: number }
+  toCell: { x: number, z: number }
+  fromRot: number
+  toRot: number
+  size: number
+}
+
+export type HistoryAction = PlaceAction | DeleteAction | RotateAction | MoveAction
 
 // ─── Store ────────────────────────────────────────────────────────────────────
 
@@ -142,6 +152,23 @@ export function applyUndo() {
     animateRotate(w, action.entityObject, action.prevRotY)
   }
 
+  if (action.type === "move") {
+    const { entityObject: e, fromCell, toCell, size, fromRot } = action
+    // Libérer la nouvelle position, occuper l'ancienne
+    w.tilesFactory.markFree(toCell.x, toCell.z, size)
+    w.tilesFactory.markOccupied(fromCell.x, fromCell.z, size)
+    
+    // Calculer la position world d'origine
+    const half = w.sizeInCells / 2
+    const worldX = (fromCell.x - half + size / 2) * w.cellSize
+    const worldZ = (fromCell.z - half + size / 2) * w.cellSize
+    const targetPos = new THREE.Vector3(worldX, e.position.y, worldZ)
+  
+    e.userData.cellX = fromCell.x
+    e.userData.cellZ = fromCell.z
+    animateMove(w, e, targetPos, fromRot)
+  }
+
   if (action.type === "delete") {
     action.cancelAnimation()
     const { entityObject: en, occupiedCells, sizeInCells, savedHoveredCell, originalY, originalScale, originalRotation } = action
@@ -178,6 +205,21 @@ export function applyRedo() {
 
   if (action.type === "rotate") {
     animateRotate(w, action.entityObject, action.nextRotY)
+  }
+
+  if (action.type === "move") {
+    const { entityObject: e, fromCell, toCell, size, toRot } = action
+    w.tilesFactory.markFree(fromCell.x, fromCell.z, size)
+    w.tilesFactory.markOccupied(toCell.x, toCell.z, size)
+  
+    const half = w.sizeInCells / 2
+    const worldX = (toCell.x - half + size / 2) * w.cellSize
+    const worldZ = (toCell.z - half + size / 2) * w.cellSize
+    const targetPos = new THREE.Vector3(worldX, e.position.y, worldZ)
+  
+    e.userData.cellX = toCell.x
+    e.userData.cellZ = toCell.z
+    animateMove(w, e, targetPos, toRot)
   }
 
   if (action.type === "delete") {

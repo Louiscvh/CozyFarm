@@ -9,6 +9,61 @@ export function syncInstance(w: W, e: THREE.Object3D) {
   w.instanceManager.setTransform(e.userData.def, e.userData.instanceSlot, e.position, e.userData.rotY ?? 0, e.scale.x)
 }
 
+// src/game/entity/EntityAnimation.ts
+
+// src/game/entity/EntityAnimation.ts
+
+export function animateMove(
+    w: W, 
+    e: THREE.Object3D, 
+    targetPos: THREE.Vector3, 
+    targetRot: number
+  ): () => void {
+    // 1. FORCER la mise à jour initiale pour capturer le point de départ réel
+    e.updateMatrix();
+    e.updateMatrixWorld(true);
+  
+    const startPos = e.position.clone();
+    // On s'assure de récupérer la rotation actuelle, qu'elle soit dans userData ou rotation.y
+    const startRot = e.userData.isInstanced ? (e.userData.rotY ?? e.rotation.y) : e.rotation.y;
+    
+    const startTime = performance.now();
+    const duration = 300;
+    let rafId = 0;
+  
+    function frame(now: number) {
+      const t = Math.min((now - startTime) / duration, 1);
+      const ease = 1 - Math.pow(1 - t, 4);
+  
+      // Interpolation Position
+      e.position.lerpVectors(startPos, targetPos, ease);
+      
+      // Interpolation Rotation (pour éviter les tours complets, on pourrait utiliser un slerp, 
+      // mais pour 90° un lerp classique sur l'angle suffit ici)
+      const currentRot = startRot + (targetRot - startRot) * ease;
+      
+      e.rotation.y = currentRot;
+      if (e.userData.isInstanced) {
+          e.userData.rotY = currentRot;
+      }
+  
+      // 2. Synchroniser le rendu
+      syncInstance(w, e);
+  
+      if (t < 1) {
+        rafId = requestAnimationFrame(frame);
+      } else {
+        e.position.copy(targetPos);
+        e.rotation.y = targetRot;
+        if (e.userData.isInstanced) e.userData.rotY = targetRot;
+        syncInstance(w, e);
+      }
+    }
+  
+    rafId = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(rafId);
+  }
+
 export function animateRemove(w: W, e: THREE.Object3D): () => void {
   const startY     = e.position.y
   const startScale = e.scale.x
