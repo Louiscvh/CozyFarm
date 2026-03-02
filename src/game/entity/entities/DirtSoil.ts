@@ -1,4 +1,4 @@
-import type { Entity } from "./Entity"
+import type { Entity } from "../Entity"
 
 export const DirtSoilEntity: Entity = {
   id: "dirt_soil",

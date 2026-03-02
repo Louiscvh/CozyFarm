@@ -1,4 +1,4 @@
-import type { Entity } from "./Entity"
+import type { Entity } from "../Entity"
 
 export const TreeOrangeEntity: Entity = {
   id: "tree_orange",

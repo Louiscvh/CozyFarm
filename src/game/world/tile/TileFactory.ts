@@ -8,17 +8,17 @@ import {
   tileTypeAt,
   computeAllCorners,
 } from "./Tile"
-import { getFootprint } from "../entity/Entity"
-import type { Entity } from "../entity/Entity"
-import { FarmEntity } from "../entity/FarmEntity"
-import { Tree1Entity } from "../entity/Tree1"
-import { Tree2Entity } from "../entity/Tree2"
-import { Flower1Entity } from "../entity/Flower1"
-import { Rock1Entity } from "../entity/Rock1"
-import { Tree3Entity } from "../entity/Tree3"
-import { TreeOrangeEntity } from "../entity/TreeOrange"
-import { TulipEntity } from "../entity/Tulip"
-import { GrassEntity } from "../entity/Grass"
+import { getFootprint } from "../../entity/Entity"
+import type { Entity } from "../../entity/Entity"
+import { FarmEntity } from "../../entity/entities/FarmEntity"
+import { Tree1Entity } from "../../entity/entities/Tree1"
+import { Tree2Entity } from "../../entity/entities/Tree2"
+import { Flower1Entity } from "../../entity/entities/Flower1"
+import { Rock1Entity } from "../../entity/entities/Rock1"
+import { Tree3Entity } from "../../entity/entities/Tree3"
+import { TreeOrangeEntity } from "../../entity/entities/TreeOrange"
+import { TulipEntity } from "../../entity/entities/Tulip"
+import { GrassEntity } from "../../entity/entities/Grass"
 
 // ─── Decor definitions ────────────────────────────────────────────────────────
 

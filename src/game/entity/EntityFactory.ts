@@ -4,7 +4,7 @@ import type { Entity } from "./Entity"
 import { assetManager } from "../../render/AssetManager"
 import { scaleModelToCells } from "./utils/scaleModelToCells"
 import { applyRotation } from "./utils/applyRotation"
-import { createTorchMesh } from "./TorchMesh"
+import { createTorchMesh } from "./entities/torch/TorchMesh"
 import { World } from "../world/World"
 
 export let debugHitboxEnabled = false

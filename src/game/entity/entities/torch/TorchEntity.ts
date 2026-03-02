@@ -1,5 +1,5 @@
 // src/game/entity/TorchEntity.ts
-import type { Entity } from "./Entity"
+import type { Entity } from "../../Entity"
 
 export const TorchEntity: Entity  = {
   id: "torch",

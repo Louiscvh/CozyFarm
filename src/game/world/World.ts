@@ -1,6 +1,6 @@
 // src/game/world/World.ts
 import * as THREE from "three"
-import { TileFactory, getFixedEntities, DECOR_CATEGORIES } from "./TileFactory"
+import { TileFactory, getFixedEntities, DECOR_CATEGORIES } from "./tile/TileFactory"
 import { createEntity } from "../entity/EntityFactory"
 import { placeOnCell } from "../entity/utils/placeOnCell"
 import { getFootprint } from "../entity/Entity"
