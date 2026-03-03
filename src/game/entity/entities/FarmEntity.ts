@@ -6,5 +6,5 @@ export const FarmEntity: Entity = {
   modelSize: 6,
   footprint: 6,
   rotation: { y: 180 },
-  yOffset: 0.5
+  //yOffset: 0.5
 }
