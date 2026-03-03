@@ -12,6 +12,7 @@ import {
   hideGridForGhost,
   revealGroup,
   buildRevealGrid,
+  GRID_Y,
 } from "../../game/system/Grid"
 
 interface UsePlacementOptions {
@@ -22,7 +23,7 @@ interface UsePlacementOptions {
 // ── Meshs de base ─────────────────────────────────────────────
 const groundPlane = new THREE.Mesh(
   new THREE.PlaneGeometry(10000, 10000),
-  new THREE.MeshBasicMaterial({ visible: true, side: THREE.DoubleSide })
+  new THREE.MeshBasicMaterial({ visible: false }) // couleur kaki/terre
 )
 groundPlane.rotation.x = -Math.PI / 2
 
@@ -166,10 +167,10 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
         setGhostColor(canPlace)
         
         highlightMesh.scale.set(footprint * world.cellSize, footprint * world.cellSize, 1)
-        highlightMesh.position.set(x, 0.055, z)
+        highlightMesh.position.set(x, GRID_Y, z)
         highlightMesh.material = canPlace ? highlightMatOk : highlightMatBad
         highlightMesh.visible = true
-        revealGroup.position.set(x, 0.056, z)
+        revealGroup.position.set(x, GRID_Y + 0.055, z)
         showGridForGhost()
       }
     
@@ -190,7 +191,7 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
         ghostRef.current.rotation.y = currentRotY.current
         
         if (highlightMesh.visible)
-          highlightMesh.position.set(currentPos.current.x, 0.055, currentPos.current.z)
+          highlightMesh.position.set(currentPos.current.x, GRID_Y, currentPos.current.z)
       }
       animateGhost()
     }
@@ -223,9 +224,9 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
       setGhostColor(placementStore.canPlace)
 
       highlightMesh.visible = true
-      highlightMesh.position.set(x, 0.055, z)
+      highlightMesh.position.set(x, GRID_Y, z)
       highlightMesh.material = placementStore.canPlace ? highlightMatOk : highlightMatBad
-      revealGroup.position.set(x, 0.056, z)
+      revealGroup.position.set(x, GRID_Y + 0.0055, z)
       revealGroup.visible = true
     }
 
@@ -249,14 +250,14 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
 
       if (placementStore.moveEntity) {
         const ent = placementStore.moveEntity
-        const origin = placementStore.moveOrigin!
         const footprint = getFootprint(ent.userData.def)
         
         // 1. CALCULER les nouvelles valeurs
         const { x: newX, z: newZ } = cellToWorld(placeCellX, placeCellZ, footprint)
         const newRotY = targetRotY.current
-        const newPos = new THREE.Vector3(newX, yOffsetRef.current || origin.pos.y, newZ)
-      
+
+        const extraY = (ent.userData.def?.yOffset ?? 0) as number
+        const newPos = new THREE.Vector3(newX, extraY, newZ)
         // 2. ENREGISTRER DANS L'HISTORIQUE (AVANT de muter l'objet)
         // On utilise origin.pos pour le "from" et newPos pour le "to"
         /*historyStore.push({

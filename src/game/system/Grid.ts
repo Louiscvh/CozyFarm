@@ -6,9 +6,10 @@ import { World } from "../../game/world/World"
 
 const STATIC_OPACITY = 0.1
 const DEBUG_OPACITY  = 0.2
+export const GRID_Y = 0
 
 export const staticGridGroup = new THREE.Group()
-staticGridGroup.position.y = 0.055
+staticGridGroup.position.y = GRID_Y
 staticGridGroup.visible    = false
 
 let _built          = false
@@ -31,9 +32,9 @@ export function buildStaticGrid(cellSize: number) {
   for (let i = -halfWorld; i <= halfWorld; i++) {
     const pos = i * cellSize
     // Horizontal
-    positions.push(min, 0, pos,  max, 0, pos)
+    positions.push(min, GRID_Y, pos,  max, GRID_Y, pos)
     // Vertical
-    positions.push(pos, 0, min,  pos, 0, max)
+    positions.push(pos, GRID_Y, min,  pos, GRID_Y, max)
   }
 
   const geo = new THREE.BufferGeometry()
@@ -43,7 +44,7 @@ export function buildStaticGrid(cellSize: number) {
     color      : 0xffffff,
     transparent: true,
     opacity    : STATIC_OPACITY,
-    depthWrite : false,
+    depthWrite : false    // ← réglable si besoin
   })
 
   staticGridGroup.add(new THREE.LineSegments(geo, mat))
@@ -83,7 +84,7 @@ const REVEAL_RADIUS = 4
 const SEGMENTS      = 8
 
 export const revealGroup = new THREE.Group()
-revealGroup.position.y = 0.055
+revealGroup.position.y = GRID_Y
 revealGroup.visible    = false
 
 let _revealSegments: THREE.LineSegments | null = null
@@ -118,11 +119,11 @@ export function buildRevealGrid(cellSize: number, footprint: number = 1) {
       const brightness = Math.max((1 - t * t) * 0.6, 0.1)
 
       // Horizontal segment
-      positions.push(segStart, 0, linePos,  segEnd, 0, linePos)
+      positions.push(segStart, GRID_Y, linePos,  segEnd, GRID_Y, linePos)
       colors.push(brightness, brightness, brightness,  brightness, brightness, brightness)
 
       // Vertical segment (perpendicular)
-      positions.push(linePos, 0, segStart,  linePos, 0, segEnd)
+      positions.push(linePos, GRID_Y, segStart,  linePos, GRID_Y, segEnd)
       colors.push(brightness, brightness, brightness,  brightness, brightness, brightness)
     }
   }
@@ -135,7 +136,7 @@ export function buildRevealGrid(cellSize: number, footprint: number = 1) {
     vertexColors: true,
     transparent : true,
     opacity     : 1,
-    depthWrite  : false,
+    depthWrite  : false
   })
 
   _revealSegments = new THREE.LineSegments(geo, mat)

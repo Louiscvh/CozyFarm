@@ -138,12 +138,13 @@ export class TileFactory {
 
     for (const type of TILE_TYPES) {
       const { color, roughness, metalness } = TILE_VISUALS[type]
-      const geometry = new THREE.BoxGeometry(subSize, 0.1, subSize)
+      const geometry = new THREE.BoxGeometry(subSize, 0.5, subSize)
+      geometry.translate(0, -0.25, 0)
       const material = new THREE.MeshStandardMaterial({ color, roughness, metalness })
       const mesh = new THREE.InstancedMesh(geometry, material, Math.max(1, countPerType[type]))
       mesh.receiveShadow = true
       mesh.castShadow = false
-      if (type === "water") mesh.position.y = -0.02
+      if (type === "water") mesh.position.y = -0.2
       this.instancedMeshes.set(type, mesh)
       this.scene.add(mesh)
     }

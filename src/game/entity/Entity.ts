@@ -10,6 +10,8 @@ export interface Entity {
     // Si absent, égal à modelSize (cas le plus courant)
     // Utile quand l'empreinte doit être différente de la taille visuelle
     footprint?: number
+    yOffset?: number  // valeur explicite, défaut 0
+
     // Taille d'occupation en cellules (1 tile = 2x2 cellules)
     // Si absent, calculé automatiquement : max(1, round(sizeInTiles * 2))
     // Exemples :

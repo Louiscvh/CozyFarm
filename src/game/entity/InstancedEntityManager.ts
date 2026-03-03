@@ -69,64 +69,66 @@ export class InstancedEntityManager {
    */
   async preparePool(def: Entity, tileSize: number, maxCount: number): Promise<PoolInfo> {
     const k = InstancedEntityManager.key(def)
-
-    // If pool exists but is too small, discard it so it gets rebuilt at the right size
+  
     const existing = this.pools.get(k)
     if (existing) {
       if (existing.maxCount >= maxCount) return existing.info
-      // Remove old InstancedMeshes from scene before rebuilding
       for (const e of existing.entries) this.scene.remove(e.mesh)
       this.pools.delete(k)
     }
-
+  
     const cellSize = tileSize / 2
     const gltf     = await assetManager.loadGLTF(def.model)
-
-    // Build a throw-away template just to extract geometry + matrices
+  
     const tmpl = gltf.scene.clone(true)
     scaleModelToCells(tmpl, def.modelSize, cellSize)
-    //applyRotation(tmpl, def.rotation)
     tmpl.updateMatrixWorld(true)
-
-    // Bounding box (model at world origin, no yOffset yet)
-    const box    = new THREE.Box3().setFromObject(tmpl)
-    const boxSz  = new THREE.Vector3()
-    const boxCtr = new THREE.Vector3()
+  
+    // 1. Bounding box AVANT yOffset
+    const box   = new THREE.Box3().setFromObject(tmpl)
+    const boxSz = new THREE.Vector3()
     box.getSize(boxSz)
-    box.getCenter(boxCtr)
-
+  
+    // 2. Bake le yOffset dans le template
+    const yOffset = -box.min.y
+    tmpl.position.y = yOffset
+    tmpl.updateMatrixWorld(true)
+  
+    // 3. Recompute boxCenter APRÈS déplacement
+    const box2   = new THREE.Box3().setFromObject(tmpl)
+    const boxCtr = new THREE.Vector3()
+    box2.getCenter(boxCtr)
+  
     const info: PoolInfo = {
-      yOffset   : -box.min.y + 0.05,   // shift so model bottom sits just above ground (mirrors attachHitBox)
+      yOffset,
       boxSize   : boxSz.clone(),
       boxCenter : boxCtr.clone(),
-      // Shared geometry — created once per pool, reused by every proxy of this type
       hitboxGeo : new THREE.BoxGeometry(boxSz.x, boxSz.y, boxSz.z),
     }
-
+  
     const cast    = def.castShadow    !== false
     const receive = def.receiveShadow !== false
-
+  
     const entries: SubMeshEntry[] = []
-
+  
     tmpl.traverse(obj => {
       if (!(obj as THREE.Mesh).isMesh) return
       const src = obj as THREE.Mesh
-
+  
       const im = new THREE.InstancedMesh(src.geometry, src.material, maxCount)
       im.castShadow    = cast
       im.receiveShadow = receive
       im.count         = 0
-      im.frustumCulled = false          // spans the whole world
-      // Static decor: tell Three.js the instance matrices won't change every frame
+      im.frustumCulled = false
       im.instanceMatrix.setUsage(THREE.StaticDrawUsage)
-      // Pre-fill with zero-scale matrices so empty slots are invisible
       for (let i = 0; i < maxCount; i++) im.setMatrixAt(i, _zero)
       im.instanceMatrix.needsUpdate = true
-
+  
       this.scene.add(im)
+      // localMat inclut maintenant le yOffset — y=0 sera toujours correct à l'usage
       entries.push({ mesh: im, localMat: src.matrixWorld.clone() })
     })
-
+  
     this.pools.set(k, {
       entries,
       active   : new Array(maxCount).fill(false),
@@ -134,7 +136,7 @@ export class InstancedEntityManager {
       maxCount,
       info,
     })
-
+  
     return info
   }
 

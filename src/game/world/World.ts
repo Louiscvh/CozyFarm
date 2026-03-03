@@ -204,12 +204,12 @@ export class World {
     const half     = this.sizeInCells / 2
     const worldX   = (cellX - half + sizeInCells / 2) * this.cellSize
     const worldZ   = (cellZ - half + sizeInCells / 2) * this.cellSize
-    const worldPos = new THREE.Vector3(worldX, info.yOffset, worldZ)
-    const slot = this.instanceManager.add(def, worldPos, rotY)
+    const extraY = def.yOffset ?? 0
+    const instancePos = new THREE.Vector3(worldX, extraY, worldZ)
+    const slot = this.instanceManager.add(def, instancePos, rotY)
 
-    const proxy   = new THREE.Group()
-
-    proxy.position.copy(worldPos)
+    const proxy = new THREE.Group()
+    proxy.position.set(worldX, extraY, worldZ)
     proxy.rotation.y = rotY
     // Reuse the shared geometry from the pool — no new BoxGeometry per instance
     const hitMesh = new THREE.Mesh(
