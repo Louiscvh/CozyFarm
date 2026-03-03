@@ -140,7 +140,12 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
       const { createEntity } = await import("../../game/entity/EntityFactory")
       const root = await createEntity(entity.entity, world.tileSize)
 
-      yOffsetRef.current = root.position.y
+      const info = world.instanceManager.getInfo(entity.entity)
+      const groundSnap = info?.yOffset ?? (() => {
+        const box = new THREE.Box3().setFromObject(root)
+        return -box.min.y
+      })()
+      yOffsetRef.current = groundSnap + (entity.entity.yOffset ?? 0)
       applyGhostMaterials(root)
       
       // ── 2. SYNCHRONISATION DES REFS ──
@@ -170,7 +175,7 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
         highlightMesh.position.set(x, GRID_Y, z)
         highlightMesh.material = canPlace ? highlightMatOk : highlightMatBad
         highlightMesh.visible = true
-        revealGroup.position.set(x, GRID_Y + 0.055, z)
+        revealGroup.position.set(x, GRID_Y + 0.0055, z)
         showGridForGhost()
       }
     
