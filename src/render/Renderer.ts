@@ -54,7 +54,7 @@ export class Renderer {
     this.world.setCamera(this.camera)
     this.world.setWeather();
 
-    this.outlineSystem = new OutlineSystem(this.renderer, this.scene, this.camera)
+    this.outlineSystem = new OutlineSystem(this.renderer, this.scene)
 
 
     // --- Ambiance sonore ---
@@ -94,8 +94,10 @@ export class Renderer {
   }
 
   render() {
+    this.renderer.info.reset()
     this.cameraController.update()
-    this.outlineSystem.render()  // remplace this.renderer.render(this.scene, this.camera)
+    this.outlineSystem.syncPosition()
+    this.renderer.render(this.scene, this.camera)
   }
 
   resetCameraToHome() {

@@ -4,6 +4,9 @@ import * as THREE from "three"
 import { placementStore } from "../store/PlacementStore"
 //import { historyStore } from "../store/HistoryStore"
 import { World } from "../../game/world/World"
+import { Line2 } from "three/addons/lines/Line2.js"
+import { LineGeometry } from "three/addons/lines/LineGeometry.js"
+import { LineMaterial } from "three/addons/lines/LineMaterial.js"
 import { getFootprint } from "../../game/entity/Entity"
 import {
   staticGridGroup,
@@ -23,7 +26,7 @@ interface UsePlacementOptions {
 // ── Meshs de base ─────────────────────────────────────────────
 const groundPlane = new THREE.Mesh(
   new THREE.PlaneGeometry(10000, 10000),
-  new THREE.MeshBasicMaterial({ visible: false }) // couleur kaki/terre
+  new THREE.MeshBasicMaterial({ visible: false })
 )
 groundPlane.rotation.x = -Math.PI / 2
 
@@ -33,6 +36,26 @@ const highlightMesh   = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), highlightM
 highlightMesh.rotation.x = -Math.PI / 2
 highlightMesh.position.y = 0.055
 highlightMesh.visible    = false
+
+// ── Hover cursor — bordure uniquement, hors mode placement ────
+const hoverBorderGeo = new LineGeometry()
+hoverBorderGeo.setPositions([
+  -0.5, 0,  0.5,
+   0.5, 0,  0.5,
+   0.5, 0, -0.5,
+  -0.5, 0, -0.5,
+  -0.5, 0,  0.5,
+])
+const hoverBorderMat = new LineMaterial({
+  color: 0xffffff,
+  linewidth: 4,        // en pixels
+  opacity: 1,
+  transparent: true,
+  resolution: new THREE.Vector2(window.innerWidth, window.innerHeight),
+})
+const hoverCellMesh = new Line2(hoverBorderGeo, hoverBorderMat)
+hoverCellMesh.position.y = GRID_Y + 0.002
+hoverCellMesh.visible    = false
 
 // ── Ghost ─────────────────────────────────────────────────────
 const ghostMat = new THREE.MeshBasicMaterial({ color:0x00ff00, transparent:true, opacity:0.5, depthWrite:false, depthTest:false })
@@ -57,21 +80,27 @@ function setGhostColor(canPlace: boolean) {
 
 // ── Hook principal ────────────────────────────────────────────
 export function usePlacement({ camera, renderer }: UsePlacementOptions) {
-  const raycaster   = useRef(new THREE.Raycaster())
-  const mouse       = useRef(new THREE.Vector2())
-  const ghostRef    = useRef<THREE.Object3D | null>(null)
-  const yOffsetRef  = useRef<number>(0)
-  const targetPos   = useRef(new THREE.Vector3())
-  const currentPos  = useRef(new THREE.Vector3())
-  const targetRotY  = useRef<number>(0)
-  const currentRotY = useRef<number>(0)
-  const rafRef      = useRef<number>(0)
+  const raycaster      = useRef(new THREE.Raycaster())
+  const mouse          = useRef(new THREE.Vector2())
+  const ghostRef       = useRef<THREE.Object3D | null>(null)
+  const yOffsetRef     = useRef<number>(0)
+  const targetPos      = useRef(new THREE.Vector3())
+  const currentPos     = useRef(new THREE.Vector3())
+  const targetRotY     = useRef<number>(0)
+  const currentRotY    = useRef<number>(0)
+  const rafRef         = useRef<number>(0)
+
+  // Hover cursor lerp
+  const hoverTargetPos   = useRef(new THREE.Vector3())
+  const hoverCurrentPos  = useRef(new THREE.Vector3())
+  const hoverRafRef      = useRef<number>(0)
+  const hoverInitialized = useRef(false)
 
   useEffect(() => {
     const world = World.current
     if (!world) return
 
-    world.scene.add(groundPlane, highlightMesh, staticGridGroup, revealGroup)
+    world.scene.add(groundPlane, highlightMesh, hoverCellMesh, staticGridGroup, revealGroup)
     buildStaticGrid(world.cellSize)
 
     const snapToCell = (x: number, z: number) => {
@@ -97,6 +126,38 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
       return { placeCellX: cellX - half, placeCellZ: cellZ - half }
     }
 
+    // ── Hover cursor animation ─────────────────────────────
+    const startHoverAnim = () => {
+      if (hoverRafRef.current) return
+      const loop = () => {
+        hoverRafRef.current = requestAnimationFrame(loop)
+    
+        const dist = hoverCurrentPos.current.distanceTo(hoverTargetPos.current)
+    
+        if (dist < 0.005) {
+          // Snap final : téléportation immédiate quand assez proche
+          hoverCurrentPos.current.copy(hoverTargetPos.current)
+        } else {
+          // Attraction magnétique : plus vite quand loin, snap quand proche
+          const t = Math.min(1, 0.28 + (dist * 0.6))
+          hoverCurrentPos.current.lerp(hoverTargetPos.current, t)
+        }
+    
+        hoverCellMesh.position.set(
+          hoverCurrentPos.current.x,
+          GRID_Y + 0.002,
+          hoverCurrentPos.current.z
+        )
+      }
+      loop()
+    }
+
+    const stopHoverAnim = () => {
+      cancelAnimationFrame(hoverRafRef.current)
+      hoverRafRef.current = 0
+      hoverInitialized.current = false
+    }
+
     // ── Ghost ──────────────────────────────────────────────
     const removeGhost = () => {
       cancelAnimationFrame(rafRef.current)
@@ -115,6 +176,8 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
       }
       yOffsetRef.current = 0
       highlightMesh.visible = false
+      hoverCellMesh.visible = false
+      stopHoverAnim()
       revealGroup.visible = false
       hideGridForGhost()
     }
@@ -122,17 +185,14 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
     async function buildGhost(entity: typeof placementStore.selectedItem) {
       if (!entity || !world) return removeGhost()
 
-        let initialRotationDeg = 0
-      
-        if (placementStore.moveOrigin) {
-          // Si on déplace, on prend la rotation actuelle de l'objet (en degrés)
-          initialRotationDeg = Math.round(THREE.MathUtils.radToDeg(placementStore.moveOrigin.rotY))
-        } else {
-          // Si c'est un nouvel item, on prend la rotation forcée de la def (ex: 180)
-          initialRotationDeg = entity.entity.rotation?.y || 0
-        }
-    
-      // On synchronise le store immédiatement
+      let initialRotationDeg = 0
+
+      if (placementStore.moveOrigin) {
+        initialRotationDeg = Math.round(THREE.MathUtils.radToDeg(placementStore.moveOrigin.rotY))
+      } else {
+        initialRotationDeg = entity.entity.rotation?.y || 0
+      }
+
       placementStore.rotation = initialRotationDeg
       const targetRotRad = THREE.MathUtils.degToRad(initialRotationDeg)
 
@@ -147,30 +207,26 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
       })()
       yOffsetRef.current = groundSnap + (entity.entity.yOffset ?? 0)
       applyGhostMaterials(root)
-      
-      // ── 2. SYNCHRONISATION DES REFS ──
-      // On force les refs à la rotation cible pour éviter que le ghost ne tourne 
-      // de 0 vers 180 au moment où il apparaît (téléportation angulaire immédiate)
-      root.rotation.y = targetRotRad 
+
+      root.rotation.y = targetRotRad
       currentRotY.current = targetRotRad
       targetRotY.current = targetRotRad
-    
+
       const footprint = getFootprint(entity.entity)
       buildRevealGrid(world.cellSize, footprint)
       revealGroup.visible = true
-      
-      // Positionnement initial (si la souris survole déjà une cellule)
+
       if (placementStore.hoveredCell) {
         const { cellX, cellZ } = placementStore.hoveredCell
         const { placeCellX, placeCellZ } = getPlaceCells(cellX, cellZ, footprint)
         const { x, z } = cellToWorld(placeCellX, placeCellZ, footprint)
-        
+
         targetPos.current.set(x, yOffsetRef.current, z)
         currentPos.current.copy(targetPos.current)
-        
+
         const canPlace = world.tilesFactory.canSpawn(placeCellX, placeCellZ, footprint)
         setGhostColor(canPlace)
-        
+
         highlightMesh.scale.set(footprint * world.cellSize, footprint * world.cellSize, 1)
         highlightMesh.position.set(x, GRID_Y, z)
         highlightMesh.material = canPlace ? highlightMatOk : highlightMatBad
@@ -178,23 +234,22 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
         revealGroup.position.set(x, GRID_Y + 0.0055, z)
         showGridForGhost()
       }
-    
+
       root.position.copy(currentPos.current)
       world.scene.add(root)
       ghostRef.current = root
       placementStore.ghostMesh = root
-    
+
       const animateGhost = () => {
         rafRef.current = requestAnimationFrame(animateGhost)
         if (!ghostRef.current) return
-        
+
         currentPos.current.lerp(targetPos.current, 0.35)
         ghostRef.current.position.copy(currentPos.current)
-        
-        // L'interpolation fluide pour la rotation
+
         currentRotY.current += (targetRotY.current - currentRotY.current) * 0.3
         ghostRef.current.rotation.y = currentRotY.current
-        
+
         if (highlightMesh.visible)
           highlightMesh.position.set(currentPos.current.x, GRID_Y, currentPos.current.z)
       }
@@ -215,10 +270,28 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
       const { cellX, cellZ } = snapToCell(hits[0].point.x, hits[0].point.z)
       placementStore.hoveredCell = { cellX, cellZ }
 
+      // ── Hover cursor : visible seulement hors mode placement ──
       if (!placementStore.selectedItem) {
+        const { x, z } = cellToWorld(cellX, cellZ, 1)
+        hoverTargetPos.current.set(x, GRID_Y + 0.002, z)
+
+        // Première apparition : téléportation immédiate pour éviter le lerp depuis (0,0,0)
+        if (!hoverInitialized.current) {
+          hoverCurrentPos.current.copy(hoverTargetPos.current)
+          hoverCellMesh.position.set(x, GRID_Y + 0.002, z)
+          hoverCellMesh.scale.set(world.cellSize, 1, world.cellSize)
+          hoverInitialized.current = true
+        }
+
+        hoverCellMesh.visible = true
         revealGroup.visible = false
+        startHoverAnim()
         return
       }
+
+      // En mode placement : masquer le curseur hover
+      hoverCellMesh.visible = false
+      stopHoverAnim()
 
       const footprint = getFootprint(placementStore.selectedItem.entity)
       const { placeCellX, placeCellZ } = getPlaceCells(cellX, cellZ, footprint)
@@ -256,15 +329,12 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
       if (placementStore.moveEntity) {
         const ent = placementStore.moveEntity
         const footprint = getFootprint(ent.userData.def)
-        
-        // 1. CALCULER les nouvelles valeurs
+
         const { x: newX, z: newZ } = cellToWorld(placeCellX, placeCellZ, footprint)
         const newRotY = targetRotY.current
 
         const extraY = (ent.userData.def?.yOffset ?? 0) as number
         const newPos = new THREE.Vector3(newX, extraY, newZ)
-        // 2. ENREGISTRER DANS L'HISTORIQUE (AVANT de muter l'objet)
-        // On utilise origin.pos pour le "from" et newPos pour le "to"
         /*historyStore.push({
           type: "move",
           entityObject: ent,
@@ -274,25 +344,24 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
           toRot: newRotY,
           size: footprint
         })*/
-      
-        // 3. MAINTENANT, on applique les changements physiques
+
         ent.position.copy(newPos)
         ent.rotation.y = newRotY
         ent.userData.cellX = placeCellX
         ent.userData.cellZ = placeCellZ
-        ent.userData.rotY = newRotY // Très important pour l'instance manager
-      
+        ent.userData.rotY = newRotY
+
         ent.updateMatrix()
         ent.updateMatrixWorld(true)
-      
+
         if (ent.userData.isInstanced) {
           world.instanceManager.show(ent.userData.def, ent.userData.instanceSlot, newPos, newRotY)
         }
-      
+
         world.scene.add(ent)
         if (!world.entities.includes(ent)) world.entities.push(ent)
         world.tilesFactory.markOccupied(placeCellX, placeCellZ, footprint)
-      
+
         placementStore.completeMove()
         removeGhost()
         playSound(false)
@@ -303,7 +372,6 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
       const entity = await world.spawnEntitySafe(item.entity, placeCellX, placeCellZ, footprint)
       if (!entity) { playSound(true); return }
 
-      // Stamp cell metadata so handleMove / handleDelete can rely on them
       entity.userData.cellX       = placeCellX
       entity.userData.cellZ       = placeCellZ
       entity.userData.sizeInCells = footprint
@@ -354,11 +422,9 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
         if (!placementStore.selectedItem) {
           removeGhost()
         } else {
-          // Sync targetRotY immediately from moveOrigin so onClick gets the right value
-          // even if buildGhost hasn't finished yet
           if (placementStore.moveOrigin) {
             targetRotY.current = placementStore.moveOrigin.rotY
-            skipNextClick = true // ignore the click that triggered startMove
+            skipNextClick = true
           }
           buildGhost(placementStore.selectedItem)
         }
@@ -373,7 +439,8 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
     return () => {
       unsubscribe()
       removeGhost()
-      world.scene.remove(groundPlane, highlightMesh, staticGridGroup, revealGroup)
+      stopHoverAnim()
+      world.scene.remove(groundPlane, highlightMesh, hoverCellMesh, staticGridGroup, revealGroup)
       window.removeEventListener("mousemove", onMouseMove)
       window.removeEventListener("mousedown", onMouseDown)
       window.removeEventListener("click",     onClick)

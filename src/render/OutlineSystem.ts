@@ -1,154 +1,136 @@
 // src/render/OutlineSystem.ts
 import * as THREE from "three"
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
-import { RenderPass }     from 'three/examples/jsm/postprocessing/RenderPass.js';
-import { OutlinePass }    from 'three/examples/jsm/postprocessing/OutlinePass.js';
-import { ShaderPass }     from 'three/examples/jsm/postprocessing/ShaderPass.js';
-import { GammaCorrectionShader } from 'three/examples/jsm/shaders/GammaCorrectionShader.js';
 import { World } from "../game/world/World"
 
-const dummyMat = new THREE.MeshBasicMaterial({
-    colorWrite: false,
-    depthWrite: false,
-    depthTest: false,
-  })
+// ── Matériau outline : BackSide + depthTest:true ──────────────
+// Les back-faces du mesh agrandi sont occludées par le depth buffer
+// de l'objet original déjà rendu → seul le bord visible qui dépasse
+// reste dessiné. Aucun stencil nécessaire.
+const outlineMat = new THREE.MeshBasicMaterial({
+  color:      0xffffff,
+  side:       THREE.BackSide,
+  depthWrite: false,
+  depthTest:  true,
+  transparent: true,
+  opacity:    0.95,
+})
 
 export class OutlineSystem {
   static instance: OutlineSystem | null = null
 
-  private composer: EffectComposer
-  private outlinePass: OutlinePass
-  private scene: THREE.Scene
-
-  private ghostGroup: THREE.Group
+  private scene:         THREE.Scene
   private currentEntity: THREE.Object3D | null = null
 
+  private outlineGroup: THREE.Group
 
-  // 🔥 Cache des ghost meshes par def
-  private ghostCache = new Map<any, THREE.Group>()
+  private outlineCache = new Map<any, THREE.Group>()
 
-  constructor(
-    renderer: THREE.WebGLRenderer,
-    scene: THREE.Scene,
-    camera: THREE.Camera,
-  ) {
+  private _scale = 1.02
+
+  constructor(renderer: THREE.WebGLRenderer, scene: THREE.Scene) {
     this.scene = scene
+    renderer.info.autoReset = false
 
-    const w = renderer.domElement.clientWidth
-    const h = renderer.domElement.clientHeight
+    this.outlineGroup = new THREE.Group()
+    this.outlineGroup.scale.setScalar(this._scale)
+    this.outlineGroup.renderOrder = 999
+    this.outlineGroup.visible = false
 
-
-    this.composer = new EffectComposer(renderer)
-    this.outlinePass = new OutlinePass(new THREE.Vector2(w, h), scene, camera)
-
-    this.outlinePass.visibleEdgeColor.set("#ffffff")
-this.outlinePass.hiddenEdgeColor.set("#ffffff")
-
-this.outlinePass.edgeStrength = 6        // intensité
-this.outlinePass.edgeThickness = 2     // épaisseur
-this.outlinePass.edgeGlow = 0            // pas de glow
-this.outlinePass.pulsePeriod = 0         // pas d'animation
-
-    const renderPass = new RenderPass(scene, camera)
-    const gammaPass  = new ShaderPass(GammaCorrectionShader)
-    this.outlinePass.renderScene = scene
-    this.outlinePass.renderCamera = camera
-    this.composer.addPass(renderPass)
-    this.composer.addPass(this.outlinePass)
-    this.composer.addPass(gammaPass)
-
-    // 🔥 ghostGroup global unique
-    this.ghostGroup = new THREE.Group()
-    this.scene.add(this.ghostGroup)
+    scene.add(this.outlineGroup)
 
     OutlineSystem.instance = this
   }
 
-  // ==========================
-  // SET HOVER
-  // ==========================
+  // ── Construction du groupe outline ────────────────────────
+
+  private buildOutlineForEntity(entity: THREE.Object3D) {
+    const world    = World.current
+    const def      = entity.userData.def
+    const cacheKey = entity.userData.isInstanced ? def : entity.uuid
+
+    if (this.outlineCache.has(cacheKey)) {
+      this.outlineGroup.clear()
+      this.outlineGroup.add(this.outlineCache.get(cacheKey)!.clone(true))
+      return
+    }
+
+    const oGrp = new THREE.Group()
+
+    const addMesh = (geometry: THREE.BufferGeometry, localMat: THREE.Matrix4) => {
+      const pos   = new THREE.Vector3()
+      const quat  = new THREE.Quaternion()
+      const scale = new THREE.Vector3()
+      localMat.decompose(pos, quat, scale)
+
+      if (!geometry.attributes.normal) geometry.computeVertexNormals()
+
+      const om = new THREE.Mesh(geometry, outlineMat)
+      om.position.copy(pos)
+      om.quaternion.copy(quat)
+      om.scale.copy(scale)
+      om.renderOrder = 999
+      oGrp.add(om)
+    }
+
+    if (entity.userData.isInstanced && world) {
+      const entries = world.instanceManager.getSubMeshEntries(def)
+      if (!entries || entries.length === 0) return
+      for (const { geometry, localMat } of entries) {
+        addMesh(geometry, localMat)
+      }
+    } else {
+      entity.updateWorldMatrix(true, true)
+      const rootInv = entity.matrixWorld.clone().invert()
+      entity.traverse(obj => {
+        if (!(obj as THREE.Mesh).isMesh) return
+        if (obj.userData.isHitBox || obj.name === "__hitbox__") return
+        const mesh = obj as THREE.Mesh
+        mesh.updateWorldMatrix(true, false)
+        const localMat = new THREE.Matrix4().multiplyMatrices(rootInv, mesh.matrixWorld)
+        addMesh(mesh.geometry, localMat)
+      })
+    }
+
+    this.outlineCache.set(cacheKey, oGrp)
+    this.outlineGroup.clear()
+    this.outlineGroup.add(oGrp.clone(true))
+  }
+
+  // ── API publique ──────────────────────────────────────────
 
   setHovered(entity: THREE.Object3D | null) {
     this.currentEntity = entity
-
     if (!entity) {
-      this.outlinePass.selectedObjects = []
-      this.ghostGroup.visible = false
+      this.outlineGroup.visible = false
       return
     }
-
-    if (!entity.userData.isInstanced) {
-      this.outlinePass.selectedObjects = [entity]
-      this.ghostGroup.visible = false
-      return
-    }
-
-    const world = World.current
-    if (!world) return
-
-    const def = entity.userData.def
-
-    // 🔥 Récupère ou crée le ghost depuis cache
-    let cached = this.ghostCache.get(def)
-
-    if (!cached) {
-      const entries = world.instanceManager.getSubMeshEntries(def)
-      if (!entries || entries.length === 0) return
-
-      cached = new THREE.Group()
-
-      for (const { geometry, localMat } of entries) {
-        const pos   = new THREE.Vector3()
-        const quat  = new THREE.Quaternion()
-        const scale = new THREE.Vector3()
-        localMat.decompose(pos, quat, scale)
-
-        const mesh = new THREE.Mesh(geometry, dummyMat)
-        mesh.position.copy(pos)
-        mesh.quaternion.copy(quat)
-        mesh.scale.copy(scale)
-
-        cached.add(mesh)
-      }
-
-      this.ghostCache.set(def, cached)
-    }
-
-    // 🔥 Nettoie ancien ghost
-    this.ghostGroup.clear()
-
-    // 🔥 Clone léger (structure seulement, pas géométrie)
-    const clone = cached.clone(true)
-    this.ghostGroup.add(clone)
-
-    this.ghostGroup.visible = true
-    this.outlinePass.selectedObjects = [this.ghostGroup]
+    this.buildOutlineForEntity(entity)
+    this.outlineGroup.visible = true
   }
 
-  // ==========================
-  // RENDER
-  // ==========================
+  syncPosition() {
+    if (!this.currentEntity) return
+    const pos  = this.currentEntity.position
+    const rotY = this.currentEntity.userData.isInstanced
+      ? (this.currentEntity.userData.rotY ?? 0)
+      : this.currentEntity.rotation.y
 
-  render() {
-    if (this.ghostGroup.visible && this.currentEntity) {
-      this.ghostGroup.position.copy(this.currentEntity.position)
-      this.ghostGroup.rotation.set(
-        0,
-        this.currentEntity.userData.rotY ?? this.currentEntity.rotation.y,
-        0
-      )
-    }
-    const camera = World.current?.camera
-    if (camera) {
-      camera.layers.enableAll()
-    }
-
-    this.composer.render()
-
+    this.outlineGroup.position.copy(pos)
+    this.outlineGroup.rotation.set(0, rotY, 0)
   }
 
-  resize(w: number, h: number) {
-    this.composer.setSize(w, h)
-    this.outlinePass.resolution.set(w, h)
+  /**
+   * Scale du groupe outline (défaut 1.08 = bordure de 8%).
+   * 1.04 = bordure fine, 1.12 = bordure épaisse.
+   */
+  setThickness(scale: number) {
+    this._scale = scale
+    this.outlineGroup.scale.setScalar(scale)
   }
+
+  setColor(hex: number) {
+    outlineMat.color.set(hex)
+  }
+
+  resize(_w: number, _h: number) { /* pas de composer */ }
 }
