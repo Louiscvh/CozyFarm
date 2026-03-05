@@ -1,6 +1,6 @@
 // src/world/Tile.ts
 
-export type TileType = "grass" | "water" | "sand" | "stone"
+export type TileType = "grass" | "water" | "sand" | "stone" | "soil"
 
 export interface TileVisual {
   color: string
@@ -9,10 +9,11 @@ export interface TileVisual {
 }
 
 export const TILE_VISUALS: Record<TileType, TileVisual> = {
-  grass: { color: "#4a8c52", roughness: 0.95, metalness: 0.0 },
-  water: { color: "#1a6fa8", roughness: 0.1,  metalness: 0.3 },
-  sand:  { color: "#d4a96a", roughness: 0.9,  metalness: 0.0 },
-  stone: { color: "#7a7470", roughness: 0.85, metalness: 0.05 },
+    grass: { color: "#4a8c52", roughness: 0.95, metalness: 0.0 },
+    water: { color: "#1a6fa8", roughness: 0.1, metalness: 0.3 },
+    sand: { color: "#d4a96a", roughness: 0.9, metalness: 0.0 },
+    stone: { color: "#7a7470", roughness: 0.85, metalness: 0.05 },
+    soil: { color: "#3d2b1f", roughness: 0.98, metalness: 0.0 },
 }
 
 export const TILE_TYPES: TileType[] = ["grass", "water", "sand", "stone"]
@@ -20,10 +21,11 @@ export const TILE_TYPES: TileType[] = ["grass", "water", "sand", "stone"]
 // Hiérarchie des biomes — un coin prend le type le plus prioritaire
 // parmi les tiles qui le touchent. Évite que l'eau envahisse la plage.
 export const BIOME_PRIORITY: Record<TileType, number> = {
-  water: 0,
-  sand:  1,
-  grass: 2,
-  stone: 3,
+    water: 0,
+    sand: 1,
+    grass: 2,
+    stone: 3,
+    soil: 4,
 }
 
 // ─── Perlin Noise ─────────────────────────────────────────────────────────────

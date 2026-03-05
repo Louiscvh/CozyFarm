@@ -42,14 +42,15 @@ export class OutlineSystem {
     this.outlinePass = new OutlinePass(new THREE.Vector2(w, h), scene, camera)
 
     this.outlinePass.visibleEdgeColor.set("#ffffff")
-this.outlinePass.hiddenEdgeColor.set("#ffffff")
+    this.outlinePass.hiddenEdgeColor.set("#ffffff")
 
-this.outlinePass.edgeStrength = 6        // intensité
-this.outlinePass.edgeThickness = 2     // épaisseur
-this.outlinePass.edgeGlow = 0            // pas de glow
-this.outlinePass.pulsePeriod = 0         // pas d'animation
+    this.outlinePass.edgeStrength = 6        // intensité
+    this.outlinePass.edgeThickness = 2     // épaisseur
+    this.outlinePass.edgeGlow = 0            // pas de glow
+    this.outlinePass.pulsePeriod = 0         // pas d'animation
 
     const renderPass = new RenderPass(scene, camera)
+    renderer.info.autoReset = false
     const gammaPass  = new ShaderPass(GammaCorrectionShader)
     this.outlinePass.renderScene = scene
     this.outlinePass.renderCamera = camera

@@ -8,6 +8,8 @@ import type { Entity } from "../entity/Entity"
 import { Weather } from "../system/Weather"
 import { InstancedEntityManager } from "../entity/InstancedEntityManager"
 import { debugHitboxEnabled } from "../entity/EntityFactory"
+import { CropManager } from "../farming/CropManager"
+import { computeGrowthRate } from "../farming/GrowthConditions"
 
 export class World {
   static current: World | null = null
@@ -25,6 +27,7 @@ export class World {
 
   public tilesFactory: TileFactory
   public instanceManager: InstancedEntityManager
+  public cropManager: CropManager
 
   constructor(scene: THREE.Scene, tileSize: number = 2) {
     World.current    = this
@@ -35,6 +38,7 @@ export class World {
 
     this.tilesFactory    = new TileFactory(scene, this.size, tileSize)
     this.instanceManager = new InstancedEntityManager(scene)
+    this.cropManager = new CropManager(scene, this)  // ← ajouter
 
     this.initialize()
   }
@@ -51,18 +55,22 @@ export class World {
 
   // ─── Update loop ──────────────────────────────────────────────────────────
 
-  update(deltaTime: number) {
-    if (!this.weather) return
-    this.weather.update(deltaTime)
+    update(deltaTime: number) {
+        const now = performance.now() / 1000
 
-    const now = performance.now() / 1000
-    const torchIntensity = 1 - this.weather.daylight
+        if (this.weather) this.weather.update(deltaTime)
 
-    for (const entity of this.entities) {
-      if (!entity.userData.isTorch) continue
-      ;(entity as any).updateTorch(now, torchIntensity)
+        // ── Conditions de croissance ──────────────────────────────────
+        const { growthRate } = computeGrowthRate(this.weather ?? null)
+        this.cropManager.update(deltaTime, growthRate)
+        this.cropManager.updateReadyPulse(now)
+
+        const torchIntensity = this.weather ? 1 - this.weather.daylight : 1
+        for (const entity of this.entities) {
+            if (!entity.userData.isTorch) continue
+                ; (entity as any).updateTorch(now, torchIntensity)
+        }
     }
-  }
 
   // ─── Coordonnées ──────────────────────────────────────────────────────────
 

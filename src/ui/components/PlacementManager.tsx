@@ -1,28 +1,26 @@
+// src/ui/components/PlacementManager.tsx
 import { useEffect } from "react"
 import { Renderer } from "../../render/Renderer"
 import { usePlacement } from "../hooks/usePlacement"
 import { placementStore } from "../store/PlacementStore"
+import { useItemAction } from "../../game/interaction/useItemAction"
+import { useFarming } from "../../game/farming/useFarming"
 
-/**
- * Pont entre React et le Renderer Three.js.
- * Renderer.instance est garanti non-null ici car le Renderer
- * est instancié avant le montage React.
- */
 export function PlacementManager() {
     const r = Renderer.instance!
-  
-    usePlacement({
-      camera: r.camera,
-      renderer: r.renderer,
-    })
-  
-    // Curseur crosshair quand un item est sélectionné
+    const camera = r.camera
+    const renderer = r.renderer
+
+    usePlacement({ camera, renderer })
+    useItemAction({ camera, renderer })
+    useFarming()
+
     useEffect(() => {
-      const unsub = placementStore.subscribe(() => {
-        document.body.classList.toggle("placing", !!placementStore.selectedItem)
-      })
-      return unsub
+        const unsub = placementStore.subscribe(() => {
+            document.body.classList.toggle("placing", !!placementStore.selectedItem)
+        })
+        return unsub
     }, [])
-  
+
     return null
-  }
+}

@@ -93,10 +93,11 @@ export class Renderer {
     this.renderer.setSize(window.innerWidth, window.innerHeight)
   }
 
-  render() {
-    this.cameraController.update()
-    this.outlineSystem.render()  // remplace this.renderer.render(this.scene, this.camera)
-  }
+    render() {
+        this.renderer.info.reset()   // ← reset une seule fois par frame
+        this.cameraController.update()
+        this.outlineSystem.render()  // le composer accumule tous ses passes sans reset intermédiaire
+    }
 
   resetCameraToHome() {
     this.cameraController.resetToHome()
