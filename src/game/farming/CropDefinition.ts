@@ -47,7 +47,7 @@ export const LettuceCrop: CropDefinition = {
     phases: [
         { durationSeconds: 5, color: 0x008000, scaleXZ: 0.01, height: 0.05 },
         { durationSeconds: 4, modelPath: "/models/crops/lettuce_stage1.glb", modelScale: 0.01 },
-        { durationSeconds: 4, modelPath: "/models/crops/lettuce_stage1.glb", modelScale: 0.1 },
+        { durationSeconds: 4, modelPath: "/models/crops/lettuce_stage1.glb", modelScale: 0.0175 },
         { durationSeconds: 4, modelPath: "/models/crops/lettuce_stage1.glb", modelScale: 0.025 },
     ],
 }

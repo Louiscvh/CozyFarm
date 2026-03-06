@@ -5,6 +5,6 @@
     "\\src\\game",
     "\\src\\game\\farming"
   ],
-  "SelectedNode": "\\src\\game\\farming\\GrowthConditions.ts",
+  "SelectedNode": "\\src\\game\\farming\\CropDefinition.ts",
   "PreviewInSolutionExplorer": false
 }
