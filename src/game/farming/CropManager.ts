@@ -22,9 +22,9 @@ async function loadModel(path: string): Promise<THREE.Object3D> {
 
 function buildCubeMesh(phase: GrowthPhase): THREE.Mesh {
     const geo = new THREE.BoxGeometry(
-        (phase.scaleXZ ?? 0.1) * 2,
-        phase.height ?? 0.1,
-        (phase.scaleXZ ?? 0.1) * 2,
+        (phase.scaleXZ ?? 0.05) * 2,
+        phase.height ?? 0.05,
+        (phase.scaleXZ ?? 0.05) * 2,
     )
     const mat = new THREE.MeshStandardMaterial({
         color: phase.color ?? 0x888888,
@@ -60,15 +60,28 @@ export class CropManager {
         if (this.hasCrop(cellX, cellZ)) return null
         const instance = new CropInstance(def, cellX, cellZ)
         this.crops.set(this.key(cellX, cellZ), instance)
-        this.spawnMesh(instance)
+        this.spawnMesh(instance, "spawn")
         return instance
     }
 
+    /**
+     * Déclenche l'animation de récolte (scale → 0) puis supprime le crop.
+     * Retourne l'instance immédiatement pour que l'inventaire soit crédité
+     * sans attendre la fin de l'animation.
+     */
     harvest(cellX: number, cellZ: number): CropInstance | null {
         const instance = this.crops.get(this.key(cellX, cellZ))
         if (!instance?.isReady) return null
-        this.disposeMesh(instance)
+
         this.crops.delete(this.key(cellX, cellZ))
+        this._harvestingInstances.add(instance)
+
+        const currentScale = instance.currentPhase.modelScale ?? 1
+        instance.startTransition("harvest", currentScale, 0, () => {
+            this.disposeMesh(instance)
+            this._harvestingInstances.delete(instance)
+        })
+
         return instance
     }
 
@@ -81,11 +94,31 @@ export class CropManager {
     // ─── Boucle ────────────────────────────────────────────────────────────────
 
     update(deltaTime: number, growthRate: number = 1): void {
+        // Les crops en cours de récolte (hors map) ont leur propre suivi via les instances
+        // On les tick séparément dans _harvestingInstances
+        for (const inst of this._harvestingInstances) {
+            if (!inst.isTransition) {
+                this._harvestingInstances.delete(inst)
+                continue
+            }
+            inst.tickTransition(deltaTime, 5)
+            this.applyScale(inst)
+        }
+
         if (growthRate <= 0) return
         const effective = deltaTime * growthRate
+
         for (const instance of this.crops.values()) {
+            // ── Transition en cours ──────────────────────────────────
+            if (instance.isTransition) {
+                instance.tickTransition(deltaTime, 4)
+                this.applyScale(instance)
+                continue   // pas de croissance pendant la transition
+            }
+
+            // ── Croissance ───────────────────────────────────────────
             const phaseChanged = instance.advance(effective)
-            if (phaseChanged) this.spawnMesh(instance)
+            if (phaseChanged) this.spawnMesh(instance, "phase")
         }
     }
 
@@ -102,6 +135,10 @@ export class CropManager {
         this.crops.clear()
     }
 
+    // ─── Instances en cours de récolte (hors map principale) ──────────────────
+
+    private _harvestingInstances = new Set<CropInstance>()
+
     // ─── Privé ─────────────────────────────────────────────────────────────────
 
     private key(cx: number, cz: number): string {
@@ -117,22 +154,44 @@ export class CropManager {
         )
     }
 
-    private spawnMesh(instance: CropInstance): void {
-        this.disposeMesh(instance)
 
+    private applyScale(instance: CropInstance): void {
+        if (!instance.mesh) return
+            ; (instance.mesh as unknown as THREE.Object3D).scale.setScalar(
+                Math.max(0, instance.currentScale)
+            )
+    }
+
+    private spawnMesh(instance: CropInstance, transitionType: "spawn" | "phase"): void {
         const phase = instance.currentPhase
+        const prevPhase = instance.previousPhase
         const pos = this.worldPos(instance.cellX, instance.cellZ)
         const cropYOffset = phase.yOffset ?? instance.def.yOffset ?? 0
+
+        // ── Même modèle entre deux phases — lerp de scale uniquement ──
+        if (
+            transitionType === "phase" &&
+            phase.modelPath &&
+            prevPhase.modelPath === phase.modelPath &&
+            instance.mesh
+        ) {
+            const fromScale = prevPhase.modelScale ?? 1
+            const toScale = phase.modelScale ?? 1
+            instance.startTransition("phase", fromScale, toScale)
+            return
+        }
+
+        // ── Modèle différent ou premier spawn — recrée le mesh ────────
+        this.disposeMesh(instance)
 
         if (phase.modelPath) {
             loadModel(phase.modelPath).then(model => {
                 if (!this.crops.has(this.key(instance.cellX, instance.cellZ))) return
                 if (instance.currentPhase !== phase) return
 
-                const scale = phase.modelScale ?? 1
-                model.scale.setScalar(scale)
+                const targetScale = phase.modelScale ?? 1
+                model.scale.setScalar(targetScale)
 
-                // ── Recale le pivot au sol + yOffset du crop ───────────
                 const box = new THREE.Box3().setFromObject(model)
                 const yFix = box.min.y < 0 ? -box.min.y : 0
                 model.position.set(pos.x, yFix + cropYOffset, pos.z)
@@ -153,16 +212,19 @@ export class CropManager {
 
                 if (instance.isReady) this.setEmissive(model, 0.12)
 
+                model.scale.setScalar(0)
                 instance.mesh = model as unknown as THREE.Mesh
                 this.scene.add(model)
 
+                instance.startTransition(transitionType, 0, targetScale)
+
             }).catch(err => {
                 console.error(`[CropManager] Impossible de charger ${phase.modelPath}`, err)
-                this.spawnCube(instance, phase, pos, cropYOffset)
+                this.spawnCube(instance, phase, pos, cropYOffset, transitionType)
             })
 
         } else {
-            this.spawnCube(instance, phase, pos, cropYOffset)
+            this.spawnCube(instance, phase, pos, cropYOffset, transitionType)
         }
     }
 
@@ -170,7 +232,8 @@ export class CropManager {
         instance: CropInstance,
         phase: GrowthPhase,
         pos: THREE.Vector3,
-        cropYOffset: number = 0,  // déjà résolu avant l'appel
+        cropYOffset: number = 0,
+        transitionType: "spawn" | "phase" = "spawn",
     ): void {
         const mesh = buildCubeMesh(phase)
         mesh.castShadow = true
@@ -179,9 +242,9 @@ export class CropManager {
         mesh.userData.cellX = instance.cellX
         mesh.userData.cellZ = instance.cellZ
 
-        const h = phase.height ?? 0.1
-        // h/2 pour centrer le cube sur sa base + yOffset du crop
+        const h = phase.height ?? 0.05
         mesh.position.set(pos.x, h / 2 + cropYOffset, pos.z)
+        mesh.scale.setScalar(0)
 
         if (instance.isReady) {
             const mat = mesh.material as THREE.MeshStandardMaterial
@@ -190,6 +253,9 @@ export class CropManager {
 
         instance.mesh = mesh
         this.scene.add(mesh)
+
+        const targetScale = 1
+        instance.startTransition(transitionType, 0, targetScale)
     }
 
     private setEmissive(root: THREE.Object3D, intensity: number): void {

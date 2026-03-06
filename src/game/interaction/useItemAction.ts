@@ -122,17 +122,22 @@ export function useItemAction({ camera, renderer }: UseItemActionOptions) {
 
                 const { cellX, cellZ } = placementStore.hoveredCell
 
-                // ← Cellule occupée par une entité → pas utilisable
-                if (world.tilesFactory.isOccupied(cellX, cellZ)) {
-                    renderer.domElement.style.cursor = "default"
-                    return
-                }
-
                 let effectiveTileType: string | undefined =
                     world.tilesFactory.getTileTypeAtCell(cellX, cellZ)
 
                 if (world.tilesFactory.isSoil(cellX, cellZ)) {
                     effectiveTileType = "soil"
+                }
+
+                // ← occupied bloque uniquement si ce n'est PAS du soil
+                // (le soil est occupé par construction mais reste utilisable pour planter)
+                const blocked =
+                    world.tilesFactory.isOccupied(cellX, cellZ) &&
+                    effectiveTileType !== "soil"
+
+                if (blocked) {
+                    renderer.domElement.style.cursor = "default"
+                    return
                 }
 
                 const isValid =

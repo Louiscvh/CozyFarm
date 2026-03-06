@@ -83,19 +83,51 @@ export class TileFactory {
 
     private initSoilMesh(): void {
         const geo = new THREE.BoxGeometry(this.cellSize, 0.5, this.cellSize)
-        geo.translate(0, -0.25, 0)   // même géométrie que les tiles terrain
+        geo.translate(0, -0.25, 0)
 
-        const { color, roughness, metalness } = TILE_VISUALS.soil
-        const mat = new THREE.MeshStandardMaterial({ color, roughness, metalness })
+        const mat = new THREE.MeshStandardMaterial({
+            map: this.generateSoilTexture(),
+            roughness: 0.98,
+            metalness: 0.0,
+        })
+
         const mesh = new THREE.InstancedMesh(geo, mat, this.SOIL_MAX)
         mesh.receiveShadow = true
-        mesh.count = 0
         mesh.frustumCulled = false
-
+        mesh.count = 0
         for (let i = 0; i < this.SOIL_MAX; i++) mesh.setMatrixAt(i, _zero)
         mesh.instanceMatrix.needsUpdate = true
         this.soilMesh = mesh
         this.scene.add(mesh)
+    }
+
+    private generateSoilTexture(): THREE.CanvasTexture {
+        const size = 128
+        const canvas = document.createElement("canvas")
+        canvas.width = size
+        canvas.height = size
+        const ctx = canvas.getContext("2d")!
+
+        // ── Base marron original ───────────────────────────────────
+        ctx.fillStyle = "#1e0f07"
+        ctx.fillRect(0, 0, size, size)
+
+        // ── Petits points aléatoires plus foncés ──────────────────
+        for (let i = 0; i < 5; i++) {
+            const x = Math.random() * size
+            const y = Math.random() * size
+            const r = Math.random() * 3 + 1.5
+
+            ctx.fillStyle = "#3d2b1f"
+            ctx.beginPath()
+            ctx.arc(x, y, r, 0, Math.PI * 2)
+            ctx.fill()
+        }
+
+        const texture = new THREE.CanvasTexture(canvas)
+        texture.wrapS = THREE.RepeatWrapping
+        texture.wrapT = THREE.RepeatWrapping
+        return texture
     }
 
     tillCell(cellX: number, cellZ: number): boolean {
