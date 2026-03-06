@@ -6,8 +6,6 @@ import { CropInstance } from "./CropInstance"
 import type { World } from "../world/World"
 
 const _loader = new GLTFLoader()
-
-/** Cache des modèles déjà chargés — clé = modelPath */
 const _modelCache = new Map<string, THREE.Object3D>()
 
 async function loadModel(path: string): Promise<THREE.Object3D> {
@@ -15,10 +13,7 @@ async function loadModel(path: string): Promise<THREE.Object3D> {
     return new Promise((resolve, reject) => {
         _loader.load(
             path,
-            gltf => {
-                _modelCache.set(path, gltf.scene)
-                resolve(gltf.scene.clone())
-            },
+            gltf => { _modelCache.set(path, gltf.scene); resolve(gltf.scene.clone()) },
             undefined,
             reject,
         )
@@ -85,10 +80,6 @@ export class CropManager {
 
     // ─── Boucle ────────────────────────────────────────────────────────────────
 
-    /**
-     * @param deltaTime  temps réel écoulé (déjà scalé par Time.timeScale)
-     * @param growthRate multiplicateur environnemental [0..2] — calculé par World
-     */
     update(deltaTime: number, growthRate: number = 1): void {
         if (growthRate <= 0) return
         const effective = deltaTime * growthRate
@@ -126,36 +117,31 @@ export class CropManager {
         )
     }
 
-    /**
-     * Crée ou remplace le mesh pour la phase courante.
-     * Gère les deux cas : modèle GLB ou cube de fallback.
-     */
     private spawnMesh(instance: CropInstance): void {
-        // Supprime l'ancien mesh avant d'en créer un nouveau
         this.disposeMesh(instance)
 
         const phase = instance.currentPhase
         const pos = this.worldPos(instance.cellX, instance.cellZ)
+        const cropYOffset = phase.yOffset ?? instance.def.yOffset ?? 0
 
         if (phase.modelPath) {
-            // ── Chargement asynchrone du modèle GLB ─────────────────────
             loadModel(phase.modelPath).then(model => {
-                // Vérifie que l'instance est toujours en vie et à la même phase
                 if (!this.crops.has(this.key(instance.cellX, instance.cellZ))) return
                 if (instance.currentPhase !== phase) return
 
                 const scale = phase.modelScale ?? 1
                 model.scale.setScalar(scale)
-                model.position.copy(pos)
-                model.frustumCulled = false
 
-                // Attache les métadonnées sur le root pour le raycasting
+                // ── Recale le pivot au sol + yOffset du crop ───────────
+                const box = new THREE.Box3().setFromObject(model)
+                const yFix = box.min.y < 0 ? -box.min.y : 0
+                model.position.set(pos.x, yFix + cropYOffset, pos.z)
+
+                model.frustumCulled = false
                 model.userData.isCrop = true
                 model.userData.cellX = instance.cellX
                 model.userData.cellZ = instance.cellZ
 
-                // Propage les métadonnées sur tous les meshes enfants
-                // pour que getMeshes() et le raycast fonctionnent
                 model.traverse(child => {
                     if (!(child as THREE.Mesh).isMesh) return
                     child.userData.isCrop = true
@@ -165,23 +151,18 @@ export class CropManager {
                         ; (child as THREE.Mesh).castShadow = true
                 })
 
-                // Applique emissive si mûre
-                if (instance.isReady) {
-                    this.setEmissive(model, 0.12)
-                }
+                if (instance.isReady) this.setEmissive(model, 0.12)
 
                 instance.mesh = model as unknown as THREE.Mesh
                 this.scene.add(model)
 
             }).catch(err => {
                 console.error(`[CropManager] Impossible de charger ${phase.modelPath}`, err)
-                // Fallback cube si le modèle échoue
-                this.spawnCube(instance, phase, pos)
+                this.spawnCube(instance, phase, pos, cropYOffset)
             })
 
         } else {
-            // ── Cube de fallback ─────────────────────────────────────────
-            this.spawnCube(instance, phase, pos)
+            this.spawnCube(instance, phase, pos, cropYOffset)
         }
     }
 
@@ -189,6 +170,7 @@ export class CropManager {
         instance: CropInstance,
         phase: GrowthPhase,
         pos: THREE.Vector3,
+        cropYOffset: number = 0,  // déjà résolu avant l'appel
     ): void {
         const mesh = buildCubeMesh(phase)
         mesh.castShadow = true
@@ -198,7 +180,8 @@ export class CropManager {
         mesh.userData.cellZ = instance.cellZ
 
         const h = phase.height ?? 0.1
-        mesh.position.set(pos.x, h / 2, pos.z)
+        // h/2 pour centrer le cube sur sa base + yOffset du crop
+        mesh.position.set(pos.x, h / 2 + cropYOffset, pos.z)
 
         if (instance.isReady) {
             const mat = mesh.material as THREE.MeshStandardMaterial
@@ -209,7 +192,6 @@ export class CropManager {
         this.scene.add(mesh)
     }
 
-    /** Applique une emissiveIntensity sur tous les meshes d'un objet. */
     private setEmissive(root: THREE.Object3D, intensity: number): void {
         root.traverse(obj => {
             const mesh = obj as THREE.Mesh

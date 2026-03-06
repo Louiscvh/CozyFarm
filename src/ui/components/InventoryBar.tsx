@@ -26,6 +26,8 @@ import { HoeItemDef } from "../../game/farming/items/HoeItem"
 import { World } from "../../game/world/World"
 import { UIButton } from "./UIButton"
 import "./InventoryBar.css"
+import { LettuceSeedItemDef } from "../../game/farming/items/LettuceSeedItem"
+import { LettuceItemDef } from "../../game/farming/items/LettuceItem"
 
 // ─── Tous les items (construction + farming) ──────────────────────────────────
 
@@ -37,8 +39,9 @@ const ALL_ITEMS: ItemDef[] = [
     { id: "rock1", label: "Rocher", icon: "🪨", usage: { kind: "placeable", entity: Rock1Entity } },
     { id: "flower1", label: "Fleur", icon: "🌸", usage: { kind: "placeable", entity: Flower1Entity } },
     { id: "farm", label: "Ferme", icon: "🏚️", usage: { kind: "placeable", entity: FarmEntity } },
-    { id: "wheatField", label: "Blé", icon: "🌾", usage: { kind: "placeable", entity: WheatField } },
     CarrotSeedItemDef,
+    LettuceSeedItemDef,
+    { id: "wheatField", label: "Blé", icon: "🌾", usage: { kind: "placeable", entity: WheatField } },
     { id: "cabana", label: "Cabane", icon: "🛖", usage: { kind: "placeable", entity: CabanaEntity } },
     { id: "wind_mill", label: "Moulin", icon: "💨", usage: { kind: "placeable", entity: WindMillEntity } },
     { id: "torch", label: "Torche", icon: "🔥", usage: { kind: "placeable", entity: TorchEntity } },
@@ -49,6 +52,7 @@ const ALL_ITEMS: ItemDef[] = [
     { id: "bench", label: "Banc", icon: "🪑", usage: { kind: "placeable", entity: BenchEntity } },
     { id: "dirt_soil", label: "Champ", icon: "🥔", usage: { kind: "placeable", entity: DirtSoilEntity } },
     CarrotItemDef,
+    LettuceItemDef
 ]
 
 // ─── Pool defs (plaçables uniquement) ────────────────────────────────────────
@@ -69,6 +73,7 @@ inventoryStore.register([
     { id: "flower1", maxQty: 64 },
     { id: "farm", maxQty: 4 },
     { id: "wheatField", maxQty: 16 },
+    { id: "lettuce_seed", maxQty: 64, initialQty: 20 },      // ← farming
     { id: "carrot_seed", maxQty: 64, initialQty: 20 },      // ← farming
     { id: "cabana", maxQty: 8 },
     { id: "torch", maxQty: 32 },
@@ -78,7 +83,8 @@ inventoryStore.register([
     { id: "wind_mill", maxQty: 4 },
     { id: "bench", maxQty: 8 },
     { id: "dirt_soil", maxQty: 24 },
-    { id: "carrot", maxQty: 99, initialQty: 0 },      // ← farming
+    { id: "carrot", maxQty: 99, initialQty: 0 },
+    { id: "lettuce", maxQty: 99, initialQty: 0 },      // ← farming
 ])
 
 const isInfinite = (item: ItemDef): boolean =>

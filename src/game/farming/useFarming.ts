@@ -3,29 +3,46 @@ import { useEffect } from "react"
 import { World } from "../world/World"
 import { itemActionRegistry } from "../interaction/ItemActionRegistry"
 import { inventoryStore } from "../../ui/store/InventoryStore"
-import { CarrotCrop } from "./CropDefinition"
+import { ALL_CROPS } from "./CropDefinition"
 import type { UseOnEntityContext } from "../interaction/ItemActionRegistry"
+
+/**
+ * Enregistre une action de plantation générique pour chaque CropDefinition.
+ * Pour ajouter un nouveau légume :
+ *   1. Crée sa CropDefinition dans CropDefinition.ts
+ *   2. Ajoute-la dans ALL_CROPS
+ *   3. Crée son ItemDef avec actionId: `farming:plant_${def.id}`
+ * C'est tout — aucune modification ici requise.
+ */
+function registerPlantActions() {
+    for (const def of ALL_CROPS) {
+        itemActionRegistry.registerTileAction(
+            `farming:plant_${def.id}`,
+            (ctx) => {
+                const world = World.current
+                if (!world) return false
+                if (!world.tilesFactory.isSoil(ctx.cellX, ctx.cellZ)) return false
+                if (world.cropManager.hasCrop(ctx.cellX, ctx.cellZ)) return false
+                return world.cropManager.plant(def, ctx.cellX, ctx.cellZ) !== null
+            }
+        )
+    }
+}
 
 export function useFarming() {
     useEffect(() => {
 
-        // ── Bêcher une case de grass ───────────────────────────────────
+        // ── Bêcher ────────────────────────────────────────────────────
         itemActionRegistry.registerTileAction("farming:till", (ctx) => {
             const world = World.current
             if (!world) return false
             return world.tilesFactory.tillCell(ctx.cellX, ctx.cellZ)
         })
 
-        // ── Planter une carotte sur une case bêchée ────────────────────
-        itemActionRegistry.registerTileAction("farming:plant_carrot", (ctx) => {
-            const world = World.current
-            if (!world) return false
-            if (!world.tilesFactory.isSoil(ctx.cellX, ctx.cellZ)) return false
-            if (world.cropManager.hasCrop(ctx.cellX, ctx.cellZ)) return false
-            return world.cropManager.plant(CarrotCrop, ctx.cellX, ctx.cellZ) !== null
-        })
+        // ── Plantation — une action par crop, générée automatiquement ─
+        registerPlantActions()
 
-        // ── Récolte (clic libre sur un crop mesh mûr) ──────────────────
+        // ── Récolte ───────────────────────────────────────────────────
         itemActionRegistry.registerEntityAction(
             "farming:harvest",
             (ctx: UseOnEntityContext): boolean => {
@@ -33,8 +50,6 @@ export function useFarming() {
                 if (!world) return false
                 const harvested = world.cropManager.harvest(ctx.cellX, ctx.cellZ)
                 if (!harvested) return false
-                // La case redevient juste bêchée (pas de tile, prête pour replanter)
-                // world.tilledLayer.untill(ctx.cellX, ctx.cellZ) // ← décommenter si on veut reset
                 inventoryStore.produce(harvested.def.harvestItemId, harvested.def.harvestQty)
                 return true
             }

@@ -2,13 +2,14 @@
 
 export interface GrowthPhase {
     durationSeconds: number
-    // ── Fallback cube (si pas de modelPath) ──
+    // ── Fallback cube ──
     color?: number
     scaleXZ?: number
     height?: number
-    // ── Modèle 3D ────────────────────────────
-    modelPath?: string   // ex: "/models/crops/carrot_stage1.glb"
-    modelScale?: number   // scale uniforme appliqué au modèle
+    // ── Modèle 3D ──────
+    modelPath?: string
+    modelScale?: number
+    yOffset?: number  // ← surcharge le yOffset global du crop pour cette phase
 }
 
 export interface CropDefinition {
@@ -17,6 +18,7 @@ export interface CropDefinition {
     readonly seedItemId: string
     readonly harvestItemId: string
     readonly harvestQty: number
+    readonly yOffset?: number   // ← décalage Y global appliqué à tous les modèles
     readonly phases: ReadonlyArray<GrowthPhase>
 }
 
@@ -26,31 +28,28 @@ export const CarrotCrop: CropDefinition = {
     seedItemId: "carrot_seed",
     harvestItemId: "carrot",
     harvestQty: 2,
+    yOffset: -0.05,
     phases: [
-        // Phase 0 : graine — cube marron (pas de modèle)
-        {
-            durationSeconds: 5,
-            color: 0x5c3317, scaleXZ: 0.01, height: 0.05,
-        },
-        // Phase 1 : pousse — modèle GLB
-        {
-            durationSeconds: 5,
-            modelPath: "/models/crops/carrot_stage1.glb",
-            modelScale: 0.05,
-        },
-        // Phase 2 : croissance
-        {
-            durationSeconds: 5,
-            modelPath: "/models/crops/carrot_stage1.glb",
-            modelScale: 0.1,
-        },
-        // Phase 3 : mûre
-        {
-            durationSeconds: 0,
-            modelPath: "/models/crops/carrot_stage1.glb",
-            modelScale: 0.15,
-        },
+        { durationSeconds: 5, color: 0x5c3317, scaleXZ: 0.01, height: 0.05 },
+        { durationSeconds: 5, modelPath: "/models/crops/carrot_stage1.glb", modelScale: 0.04, yOffset: -0.13 },
+        { durationSeconds: 5, modelPath: "/models/crops/carrot_stage1.glb", modelScale: 0.07, yOffset: -0.2 },
+        { durationSeconds: 0, modelPath: "/models/crops/carrot_stage1.glb", modelScale: 0.1, yOffset: -0.2 },
     ],
 }
 
-export const ALL_CROPS: ReadonlyArray<CropDefinition> = [CarrotCrop]
+export const LettuceCrop: CropDefinition = {
+    id: "lettuce",
+    label: "Salade",
+    seedItemId: "lettuce_seed",
+    harvestItemId: "lettuce",
+    harvestQty: 4,
+    yOffset: -0.05,
+    phases: [
+        { durationSeconds: 5, color: 0x008000, scaleXZ: 0.01, height: 0.05 },
+        { durationSeconds: 4, modelPath: "/models/crops/lettuce_stage1.glb", modelScale: 0.01 },
+        { durationSeconds: 4, modelPath: "/models/crops/lettuce_stage1.glb", modelScale: 0.1 },
+        { durationSeconds: 4, modelPath: "/models/crops/lettuce_stage1.glb", modelScale: 0.025 },
+    ],
+}
+
+export const ALL_CROPS: ReadonlyArray<CropDefinition> = [CarrotCrop, LettuceCrop]
