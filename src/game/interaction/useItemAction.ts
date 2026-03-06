@@ -4,7 +4,7 @@ import * as THREE from "three"
 import { placementStore } from "../../ui/store/PlacementStore"
 import { inventoryStore } from "../../ui/store/InventoryStore"
 import { itemActionRegistry } from "./ItemActionRegistry"
-import { isUsableOnEntity, isUsableOnTile } from "../entity/ItemDef"
+import { isPlaceable, isUsableOnEntity, isUsableOnTile, type ItemDef } from "../entity/ItemDef"
 import { World } from "../world/World"
 
 interface UseItemActionOptions {
@@ -82,75 +82,75 @@ export function useItemAction({ camera, renderer }: UseItemActionOptions) {
         // ── Mouse move ─────────────────────────────────────────────────────────────
 
         const onMouseMove = (e: MouseEvent) => {
-            const item = placementStore.selectedItem
-             
+            const item: ItemDef | null = placementStore.selectedItem
             const hoveredCell = placementStore.hoveredCell
-            if (hoveredCell && !placementStore.selectedItem) {
-                const crop = world.cropManager.getCrop(hoveredCell.cellX, hoveredCell.cellZ)
+            const canvas = renderer.domElement
 
-                if (crop?.isReady) {
-                    renderer.domElement.style.cursor = "pointer"
-                    return
-                }
+            // ── 1️⃣ Mode placement ──
+            if (item && isPlaceable(item)) {
+                // Ici tu définis si l'emplacement est valide pour placer
+                // placementStore.canPlace devrait être calculé ailleurs selon hoveredCell
+                canvas.style.cursor = placementStore.canPlace ? "pointer" : "not-allowed"
+                return
             }
 
-            // ── use_on_entity : highlight + curseur pointer ──────────────────────────
+            // ── 2️⃣ Hover sur crop récoltable ──
+            if (hoveredCell && !item) {
+                const crop = world.cropManager.getCrop(hoveredCell.cellX, hoveredCell.cellZ)
+                canvas.style.cursor = crop?.isReady ? "pointer" : "default"
+                return
+            }
+
+            // ── 3️⃣ Hover sur entity usable ──
             if (isUsableOnEntity(item)) {
                 mouseRef.current.copy(toNDC(e))
                 raycasterRef.current.setFromCamera(mouseRef.current, camera)
 
-                const hitboxes = getHitboxesForEntityIds(item.usage.targetEntityIds)
-                const hits = raycasterRef.current.intersectObjects(hitboxes, false)
+                const hitboxes: THREE.Object3D[] = []
+                for (const entity of world.entities) {
+                    if (!item.usage.targetEntityIds.includes(entity.userData.id)) continue
+                    entity.traverse(child => {
+                        if (child.userData.isHitBox) hitboxes.push(child)
+                    })
+                }
 
+                const hits = raycasterRef.current.intersectObjects(hitboxes, false)
                 if (hits.length > 0) {
-                    const proxy = hits[0].object.parent
-                    setHighlight(proxy ?? null)
-                    renderer.domElement.style.cursor = "pointer"
+                    setHighlight(hits[0].object.parent ?? null)
+                    canvas.style.cursor = "pointer"
                 } else {
                     setHighlight(null)
-                    renderer.domElement.style.cursor = "default"
+                    canvas.style.cursor = "default"
                 }
                 return
             }
 
-            // ── use_on_tile : curseur pointer si tile valide ─────────────────────────
+            // ── 4️⃣ Hover sur tile usable ──
             if (isUsableOnTile(item)) {
-                if (!placementStore.hoveredCell) {
-                    renderer.domElement.style.cursor = "default"
+                if (!hoveredCell) {
+                    canvas.style.cursor = "default"
                     return
                 }
 
-                const { cellX, cellZ } = placementStore.hoveredCell
+                const { cellX, cellZ } = hoveredCell
+                let effectiveTileType = world.tilesFactory.getTileTypeAtCell(cellX, cellZ)
+                if (world.tilesFactory.isSoil(cellX, cellZ)) effectiveTileType = "soil"
 
-                let effectiveTileType: string | undefined =
-                    world.tilesFactory.getTileTypeAtCell(cellX, cellZ)
-
-                if (world.tilesFactory.isSoil(cellX, cellZ)) {
-                    effectiveTileType = "soil"
-                }
-
-                // ← occupied bloque uniquement si ce n'est PAS du soil
-                // (le soil est occupé par construction mais reste utilisable pour planter)
                 const blocked =
                     world.tilesFactory.isOccupied(cellX, cellZ) &&
                     effectiveTileType !== "soil"
-
-                if (blocked) {
-                    renderer.domElement.style.cursor = "default"
-                    return
-                }
 
                 const isValid =
                     !!effectiveTileType &&
                     item.usage.targetTileTypes.includes(effectiveTileType)
 
-                renderer.domElement.style.cursor = isValid ? "pointer" : "default"
+                canvas.style.cursor = isValid && !blocked ? "pointer" : "not-allowed"
                 return
             }
 
-            // ── Pas d'item utilisable sélectionné ────────────────────────────────────
+            // ── 5️⃣ Aucun item sélectionné ──
             setHighlight(null)
-            renderer.domElement.style.cursor = "default"
+            canvas.style.cursor = "default"
         }
 
         // ── Click ──────────────────────────────────────────────────────────────────

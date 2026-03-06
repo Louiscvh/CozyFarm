@@ -16,11 +16,24 @@ export function PlacementManager() {
     useFarming()
 
     useEffect(() => {
-        const unsub = placementStore.subscribe(() => {
-            document.body.classList.toggle("placing", !!placementStore.selectedItem)
-        })
-        return unsub
-    }, [])
+        const canvas = renderer.domElement
+
+        const updateCursor = () => {
+            if (placementStore.selectedItem) {
+                canvas.style.cursor = "crosshair"
+            } else {
+                canvas.style.cursor = "default"
+            }
+        }
+
+        updateCursor()
+        const unsub = placementStore.subscribe(updateCursor)
+
+        return () => {
+            unsub()
+            canvas.style.cursor = "default"
+        }
+    }, [renderer])
 
     return null
 }
