@@ -3,8 +3,8 @@
     "",
     "\\src",
     "\\src\\game",
-    "\\src\\game\\farming",
-    "\\src\\game\\interaction"
+    "\\src\\game\\farming"
   ],
+  "SelectedNode": "\\src\\game\\farming\\CropDefinition.ts",
   "PreviewInSolutionExplorer": false
 }

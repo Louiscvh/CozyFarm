@@ -48,6 +48,15 @@ const CORNER_OFFSETS: [number, number][] = [
 const _zero = new THREE.Matrix4().makeScale(0, 0, 0)
 const _dummy = new THREE.Object3D()
 
+interface SoilTransition {
+    slot: number
+    cellX: number
+    cellZ: number
+    progress: number
+    direction: "in" | "out"
+    onDone?: () => void
+}
+
 export class TileFactory {
     private scene: THREE.Scene
     readonly worldSize: number
@@ -59,16 +68,21 @@ export class TileFactory {
     private debugMarkers: THREE.Mesh[] = []
     private debugMarkersVisible = false
 
-    private instancedMeshes: Map<TileType, THREE.InstancedMesh> = new Map()
-    private tileMap: Map<string, Tile> = new Map()
+    private instancedMeshes = new Map<TileType, THREE.InstancedMesh>()
+    private tileMap = new Map<string, Tile>()
+    private cellInstanceMap = new Map<string, { type: TileType; index: number }>()
 
-    // ── Soil layer dynamique ───────────────────────────────────────
+    // ── Soil layer ────────────────────────────────────────────────
     private soilMesh!: THREE.InstancedMesh
     private soilSlots = new Map<string, number>()
     private soilFreeSlots: number[] = []
     private soilHighWater = 0
     private readonly SOIL_MAX = 2000
-    private cellInstanceMap = new Map<string, { type: TileType; index: number }>()
+
+    // ── Transitions ───────────────────────────────────────────────
+    private transitions = new Map<string, SoilTransition>()
+    private readonly TRANSITION_SPEED = 1   // ~125ms
+
     constructor(scene: THREE.Scene, worldSize: number, tileSize: number) {
         this.scene = scene
         this.worldSize = worldSize
@@ -79,18 +93,16 @@ export class TileFactory {
         this.initSoilMesh()
     }
 
-    // ─── Soil layer ───────────────────────────────────────────────────────────────
+    // ─── Soil layer ───────────────────────────────────────────────
 
     private initSoilMesh(): void {
         const geo = new THREE.BoxGeometry(this.cellSize, 0.5, this.cellSize)
         geo.translate(0, -0.25, 0)
-
         const mat = new THREE.MeshStandardMaterial({
             map: this.generateSoilTexture(),
             roughness: 0.98,
             metalness: 0.0,
         })
-
         const mesh = new THREE.InstancedMesh(geo, mat, this.SOIL_MAX)
         mesh.receiveShadow = true
         mesh.frustumCulled = false
@@ -108,17 +120,14 @@ export class TileFactory {
         canvas.height = size
         const ctx = canvas.getContext("2d")!
 
-        // ── Base marron original ───────────────────────────────────
-        ctx.fillStyle = "#1e0f07"
+        ctx.fillStyle = "#3d2b1f"
         ctx.fillRect(0, 0, size, size)
 
-        // ── Petits points aléatoires plus foncés ──────────────────
         for (let i = 0; i < 5; i++) {
             const x = Math.random() * size
             const y = Math.random() * size
-            const r = Math.random() * 3 + 1.5
-
-            ctx.fillStyle = "#3d2b1f"
+            const r = Math.random() * 6 + 4
+            ctx.fillStyle = "#1e0f07"
             ctx.beginPath()
             ctx.arc(x, y, r, 0, Math.PI * 2)
             ctx.fill()
@@ -130,59 +139,142 @@ export class TileFactory {
         return texture
     }
 
-    tillCell(cellX: number, cellZ: number): boolean {
-        const k = this.cellKey(cellX, cellZ)
-        if (this.soilSlots.has(k)) return false
-        if (this.occupiedCells.has(k)) return false  // ← ajouter
+    // ── Écrit la matrice d'une instance soil avec un scaleY donné ──
 
-        // Cache la cellule terrain sous-jacente
-        this.hideCell(cellX, cellZ)
-        this.markOccupied(cellX, cellZ, 1)  // ← ajouter
-
-        const slot = this.soilFreeSlots.pop() ?? this.soilHighWater++
-        this.soilSlots.set(k, slot)
-
+    private setSoilMatrix(slot: number, cellX: number, cellZ: number): void {
         const half = this.worldSizeInCells / 2
         _dummy.position.set(
             (cellX - half + 0.5) * this.cellSize,
-            -0.05,   // en dessous du niveau du terrain
+            -0.05,
             (cellZ - half + 0.5) * this.cellSize,
         )
         _dummy.rotation.set(0, 0, 0)
         _dummy.scale.setScalar(1)
         _dummy.updateMatrix()
-
         this.soilMesh.setMatrixAt(slot, _dummy.matrix)
-        this.soilMesh.count = this.soilHighWater
         this.soilMesh.instanceMatrix.needsUpdate = true
+    }
+
+    private readonly TERRAIN_Y_VISIBLE: number = 0.0
+    private readonly TERRAIN_Y_HIDDEN: number = -0.45
+    private readonly TERRAIN_Y_UNTILL_START: number = -0.05 // juste sous le soil
+    // ── Tick transitions — à appeler depuis World.update ───────────
+
+    tickTransitions(deltaTime: number): void {
+        if (this.transitions.size === 0) return
+
+        for (const [k, t] of this.transitions) {
+            t.progress = Math.min(1, t.progress + deltaTime * this.TRANSITION_SPEED)
+
+            const ease = t.progress
+
+            if (t.direction === "in") {
+                // Bêchage : herbe descend
+                const posY = this.TERRAIN_Y_VISIBLE + (this.TERRAIN_Y_HIDDEN - this.TERRAIN_Y_VISIBLE) * ease
+                this.setTerrainMatrix(t.cellX, t.cellZ, posY)
+            } else {
+                // Pelle : herbe remonte, linéaire pour accélérer
+                const posY = this.TERRAIN_Y_UNTILL_START + (this.TERRAIN_Y_VISIBLE - this.TERRAIN_Y_UNTILL_START) * ease
+                this.setTerrainMatrix(t.cellX, t.cellZ, posY)
+            }
+
+            if (t.progress >= 1) {
+                t.onDone?.()
+                this.transitions.delete(k)
+            }
+        }
+    }
+
+    // ── Anime la cellule terrain (herbe) en Y ─────────────────────────
+    private _matrix = new THREE.Matrix4()
+    private _pos = new THREE.Vector3()
+    private _quat = new THREE.Quaternion()
+    private _scale = new THREE.Vector3()
+
+    private setTerrainMatrix(cellX: number, cellZ: number, posY: number): void {
+        const entry = this.cellInstanceMap.get(this.cellKey(cellX, cellZ))
+        if (!entry) return
+
+        const mesh = this.instancedMeshes.get(entry.type)
+        if (!mesh) return
+
+        mesh.getMatrixAt(entry.index, this._matrix)
+        this._matrix.decompose(this._pos, this._quat, this._scale)
+
+        this._pos.y = posY
+
+        this._matrix.compose(this._pos, this._quat, this._scale)
+        mesh.setMatrixAt(entry.index, this._matrix)
+        mesh.instanceMatrix.needsUpdate = true
+    }
+
+    // ─── API Soil ─────────────────────────────────────────────────
+
+    tillCell(cellX: number, cellZ: number): boolean {
+        const k = this.cellKey(cellX, cellZ)
+        if (this.soilSlots.has(k)) return false
+        if (this.occupiedCells.has(k)) return false
+
+        this.markOccupied(cellX, cellZ, 1)
+
+        const slot = this.soilFreeSlots.pop() ?? this.soilHighWater++
+        this.soilSlots.set(k, slot)
+        this.soilMesh.count = this.soilHighWater
+
+        // Place le soil immédiatement à sa position finale
+        this.setSoilMatrix(slot, cellX, cellZ)
+
+        // Lance l'animation de l'herbe qui descend
+        this.transitions.set(k, {
+            slot, cellX, cellZ,
+            progress: 0,
+            direction: "in",
+            onDone: () => {
+                // Cache complètement l'herbe une fois descendue
+                this.hideCell(cellX, cellZ)
+            },
+        })
+
         return true
     }
-    
 
     untillCell(cellX: number, cellZ: number): void {
         const k = this.cellKey(cellX, cellZ)
         const slot = this.soilSlots.get(k)
         if (slot === undefined) return
 
-        this.soilSlots.delete(k)
-        this.soilFreeSlots.push(slot)
-        this.soilMesh.setMatrixAt(slot, _zero)
-        this.soilMesh.instanceMatrix.needsUpdate = true
+        this.transitions.delete(k)
 
-        // Restaure la cellule terrain sous-jacente
-        this.showCell(cellX, cellZ)
-        this.markFree(cellX, cellZ, 1)  // ← ajouter
-    }
+        // recréer l’herbe sous le sol
+        this.showCell(cellX, cellZ, this.TERRAIN_Y_UNTILL_START)
 
-    isOccupied(cellX: number, cellZ: number): boolean {
-        return this.occupiedCells.has(this.cellKey(cellX, cellZ))
+        this.transitions.set(k, {
+            slot,
+            cellX,
+            cellZ,
+            progress: 0,
+            direction: "out",
+            onDone: () => {
+                // maintenant on peut cacher le soil
+                this.soilMesh.setMatrixAt(slot, _zero)
+                this.soilMesh.instanceMatrix.needsUpdate = true
+
+                this.soilSlots.delete(k)
+                this.soilFreeSlots.push(slot)
+                this.markFree(cellX, cellZ, 1)
+            }
+        })
     }
 
     isSoil(cellX: number, cellZ: number): boolean {
         return this.soilSlots.has(this.cellKey(cellX, cellZ))
     }
 
-    // ─── Accès aux données ────────────────────────────────────────────────────────
+    isOccupied(cellX: number, cellZ: number): boolean {
+        return this.occupiedCells.has(this.cellKey(cellX, cellZ))
+    }
+
+    // ─── Accès aux données ────────────────────────────────────────
 
     getTile(tileX: number, tileZ: number): Tile | undefined {
         return this.tileMap.get(`${tileX}|${tileZ}`)
@@ -199,13 +291,12 @@ export class TileFactory {
         }
     }
 
-    /** Retourne le type effectif — "soil" est prioritaire sur le terrain sous-jacent. */
     getTileTypeAtCell(cellX: number, cellZ: number): TileType | undefined {
         if (this.isSoil(cellX, cellZ)) return "soil"
-        return this.getCornerTypeAtCell(cellX, cellZ)  // ← corner exact, pas le dominant du tile
+        return this.getCornerTypeAtCell(cellX, cellZ)
     }
 
-    // ─── Grid generation ──────────────────────────────────────────────────────────
+    // ─── Grid generation ──────────────────────────────────────────
 
     generateGrid(): Tile[] {
         const tiles: Tile[] = []
@@ -228,7 +319,6 @@ export class TileFactory {
                 for (const c of corners) freq[c]++
                 const dominant = (Object.keys(freq) as TileType[])
                     .reduce((a, b) => freq[a] >= freq[b] ? a : b)
-
                 const tile: Tile = { type: dominant, corners, tileX: x, tileZ: z }
                 tiles.push(tile)
                 this.tileMap.set(`${x}|${z}`, tile)
@@ -264,11 +354,9 @@ export class TileFactory {
                     const idx = indexPerType[type]++
                     const [ox, oz] = CORNER_OFFSETS[i]
 
-                    // Calcul de la cellule correspondante à ce coin
-                    const cx = x * 2 + (i % 2)        // col: 0=gauche, 1=droite
-                    const cz = z * 2 + Math.floor(i / 2) // row: 0=haut, 1=bas
-
-                    this.cellInstanceMap.set(this.cellKey(cx, cz), { type, index: idx })  // ← ajouter
+                    const cx = x * 2 + (i % 2)
+                    const cz = z * 2 + Math.floor(i / 2)
+                    this.cellInstanceMap.set(this.cellKey(cx, cz), { type, index: idx })
 
                     dummy.position.set(
                         centerX + ox * this.tileSize + this.cellSize,
@@ -288,35 +376,55 @@ export class TileFactory {
         return tiles
     }
 
+    // ─── Show / Hide terrain ──────────────────────────────────────
+
     private hideCell(cellX: number, cellZ: number): void {
         const entry = this.cellInstanceMap.get(this.cellKey(cellX, cellZ))
         if (!entry) return
-        const mesh = this.instancedMeshes.get(entry.type)
-        if (!mesh) return
-        mesh.setMatrixAt(entry.index, _zero)
-        mesh.instanceMatrix.needsUpdate = true
-    }
 
-    private showCell(cellX: number, cellZ: number): void {
-        const entry = this.cellInstanceMap.get(this.cellKey(cellX, cellZ))
-        if (!entry) return
         const mesh = this.instancedMeshes.get(entry.type)
         if (!mesh) return
 
         const half = this.worldSizeInCells / 2
+
         _dummy.position.set(
             (cellX - half + 0.5) * this.cellSize,
-            0,
+            this.TERRAIN_Y_HIDDEN, // juste sous le soil
             (cellZ - half + 0.5) * this.cellSize,
         )
+
         _dummy.rotation.set(0, 0, 0)
         _dummy.scale.setScalar(1)
         _dummy.updateMatrix()
+
         mesh.setMatrixAt(entry.index, _dummy.matrix)
         mesh.instanceMatrix.needsUpdate = true
     }
 
-    // ─── Debug ────────────────────────────────────────────────────────────────────
+    private showCell(cellX: number, cellZ: number, y: number): void {
+        const entry = this.cellInstanceMap.get(this.cellKey(cellX, cellZ))
+        if (!entry) return
+
+        const mesh = this.instancedMeshes.get(entry.type)
+        if (!mesh) return
+
+        const half = this.worldSizeInCells / 2
+
+        _dummy.position.set(
+            (cellX - half + 0.5) * this.cellSize,
+            y,
+            (cellZ - half + 0.5) * this.cellSize,
+        )
+
+        _dummy.rotation.set(0, 0, 0)
+        _dummy.scale.setScalar(1)
+        _dummy.updateMatrix()
+
+        mesh.setMatrixAt(entry.index, _dummy.matrix)
+        mesh.instanceMatrix.needsUpdate = true
+    }
+
+    // ─── Debug ────────────────────────────────────────────────────
 
     toggleDebugMarkers() {
         this.debugMarkersVisible = !this.debugMarkersVisible
@@ -358,7 +466,7 @@ export class TileFactory {
         return tile.corners[cornerIndex]
     }
 
-    // ─── Cell occupancy ───────────────────────────────────────────────────────────
+    // ─── Cell occupancy ───────────────────────────────────────────
 
     canSpawn(cellX: number, cellZ: number, sizeInCells: number = 1): boolean {
         if (

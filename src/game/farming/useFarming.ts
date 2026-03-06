@@ -39,6 +39,15 @@ export function useFarming() {
             return world.tilesFactory.tillCell(ctx.cellX, ctx.cellZ)
         })
 
+        itemActionRegistry.registerTileAction("farming:untill", (ctx) => {
+            const world = World.current
+            if (!world) return false
+            // Bloqué si une plante est dessus
+            if (world.cropManager.hasCrop(ctx.cellX, ctx.cellZ)) return false
+            world.tilesFactory.untillCell(ctx.cellX, ctx.cellZ)
+            return true
+        })
+
         // ── Plantation — une action par crop, générée automatiquement ─
         registerPlantActions()
 

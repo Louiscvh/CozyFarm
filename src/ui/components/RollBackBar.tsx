@@ -16,6 +16,7 @@ export const RollBackBar = () => {
 
     const onKey = (e: KeyboardEvent) => {
       if (!e.ctrlKey || e.repeat) return
+      if (e.key.toLowerCase() === "a") { e.preventDefault(); return }  // ← ajouter
       if (e.key.toLowerCase() === "z") { e.preventDefault(); applyUndo() }
       if (e.key.toLowerCase() === "y") { e.preventDefault(); applyRedo() }
     }

@@ -9,6 +9,7 @@ import { LineMaterial } from "three/addons/lines/LineMaterial.js"
 import { getFootprint } from "../../game/entity/Entity"
 import { isPlaceable, getItemEntity } from "../../game/entity/ItemDef"
 import type { ItemDef } from "../../game/entity/ItemDef"
+import { historyStore } from "../../ui/store/HistoryStore"
 import {
     staticGridGroup,
     buildStaticGrid,
@@ -335,8 +336,13 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
             const { placeCellX, placeCellZ } = getPlaceCells(cellX, cellZ, footprint)
 
             // ── Mode déplacement ────────────────────────────────────────────────
+            // ── Mode déplacement ────────────────────────────────────────────────
             if (placementStore.moveEntity) {
                 const ent = placementStore.moveEntity
+
+                const fromCellX = ent.userData.cellX as number
+                const fromCellZ = ent.userData.cellZ as number
+                const fromRotY = ent.userData.rotY as number
 
                 const { x: newX, z: newZ } = (() => {
                     const half = world.sizeInCells / 2
@@ -365,6 +371,17 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
                 if (!world.entities.includes(ent)) world.entities.push(ent)
                 world.tilesFactory.markOccupied(placeCellX, placeCellZ, footprint)
 
+                // ← Push move dans l'historique
+                historyStore.push({
+                    type: "move",
+                    entityObject: ent,
+                    fromCell: { x: fromCellX, z: fromCellZ },
+                    toCell: { x: placeCellX, z: placeCellZ },
+                    fromRot: fromRotY,
+                    toRot: newRotY,
+                    size: footprint,
+                })
+
                 placementStore.completeMove()
                 removeGhost()
                 playSuccessSound()
@@ -392,6 +409,18 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
                 spawnedEntity.rotation.y = targetRotY.current
             }
 
+            // ← Pousse dans l'historique pour le sync inventaire + Ctrl+Z
+            historyStore.push({
+                type: "place",
+                entityObject: spawnedEntity,
+                cellX: placeCellX,
+                cellZ: placeCellZ,
+                sizeInCells: footprint,
+                originalY: spawnedEntity.position.y,
+                originalScale: spawnedEntity.scale.clone(),
+                originalRotation: spawnedEntity.rotation.clone(),
+            })
+
             playSuccessSound()
         }
 
@@ -399,6 +428,7 @@ export function usePlacement({ camera, renderer }: UsePlacementOptions) {
 
         const onKeyDown = (e: KeyboardEvent) => {
             if (e.key === "Escape") { placementStore.cancel(); removeGhost(); return }
+
             if ((e.key === "r" || e.key === "R") && placementStore.selectedItem && isPlaceable(placementStore.selectedItem)) {
                 placementStore.rotate()
                 targetRotY.current += THREE.MathUtils.degToRad(90)

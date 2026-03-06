@@ -96,6 +96,7 @@ export class CropManager {
     update(deltaTime: number, growthRate: number = 1): void {
         // Les crops en cours de récolte (hors map) ont leur propre suivi via les instances
         // On les tick séparément dans _harvestingInstances
+
         for (const inst of this._harvestingInstances) {
             if (!inst.isTransition) {
                 this._harvestingInstances.delete(inst)

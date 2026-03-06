@@ -172,7 +172,17 @@ export function applyUndo() {
   if (action.type === "delete") {
     action.cancelAnimation()
     const { entityObject: en, occupiedCells, sizeInCells, savedHoveredCell, originalY, originalScale, originalRotation } = action
+      const allFree = occupiedCells.every(c =>
+          !w.tilesFactory.isOccupied(c.x, c.z)
+      )
 
+      console.log(allFree)
+
+      if (!allFree) {
+          // Remet l'action dans la stack pour ne pas la perdre
+          // (ou simplement l'ignorer selon la préférence)
+          return
+      }
     if (action.onRestore) {
       w.scene.add(en)
       w.entities.push(en)
@@ -196,12 +206,22 @@ export function applyRedo() {
   const action = historyStore.redo()
   if (!action) return
 
-  if (action.type === "place") {
-    const { entityObject: e, originalY, originalScale, originalRotation } = action
-    addToScene(w, e, originalY)
-    w.tilesFactory.markOccupied(action.cellX, action.cellZ, action.sizeInCells)
-    animateAppear(w, e, originalY, originalScale, originalRotation)
-  }
+    if (action.type === "place") {
+        const { entityObject: e, originalY, originalScale, originalRotation } = action
+
+        // ← Vérifie que toutes les cellules sont libres avant de replacer
+        const allFree = Array.from({ length: action.sizeInCells }, (_, dx) =>
+            Array.from({ length: action.sizeInCells }, (_, dz) =>
+                !w.tilesFactory.isOccupied(action.cellX + dx, action.cellZ + dz)
+            )
+        ).flat().every(Boolean)
+
+        if (!allFree) return
+
+        addToScene(w, e, originalY)
+        w.tilesFactory.markOccupied(action.cellX, action.cellZ, action.sizeInCells)
+        animateAppear(w, e, originalY, originalScale, originalRotation)
+    }
 
   if (action.type === "rotate") {
     animateRotate(w, action.entityObject, action.nextRotY)

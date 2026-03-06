@@ -60,8 +60,11 @@ export class World {
 
         if (this.weather) this.weather.update(deltaTime)
 
+        this.tilesFactory.tickTransitions(deltaTime)   // ← ajouter ici
+
         // ── Conditions de croissance ──────────────────────────────────
         const { growthRate } = computeGrowthRate(this.weather ?? null)
+
         this.cropManager.update(deltaTime, growthRate)
         this.cropManager.updateReadyPulse(now)
 

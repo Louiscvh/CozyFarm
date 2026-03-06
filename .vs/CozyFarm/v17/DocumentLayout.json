@@ -3,12 +3,72 @@
   "WorkspaceRootPath": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\",
   "Documents": [
     {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\farming\\CropDefinition.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\game\\farming\\CropDefinition.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\ui\\hooks\\usePlacement.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\ui\\hooks\\usePlacement.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\world\\World.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\game\\world\\World.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\ui\\components\\InventoryBar.tsx||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\ui\\components\\InventoryBar.tsx||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\farming\\useFarming.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\game\\farming\\useFarming.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\farming\\CropManager.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\game\\farming\\CropManager.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\ui\\components\\FlyingItem.tsx||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\ui\\components\\FlyingItem.tsx||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\ui\\components\\InventoryBar.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\ui\\components\\InventoryBar.css||{A5401142-F49D-43DB-90B1-F57BA349E55C}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\interaction\\useItemAction.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\game\\interaction\\useItemAction.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
+    },
+    {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\world\\tile\\TileFactory.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\game\\world\\tile\\TileFactory.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\world\\tile\\Tile.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\game\\world\\tile\\Tile.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\farming\\items\\ShovelItem.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\game\\farming\\items\\ShovelItem.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\farming\\items\\HoeItem.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\game\\farming\\items\\HoeItem.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\ui\\components\\EntityPopup.tsx||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\ui\\components\\EntityPopup.tsx||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\ui\\components\\RollBackBar.tsx||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\ui\\components\\RollBackBar.tsx||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\ui\\store\\HistoryStore.tsx||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\ui\\store\\HistoryStore.tsx||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\ui\\store\\InventoryStore.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\ui\\store\\InventoryStore.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\render\\Renderer.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
@@ -19,20 +79,8 @@
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\game\\entity\\InstancedEntityManager.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\farming\\CropManager.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\game\\farming\\CropManager.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\farming\\CropInstance.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\game\\farming\\CropInstance.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\interaction\\useItemAction.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\game\\interaction\\useItemAction.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\farming\\CropDefinition.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\game\\farming\\CropDefinition.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\farming\\GrowthConditions.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
@@ -47,28 +95,12 @@
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\game\\farming\\items\\LettuceSeedItem.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\farming\\useFarming.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\game\\farming\\useFarming.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\farming\\items\\CarrotSeedItem.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\game\\farming\\items\\CarrotSeedItem.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\farming\\items\\CarrotItem.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\game\\farming\\items\\CarrotItem.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\ui\\components\\InventoryBar.tsx||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\ui\\components\\InventoryBar.tsx||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\ui\\hooks\\usePlacement.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\ui\\hooks\\usePlacement.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\world\\World.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\game\\world\\World.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\ui\\components\\Temperature.tsx||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
@@ -83,24 +115,12 @@
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\game\\entity\\entities\\DirtSoil.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
     },
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\ui\\store\\InventoryStore.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\ui\\store\\InventoryStore.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\farming\\items\\HoeItem.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\game\\farming\\items\\HoeItem.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\entity\\ItemDef.ts||{8B382828-6202-11D1-8870-0000F87579D2}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\game\\entity\\ItemDef.ts||{8B382828-6202-11D1-8870-0000F87579D2}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\ui\\store\\PlacementStore.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\ui\\store\\PlacementStore.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
-    },
-    {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\ui\\components\\EntityPopup.tsx||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\ui\\components\\EntityPopup.tsx||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\ui\\components\\PlacementManager.tsx||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
@@ -144,11 +164,80 @@
         },
         {
           "DockedHeight": 221,
-          "SelectedChildIndex": 26,
+          "SelectedChildIndex": 16,
           "Children": [
             {
               "$type": "Document",
-              "DocumentIndex": 10,
+              "DocumentIndex": 6,
+              "Title": "FlyingItem.tsx",
+              "DocumentMoniker": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\ui\\components\\FlyingItem.tsx",
+              "RelativeDocumentMoniker": "src\\ui\\components\\FlyingItem.tsx",
+              "ToolTip": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\ui\\components\\FlyingItem.tsx",
+              "RelativeToolTip": "src\\ui\\components\\FlyingItem.tsx",
+              "ViewState": "AgIAAAwAAAAAAAAAAAAcwBsAAAAJAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-03-06T17:42:46.686Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 11,
+              "Title": "ShovelItem.ts",
+              "DocumentMoniker": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\farming\\items\\ShovelItem.ts",
+              "RelativeDocumentMoniker": "src\\game\\farming\\items\\ShovelItem.ts",
+              "ToolTip": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\farming\\items\\ShovelItem.ts",
+              "RelativeToolTip": "src\\game\\farming\\items\\ShovelItem.ts",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-03-06T16:42:44.758Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 14,
+              "Title": "RollBackBar.tsx",
+              "DocumentMoniker": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\ui\\components\\RollBackBar.tsx",
+              "RelativeDocumentMoniker": "src\\ui\\components\\RollBackBar.tsx",
+              "ToolTip": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\ui\\components\\RollBackBar.tsx",
+              "RelativeToolTip": "src\\ui\\components\\RollBackBar.tsx",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABEAAAAGAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-03-06T16:31:59.711Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Bookmark",
+              "Name": "ST:0:0:{004be353-6879-467c-9d1e-9ac23cdf6d49}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 15,
+              "Title": "HistoryStore.tsx",
+              "DocumentMoniker": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\ui\\store\\HistoryStore.tsx",
+              "RelativeDocumentMoniker": "src\\ui\\store\\HistoryStore.tsx",
+              "ToolTip": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\ui\\store\\HistoryStore.tsx",
+              "RelativeToolTip": "src\\ui\\store\\HistoryStore.tsx",
+              "ViewState": "AgIAAMoAAAAAAAAAAAAtwN8AAAAFAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
+              "WhenOpened": "2026-03-06T16:21:38.09Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 7,
+              "Title": "InventoryBar.css",
+              "DocumentMoniker": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\ui\\components\\InventoryBar.css",
+              "RelativeDocumentMoniker": "src\\ui\\components\\InventoryBar.css",
+              "ToolTip": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\ui\\components\\InventoryBar.css",
+              "RelativeToolTip": "src\\ui\\components\\InventoryBar.css",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAsAAAAPAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003000|",
+              "WhenOpened": "2026-03-06T16:20:40.121Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 22,
               "Title": "LettuceSeedItem.ts",
               "DocumentMoniker": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\farming\\items\\LettuceSeedItem.ts",
               "RelativeDocumentMoniker": "src\\game\\farming\\items\\LettuceSeedItem.ts",
@@ -160,7 +249,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 9,
+              "DocumentIndex": 21,
               "Title": "LettuceItem.ts",
               "DocumentMoniker": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\farming\\items\\LettuceItem.ts",
               "RelativeDocumentMoniker": "src\\game\\farming\\items\\LettuceItem.ts",
@@ -172,7 +261,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 8,
+              "DocumentIndex": 20,
               "Title": "GrowthConditions.ts",
               "DocumentMoniker": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\farming\\GrowthConditions.ts",
               "RelativeDocumentMoniker": "src\\game\\farming\\GrowthConditions.ts",
@@ -184,7 +273,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 17,
+              "DocumentIndex": 25,
               "Title": "Temperature.tsx",
               "DocumentMoniker": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\ui\\components\\Temperature.tsx",
               "RelativeDocumentMoniker": "src\\ui\\components\\Temperature.tsx",
@@ -196,7 +285,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 18,
+              "DocumentIndex": 26,
               "Title": "DevToolBar.tsx",
               "DocumentMoniker": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\ui\\components\\DevToolBar.tsx",
               "RelativeDocumentMoniker": "src\\ui\\components\\DevToolBar.tsx",
@@ -208,7 +297,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 19,
+              "DocumentIndex": 27,
               "Title": "DirtSoil.ts",
               "DocumentMoniker": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\entity\\entities\\DirtSoil.ts",
               "RelativeDocumentMoniker": "src\\game\\entity\\entities\\DirtSoil.ts",
@@ -220,31 +309,33 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 21,
+              "DocumentIndex": 12,
               "Title": "HoeItem.ts",
               "DocumentMoniker": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\farming\\items\\HoeItem.ts",
               "RelativeDocumentMoniker": "src\\game\\farming\\items\\HoeItem.ts",
               "ToolTip": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\farming\\items\\HoeItem.ts",
               "RelativeToolTip": "src\\game\\farming\\items\\HoeItem.ts",
-              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAcAAAAMAAAAAAAAAA==",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAAhAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-05T15:21:44.117Z"
+              "WhenOpened": "2026-03-05T15:21:44.117Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 24,
+              "DocumentIndex": 13,
               "Title": "EntityPopup.tsx",
               "DocumentMoniker": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\ui\\components\\EntityPopup.tsx",
               "RelativeDocumentMoniker": "src\\ui\\components\\EntityPopup.tsx",
               "ToolTip": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\ui\\components\\EntityPopup.tsx",
               "RelativeToolTip": "src\\ui\\components\\EntityPopup.tsx",
-              "ViewState": "AgIAAMYAAAAAAAAAAAAqwNEAAAAgAAAAAAAAAA==",
+              "ViewState": "AgIAAHUAAAAAAAAAAAAqwNEAAAAgAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-05T08:30:15.335Z"
+              "WhenOpened": "2026-03-05T08:30:15.335Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 5,
+              "DocumentIndex": 19,
               "Title": "CropInstance.ts",
               "DocumentMoniker": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\farming\\CropInstance.ts",
               "RelativeDocumentMoniker": "src\\game\\farming\\CropInstance.ts",
@@ -252,38 +343,37 @@
               "RelativeToolTip": "src\\game\\farming\\CropInstance.ts",
               "ViewState": "AgIAADgAAAAAAAAAAAAgwFcAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-05T08:08:19.215Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-05T08:08:19.215Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 4,
+              "DocumentIndex": 5,
               "Title": "CropManager.ts",
               "DocumentMoniker": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\farming\\CropManager.ts",
               "RelativeDocumentMoniker": "src\\game\\farming\\CropManager.ts",
               "ToolTip": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\farming\\CropManager.ts",
               "RelativeToolTip": "src\\game\\farming\\CropManager.ts",
-              "ViewState": "AgIAAJcAAAAAAAAAAAApwKIAAAAFAAAAAAAAAA==",
+              "ViewState": "AgIAAPEAAAAAAAAAAAAcwAABAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
               "WhenOpened": "2026-03-05T08:07:53.204Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 7,
+              "DocumentIndex": 0,
               "Title": "CropDefinition.ts",
               "DocumentMoniker": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\farming\\CropDefinition.ts",
               "RelativeDocumentMoniker": "src\\game\\farming\\CropDefinition.ts",
               "ToolTip": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\farming\\CropDefinition.ts",
               "RelativeToolTip": "src\\game\\farming\\CropDefinition.ts",
-              "ViewState": "AgIAACUAAAAAAAAAAAAQwDEAAABfAAAAAAAAAA==",
+              "ViewState": "AgIAABwAAAAAAAAAAAAQwDEAAABhAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
               "WhenOpened": "2026-03-05T07:59:32.568Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 25,
+              "DocumentIndex": 30,
               "Title": "PlacementManager.tsx",
               "DocumentMoniker": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\ui\\components\\PlacementManager.tsx",
               "RelativeDocumentMoniker": "src\\ui\\components\\PlacementManager.tsx",
@@ -295,19 +385,20 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 11,
+              "DocumentIndex": 4,
               "Title": "useFarming.ts",
               "DocumentMoniker": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\farming\\useFarming.ts",
               "RelativeDocumentMoniker": "src\\game\\farming\\useFarming.ts",
               "ToolTip": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\farming\\useFarming.ts",
               "RelativeToolTip": "src\\game\\farming\\useFarming.ts",
-              "ViewState": "AgIAAB0AAAAAAAAAAAAAwAYAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAACUAAAAAAAAAAAAswEMAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-05T07:52:11.541Z"
+              "WhenOpened": "2026-03-05T07:52:11.541Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 13,
+              "DocumentIndex": 24,
               "Title": "CarrotItem.ts",
               "DocumentMoniker": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\farming\\items\\CarrotItem.ts",
               "RelativeDocumentMoniker": "src\\game\\farming\\items\\CarrotItem.ts",
@@ -319,7 +410,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 12,
+              "DocumentIndex": 23,
               "Title": "CarrotSeedItem.ts",
               "DocumentMoniker": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\farming\\items\\CarrotSeedItem.ts",
               "RelativeDocumentMoniker": "src\\game\\farming\\items\\CarrotSeedItem.ts",
@@ -331,7 +422,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 23,
+              "DocumentIndex": 29,
               "Title": "PlacementStore.ts",
               "DocumentMoniker": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\ui\\store\\PlacementStore.ts",
               "RelativeDocumentMoniker": "src\\ui\\store\\PlacementStore.ts",
@@ -343,20 +434,20 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 6,
+              "DocumentIndex": 8,
               "Title": "useItemAction.ts",
               "DocumentMoniker": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\interaction\\useItemAction.ts",
               "RelativeDocumentMoniker": "src\\game\\interaction\\useItemAction.ts",
               "ToolTip": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\interaction\\useItemAction.ts",
               "RelativeToolTip": "src\\game\\interaction\\useItemAction.ts",
-              "ViewState": "AgIAAHUAAAAAAAAAAAAgwJQAAAANAAAAAAAAAA==",
+              "ViewState": "AgIAAB4BAAAAAAAAAAAkwDoBAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
               "WhenOpened": "2026-03-05T07:50:06.173Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 26,
+              "DocumentIndex": 31,
               "Title": "ItemActionRegistry.ts",
               "DocumentMoniker": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\interaction\\ItemActionRegistry.ts",
               "RelativeDocumentMoniker": "src\\game\\interaction\\ItemActionRegistry.ts",
@@ -368,7 +459,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 22,
+              "DocumentIndex": 28,
               "Title": "ItemDef.ts",
               "DocumentMoniker": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\entity\\ItemDef.ts",
               "RelativeDocumentMoniker": "src\\game\\entity\\ItemDef.ts",
@@ -380,7 +471,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 27,
+              "DocumentIndex": 32,
               "Title": "Rock1.ts",
               "DocumentMoniker": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\entity\\entities\\Rock1.ts",
               "RelativeDocumentMoniker": "src\\game\\entity\\entities\\Rock1.ts",
@@ -392,7 +483,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 3,
+              "DocumentIndex": 18,
               "Title": "InstancedEntityManager.ts",
               "DocumentMoniker": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\entity\\InstancedEntityManager.ts",
               "RelativeDocumentMoniker": "src\\game\\entity\\InstancedEntityManager.ts",
@@ -400,12 +491,11 @@
               "RelativeToolTip": "src\\game\\entity\\InstancedEntityManager.ts",
               "ViewState": "AgIAAO4AAAAAAAAAAAAAABIBAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-05T07:42:47.876Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-05T07:42:47.876Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 28,
+              "DocumentIndex": 33,
               "Title": "EntityFactory.ts",
               "DocumentMoniker": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\entity\\EntityFactory.ts",
               "RelativeDocumentMoniker": "src\\game\\entity\\EntityFactory.ts",
@@ -417,7 +507,7 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 29,
+              "DocumentIndex": 34,
               "Title": "Entity.ts",
               "DocumentMoniker": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\entity\\Entity.ts",
               "RelativeDocumentMoniker": "src\\game\\entity\\Entity.ts",
@@ -429,69 +519,72 @@
             },
             {
               "$type": "Document",
-              "DocumentIndex": 20,
+              "DocumentIndex": 16,
               "Title": "InventoryStore.ts",
               "DocumentMoniker": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\ui\\store\\InventoryStore.ts",
               "RelativeDocumentMoniker": "src\\ui\\store\\InventoryStore.ts",
               "ToolTip": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\ui\\store\\InventoryStore.ts",
               "RelativeToolTip": "src\\ui\\store\\InventoryStore.ts",
-              "ViewState": "AgIAAGIAAAAAAAAAAAAAwGwAAAAwAAAAAAAAAA==",
+              "ViewState": "AgIAAGMAAAAAAAAAAAAgwIIAAAAyAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-05T07:22:02.702Z"
+              "WhenOpened": "2026-03-05T07:22:02.702Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 14,
+              "DocumentIndex": 3,
               "Title": "InventoryBar.tsx",
               "DocumentMoniker": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\ui\\components\\InventoryBar.tsx",
               "RelativeDocumentMoniker": "src\\ui\\components\\InventoryBar.tsx",
               "ToolTip": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\ui\\components\\InventoryBar.tsx",
               "RelativeToolTip": "src\\ui\\components\\InventoryBar.tsx",
-              "ViewState": "AgIAAD4AAAAAAAAAAAAwwFYAAAASAAAAAAAAAA==",
+              "ViewState": "AgIAAOcAAAAAAAAAAAAwwFkAAAAwAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-05T07:21:58.624Z"
+              "WhenOpened": "2026-03-05T07:21:58.624Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 10,
               "Title": "Tile.ts",
               "DocumentMoniker": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\world\\tile\\Tile.ts",
               "RelativeDocumentMoniker": "src\\game\\world\\tile\\Tile.ts",
               "ToolTip": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\world\\tile\\Tile.ts",
               "RelativeToolTip": "src\\game\\world\\tile\\Tile.ts",
-              "ViewState": "AgIAAAEAAAAAAAAAAADgvw8AAAAcAAAAAAAAAA==",
+              "ViewState": "AgIAAH0AAAAAAAAAAAAYwBsAAAAIAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
               "WhenOpened": "2026-03-05T07:21:10.608Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 9,
               "Title": "TileFactory.ts",
               "DocumentMoniker": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\world\\tile\\TileFactory.ts",
               "RelativeDocumentMoniker": "src\\game\\world\\tile\\TileFactory.ts",
               "ToolTip": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\world\\tile\\TileFactory.ts",
               "RelativeToolTip": "src\\game\\world\\tile\\TileFactory.ts",
-              "ViewState": "AgIAAGAAAAAAAAAAAAApwHgAAAAkAAAAAAAAAA==",
+              "ViewState": "AgIAAJ8AAAAAAAAAAAAAAKgAAAARAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
               "WhenOpened": "2026-03-05T07:21:06.959Z",
               "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 16,
+              "DocumentIndex": 2,
               "Title": "World.ts",
               "DocumentMoniker": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\world\\World.ts",
               "RelativeDocumentMoniker": "src\\game\\world\\World.ts",
               "ToolTip": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\world\\World.ts",
               "RelativeToolTip": "src\\game\\world\\World.ts",
-              "ViewState": "AgIAACsAAAAAAAAAAAAQwAwAAAAAAAAAAAAAAA==",
+              "ViewState": "AgIAADkAAAAAAAAAAAAvwEkAAAAdAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-05T07:20:59.149Z"
+              "WhenOpened": "2026-03-05T07:20:59.149Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 2,
+              "DocumentIndex": 17,
               "Title": "Renderer.ts",
               "DocumentMoniker": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\render\\Renderer.ts",
               "RelativeDocumentMoniker": "src\\render\\Renderer.ts",
@@ -499,24 +592,24 @@
               "RelativeToolTip": "src\\render\\Renderer.ts",
               "ViewState": "AgIAAEwAAAAAAAAAAAAQwFsAAAAoAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-05T07:15:09.411Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-05T07:15:09.411Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 15,
+              "DocumentIndex": 1,
               "Title": "usePlacement.ts",
               "DocumentMoniker": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\ui\\hooks\\usePlacement.ts",
               "RelativeDocumentMoniker": "src\\ui\\hooks\\usePlacement.ts",
               "ToolTip": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\ui\\hooks\\usePlacement.ts",
               "RelativeToolTip": "src\\ui\\hooks\\usePlacement.ts",
-              "ViewState": "AgIAAB0AAAAAAAAAAAAAwDAAAAACAAAAAAAAAA==",
+              "ViewState": "AgIAABIAAAAAAAAAAAAAAAwAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-05T07:11:08.415Z"
+              "WhenOpened": "2026-03-05T07:11:08.415Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
-              "DocumentIndex": 30,
+              "DocumentIndex": 35,
               "Title": "OutlineSystem.ts",
               "DocumentMoniker": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\render\\OutlineSystem.ts",
               "RelativeDocumentMoniker": "src\\render\\OutlineSystem.ts",

@@ -28,11 +28,13 @@ import { UIButton } from "./UIButton"
 import "./InventoryBar.css"
 import { LettuceSeedItemDef } from "../../game/farming/items/LettuceSeedItem"
 import { LettuceItemDef } from "../../game/farming/items/LettuceItem"
+import { ShovelItemDef } from "../../game/farming/items/ShovelItem"
 
 // ─── Tous les items (construction + farming) ──────────────────────────────────
 
 const ALL_ITEMS: ItemDef[] = [
     HoeItemDef,
+    ShovelItemDef,
     { id: "tree1", label: "Pin", icon: "🌲", usage: { kind: "placeable", entity: Tree1Entity } },
     { id: "tree2", label: "Chêne", icon: "🌳", usage: { kind: "placeable", entity: Tree2Entity } },
     { id: "tree3", label: "Acacia", icon: "🌴", usage: { kind: "placeable", entity: Tree3Entity } },
@@ -85,6 +87,7 @@ inventoryStore.register([
     { id: "dirt_soil", maxQty: 24 },
     { id: "carrot", maxQty: 99, initialQty: 0 },
     { id: "lettuce", maxQty: 99, initialQty: 0 },      // ← farming
+    { id: "shovel", maxQty: 1, infinite: true },
 ])
 
 const isInfinite = (item: ItemDef): boolean =>
