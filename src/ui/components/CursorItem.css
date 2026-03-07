@@ -1,0 +1,34 @@
+/* src/ui/components/CursorItem.css */
+
+.cursor-item {
+    position: fixed;
+    top: 0;
+    left: 0;
+    pointer-events: none;
+    z-index: 9999;
+    /* Décale le slot pour qu'il apparaisse en bas à droite du curseur */
+    margin-left: 12px;
+    margin-top: 12px;
+    /* Apparition douce */
+}
+
+@keyframes cursor-item-in {
+    from {
+        opacity: 0;
+        scale: 0.75;
+    }
+
+    to {
+        opacity: 1;
+        scale: 1;
+    }
+}
+
+.cursor-item__slot {
+    /* Légèrement plus petit que les slots de l'inventaire */
+    width: 54px !important;
+    height: 54px !important;
+    /* Fond semi-transparent pour ne pas gêner la lecture */
+    opacity: 0.88;
+    cursor: none !important;
+}

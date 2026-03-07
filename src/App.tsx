@@ -10,6 +10,7 @@ import { EntityPopups } from "./ui/components/EntityPopup"
 import { RollBackBar } from "./ui/components/RollBackBar"
 import { Temperature } from "./ui/components/Temperature"
 import { PlacementManager } from "./ui/components/PlacementManager"
+import { CursorItem } from "./ui/components/CursorItem"
 
 export const App = () => {
   return (
@@ -25,6 +26,7 @@ export const App = () => {
           <Temperature />
         </header>
         <EntityPopups />
+        <CursorItem />
 
         <footer>
           <RollBackBar/>

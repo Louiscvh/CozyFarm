@@ -54,6 +54,7 @@ export interface ItemDef {
   readonly label: string
   readonly icon: string
   readonly usage: ItemUsage
+  readonly showCursorItem?: boolean
 }
 
 // ─── Helpers de type ─────────────────────────────────────────────────────────

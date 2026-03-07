@@ -7,6 +7,7 @@ export const WateringCanItemDef: ItemDef = {
     id: "watering_can",
     label: "Arrosoir",
     icon: "💧",
+    showCursorItem: true,
     usage: {
         kind: 'use_on_tile',
         targetTileTypes: ["soil"],

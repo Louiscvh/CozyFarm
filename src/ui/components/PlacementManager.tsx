@@ -5,6 +5,9 @@ import { usePlacement } from "../hooks/usePlacement"
 import { placementStore } from "../store/PlacementStore"
 import { useFarming } from "../hooks/useFarming"
 import { useItemAction } from "../hooks/useItemAction"
+import { isPlaceable } from "../../game/entity/ItemDef"
+import { CursorItem } from "./CursorItem"
+import { ALL_CROPS } from "../../game/farming/CropDefinition"
 
 export function PlacementManager() {
     const r = Renderer.instance!
@@ -19,11 +22,11 @@ export function PlacementManager() {
         const canvas = renderer.domElement
 
         const updateCursor = () => {
-            if (placementStore.selectedItem) {
-                canvas.style.cursor = "crosshair"
-            } else {
-                canvas.style.cursor = "default"
-            }
+            const item = placementStore.selectedItem
+            const isSeedGhost = !!ALL_CROPS.find(c => c.seedItemId === item?.id)?.usePlacementGhost
+            canvas.style.cursor = item
+                ? (isPlaceable(item) || isSeedGhost ? "crosshair" : "none")
+                : "default"
         }
 
         updateCursor()
@@ -35,5 +38,5 @@ export function PlacementManager() {
         }
     }, [renderer])
 
-    return null
+    return <CursorItem />
 }

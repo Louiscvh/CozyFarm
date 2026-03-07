@@ -41,6 +41,8 @@ export class CropManager {
     private readonly world: World
     private readonly crops = new Map<string, CropInstance>()
 
+    private _harvestingInstances = new Set<CropInstance>()
+
     constructor(scene: THREE.Scene, world: World) {
         this.scene = scene
         this.world = world
@@ -60,7 +62,10 @@ export class CropManager {
         if (this.hasCrop(cellX, cellZ)) return null
         const instance = new CropInstance(def, cellX, cellZ)
         this.crops.set(this.key(cellX, cellZ), instance)
-        this.spawnMesh(instance, "spawn")
+
+        // ← délai pour laisser l'animation du ghost se terminer
+        setTimeout(() => this.spawnMesh(instance, "spawn"), 300)
+
         return instance
     }
 
@@ -94,9 +99,9 @@ export class CropManager {
     // ─── Boucle ────────────────────────────────────────────────────────────────
 
     update(deltaTime: number, growthRate: number, wateredMult: number): void {
-        // Tick des instances en cours de récolte (temps réel, non scalé)
         for (const inst of this._harvestingInstances) {
             inst.tickTransition(deltaTime)
+            this.applyScale(inst)   // ← manquait
             if (!inst.isTransition) this._harvestingInstances.delete(inst)
         }
 
@@ -109,7 +114,6 @@ export class CropManager {
                 continue
             }
 
-            // Bonus d'arrosage per-cell
             const [cx, cz] = key.split("|").map(Number)
             const isWatered = this.world.tilesFactory.isWatered(cx, cz)
             const effective = deltaTime * growthRate * (isWatered ? wateredMult : 1)
@@ -132,11 +136,7 @@ export class CropManager {
         this.crops.clear()
     }
 
-    // ─── Instances en cours de récolte (hors map principale) ──────────────────
-
-    private _harvestingInstances = new Set<CropInstance>()
-
-    // ─── Privé ─────────────────────────────────────────────────────────────────
+    // ─── Helpers privés ────────────────────────────────────────────────────────
 
     private key(cx: number, cz: number): string {
         return `${cx}|${cz}`
@@ -151,6 +151,26 @@ export class CropManager {
         )
     }
 
+    /**
+     * Décalage pseudo-aléatoire déterministe basé sur les coordonnées de cellule.
+     * Stable entre les changements de phase — la plante ne "saute" pas.
+     */
+    private cellJitter(cellX: number, cellZ: number): { dx: number; dz: number; rotY: number } {
+        const s1 = Math.sin(cellX * 127.1 + cellZ * 311.7) * 43758.5453
+        const s2 = Math.sin(cellX * 269.5 + cellZ * 183.3) * 43758.5453
+        const s3 = Math.sin(cellX * 419.2 + cellZ * 371.9) * 43758.5453
+
+        const r1 = s1 - Math.floor(s1)   // 0..1
+        const r2 = s2 - Math.floor(s2)
+        const r3 = s3 - Math.floor(s3)
+
+        const margin = this.world.cellSize * 0.12   // ~28% du rayon de la cellule
+        return {
+            dx: (r1 - 0.5) * 2 * margin,
+            dz: (r2 - 0.5) * 2 * margin,
+            rotY: r3 * Math.PI * 2,
+        }
+    }
 
     private applyScale(instance: CropInstance): void {
         if (!instance.mesh) return
@@ -162,10 +182,18 @@ export class CropManager {
     private spawnMesh(instance: CropInstance, transitionType: "spawn" | "phase"): void {
         const phase = instance.currentPhase
         const prevPhase = instance.previousPhase
-        const pos = this.worldPos(instance.cellX, instance.cellZ)
+        const basePos = this.worldPos(instance.cellX, instance.cellZ)
         const cropYOffset = phase.yOffset ?? instance.def.yOffset ?? 0
+        const jitter = this.cellJitter(instance.cellX, instance.cellZ)
 
-        // ── Même modèle entre deux phases — lerp de scale uniquement ──
+        // Position finale avec jitter
+        const pos = new THREE.Vector3(
+            basePos.x + jitter.dx,
+            basePos.y,
+            basePos.z + jitter.dz,
+        )
+
+        // ── Même modèle entre deux phases — lerp de scale uniquement ──────────
         if (
             transitionType === "phase" &&
             phase.modelPath &&
@@ -178,7 +206,7 @@ export class CropManager {
             return
         }
 
-        // ── Modèle différent ou premier spawn — recrée le mesh ────────
+        // ── Modèle différent ou premier spawn — recrée le mesh ───────────────
         this.disposeMesh(instance)
 
         if (phase.modelPath) {
@@ -192,6 +220,7 @@ export class CropManager {
                 const box = new THREE.Box3().setFromObject(model)
                 const yFix = box.min.y < 0 ? -box.min.y : 0
                 model.position.set(pos.x, yFix + cropYOffset, pos.z)
+                model.rotation.y = jitter.rotY   // ← rotation aléatoire
 
                 model.frustumCulled = false
                 model.userData.isCrop = true
@@ -217,11 +246,11 @@ export class CropManager {
 
             }).catch(err => {
                 console.error(`[CropManager] Impossible de charger ${phase.modelPath}`, err)
-                this.spawnCube(instance, phase, pos, cropYOffset, transitionType)
+                this.spawnCube(instance, phase, pos, cropYOffset, jitter.rotY, transitionType)
             })
 
         } else {
-            this.spawnCube(instance, phase, pos, cropYOffset, transitionType)
+            this.spawnCube(instance, phase, pos, cropYOffset, jitter.rotY, transitionType)
         }
     }
 
@@ -230,6 +259,7 @@ export class CropManager {
         phase: GrowthPhase,
         pos: THREE.Vector3,
         cropYOffset: number = 0,
+        rotY: number = 0,
         transitionType: "spawn" | "phase" = "spawn",
     ): void {
         const mesh = buildCubeMesh(phase)
@@ -241,18 +271,17 @@ export class CropManager {
 
         const h = phase.height ?? 0.05
         mesh.position.set(pos.x, h / 2 + cropYOffset, pos.z)
+        mesh.rotation.y = rotY   // ← rotation aléatoire
         mesh.scale.setScalar(0)
 
         if (instance.isReady) {
-            const mat = mesh.material as THREE.MeshStandardMaterial
-            mat.emissiveIntensity = 0.12
+            ; (mesh.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.12
         }
 
         instance.mesh = mesh
         this.scene.add(mesh)
 
-        const targetScale = 1
-        instance.startTransition(transitionType, 0, targetScale)
+        instance.startTransition(transitionType, 0, 1)
     }
 
     private setEmissive(root: THREE.Object3D, intensity: number): void {

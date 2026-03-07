@@ -9,8 +9,8 @@ export const ghostMat = new THREE.MeshBasicMaterial({
     color: 0x00ff00,
     transparent: true,
     opacity: 0.45,
-    depthWrite: false,
-    depthTest: false,
+    depthWrite: true,
+    depthTest: true,
 })
 
 export function applyGhostMaterials(root: THREE.Object3D): void {

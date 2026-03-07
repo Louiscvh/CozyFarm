@@ -3,12 +3,12 @@
   "WorkspaceRootPath": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\interaction\\PlacementController.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
-      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\game\\interaction\\PlacementController.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
-    },
-    {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\interaction\\ItemActionController.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
       "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\game\\interaction\\ItemActionController.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\interaction\\PlacementController.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
+      "RelativeMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|solutionrelative:src\\game\\interaction\\PlacementController.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}"
     },
     {
       "AbsoluteMoniker": "D:0:0:{A2FE74E1-B743-11D0-AE1A-00A0C90FFFC3}|\u003CMiscFiles\u003E|C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\render\\Renderer.ts||{0F2454B1-A556-402D-A7D0-1FDE7F99DEE0}",
@@ -188,7 +188,7 @@
         },
         {
           "DockedHeight": 221,
-          "SelectedChildIndex": 4,
+          "SelectedChildIndex": 1,
           "Children": [
             {
               "$type": "Document",
@@ -200,18 +200,17 @@
               "RelativeToolTip": "src\\game\\interaction\\ItemActionRegistry.ts",
               "ViewState": "AgIAABgAAAAAAAAAAAAcwCYAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-05T07:49:53.752Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-05T07:49:53.752Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 1,
+              "DocumentIndex": 0,
               "Title": "ItemActionController.ts",
               "DocumentMoniker": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\interaction\\ItemActionController.ts",
               "RelativeDocumentMoniker": "src\\game\\interaction\\ItemActionController.ts",
               "ToolTip": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\interaction\\ItemActionController.ts",
               "RelativeToolTip": "src\\game\\interaction\\ItemActionController.ts",
-              "ViewState": "AgIAABkAAAAAAAAAAAAiwDAAAAAFAAAAAAAAAA==",
+              "ViewState": "AgIAAI0AAAAAAAAAAAAUwKcAAAA4AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
               "WhenOpened": "2026-03-06T23:30:52.609Z",
               "EditorCaption": ""
@@ -226,8 +225,7 @@
               "RelativeToolTip": "src\\ui\\components\\PlacementManager.tsx",
               "ViewState": "AgIAAAAAAAAAAAAAAAArwA0AAAAQAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-05T07:54:20.706Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-05T07:54:20.706Z"
             },
             {
               "$type": "Document",
@@ -239,12 +237,11 @@
               "RelativeToolTip": "src\\ui\\hooks\\usePlacement.ts",
               "ViewState": "AgIAAAAAAAAAAAAAAAAuwBAAAAAyAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-05T07:11:08.415Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-05T07:11:08.415Z"
             },
             {
               "$type": "Document",
-              "DocumentIndex": 0,
+              "DocumentIndex": 1,
               "Title": "PlacementController.ts",
               "DocumentMoniker": "C:\\Users\\lcavecchi\\Documents\\cozy-farm\\CozyFarm\\src\\game\\interaction\\PlacementController.ts",
               "RelativeDocumentMoniker": "src\\game\\interaction\\PlacementController.ts",
@@ -265,8 +262,7 @@
               "RelativeToolTip": "src\\render\\Renderer.ts",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABcAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-05T07:15:09.411Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-05T07:15:09.411Z"
             },
             {
               "$type": "Document",
@@ -278,8 +274,7 @@
               "RelativeToolTip": "src\\game\\farming\\CropDefinition.ts",
               "ViewState": "AgIAABIAAAAAAAAAAAAUwCoAAAAfAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-05T07:59:32.568Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-05T07:59:32.568Z"
             },
             {
               "$type": "Document",
@@ -291,8 +286,7 @@
               "RelativeToolTip": "src\\game\\shared\\GhostMaterial.ts",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABsAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-07T00:17:17.295Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-07T00:17:17.295Z"
             },
             {
               "$type": "Document",
@@ -304,8 +298,7 @@
               "RelativeToolTip": "src\\game\\world\\tile\\TileFactory.ts",
               "ViewState": "AgIAAD8AAAAAAAAAAAAmwFMAAABCAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-05T07:21:06.959Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-05T07:21:06.959Z"
             },
             {
               "$type": "Document",
@@ -317,8 +310,7 @@
               "RelativeToolTip": "src\\game\\farming\\items\\WateringCanItem.ts",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAUAAAAoAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-06T23:44:43.748Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-06T23:44:43.748Z"
             },
             {
               "$type": "Document",
@@ -330,8 +322,7 @@
               "RelativeToolTip": "src\\ui\\hooks\\useItemAction.ts",
               "ViewState": "AgIAAAAAAAAAAAAAAAAuwBEAAAAzAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-05T07:50:06.173Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-05T07:50:06.173Z"
             },
             {
               "$type": "Document",
@@ -343,8 +334,7 @@
               "RelativeToolTip": "src\\game\\entity\\ItemDef.ts",
               "ViewState": "AgIAACYAAAAAAAAAAAAcwDgAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-05T07:49:00.733Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-05T07:49:00.733Z"
             },
             {
               "$type": "Document",
@@ -356,8 +346,7 @@
               "RelativeToolTip": "src\\ui\\components\\InventoryBar.tsx",
               "ViewState": "AgIAACoAAAAAAAAAAAAAADoAAAAWAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-05T07:21:58.624Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-05T07:21:58.624Z"
             },
             {
               "$type": "Document",
@@ -369,8 +358,7 @@
               "RelativeToolTip": "src\\game\\farming\\items\\LettuceItem.ts",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAMAAAAbAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-06T10:48:08.93Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-06T10:48:08.93Z"
             },
             {
               "$type": "Document",
@@ -382,8 +370,7 @@
               "RelativeToolTip": "src\\game\\farming\\GrowthConditions.ts",
               "ViewState": "AgIAAAEAAAAAAAAAAAAcwCIAAABMAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-05T16:44:56.14Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-05T16:44:56.14Z"
             },
             {
               "$type": "Document",
@@ -395,8 +382,7 @@
               "RelativeToolTip": "src\\game\\world\\World.ts",
               "ViewState": "AgIAADAAAAAAAAAAAAAvwEEAAAA9AAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-05T07:20:59.149Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-05T07:20:59.149Z"
             },
             {
               "$type": "Document",
@@ -408,8 +394,7 @@
               "RelativeToolTip": "src\\game\\farming\\CropManager.ts",
               "ViewState": "AgIAAFoAAAAAAAAAAAAmwHEAAAAjAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-05T08:07:53.204Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-05T08:07:53.204Z"
             },
             {
               "$type": "Document",
@@ -421,8 +406,7 @@
               "RelativeToolTip": "src\\ui\\hooks\\useFarming.ts",
               "ViewState": "AgIAAAoAAAAAAAAAAAAQwCkAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-05T07:52:11.541Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-05T07:52:11.541Z"
             },
             {
               "$type": "Document",
@@ -434,8 +418,7 @@
               "RelativeToolTip": "src\\game\\farming\\items\\ShovelItem.ts",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-06T16:42:44.758Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-06T16:42:44.758Z"
             },
             {
               "$type": "Document",
@@ -447,8 +430,7 @@
               "RelativeToolTip": "src\\game\\system\\SoundManager.ts",
               "ViewState": "AgIAAAcAAAAAAAAAAAAkwD4AAAAuAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-06T23:14:19.102Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-06T23:14:19.102Z"
             },
             {
               "$type": "Document",
@@ -460,8 +442,7 @@
               "RelativeToolTip": "src\\App.tsx",
               "ViewState": "AgIAAAwAAAAAAAAAAAAAABIAAAAXAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-06T23:03:19.951Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-06T23:03:19.951Z"
             },
             {
               "$type": "Document",
@@ -473,8 +454,7 @@
               "RelativeToolTip": "src\\ui\\components\\FlyingItem.tsx",
               "ViewState": "AgIAAAwAAAAAAAAAAAAcwBsAAAAJAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-06T17:42:46.686Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-06T17:42:46.686Z"
             },
             {
               "$type": "Document",
@@ -486,8 +466,7 @@
               "RelativeToolTip": "src\\ui\\components\\RollBackBar.tsx",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAABEAAAAGAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-06T16:31:59.711Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-06T16:31:59.711Z"
             },
             {
               "$type": "Document",
@@ -499,8 +478,7 @@
               "RelativeToolTip": "src\\ui\\store\\HistoryStore.tsx",
               "ViewState": "AgIAAOUAAAAAAAAAAAAcwLUAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-06T16:21:38.09Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-06T16:21:38.09Z"
             },
             {
               "$type": "Document",
@@ -512,8 +490,7 @@
               "RelativeToolTip": "src\\ui\\components\\InventoryBar.css",
               "ViewState": "AgIAANsAAAAAAAAAAAAiwOkAAAARAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003000|",
-              "WhenOpened": "2026-03-06T16:20:40.121Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-06T16:20:40.121Z"
             },
             {
               "$type": "Document",
@@ -525,8 +502,7 @@
               "RelativeToolTip": "src\\game\\farming\\items\\LettuceSeedItem.ts",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAcAAAAMAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-06T10:48:49.149Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-06T10:48:49.149Z"
             },
             {
               "$type": "Document",
@@ -538,8 +514,7 @@
               "RelativeToolTip": "src\\ui\\components\\Temperature.tsx",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAAcAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-05T16:43:37.421Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-05T16:43:37.421Z"
             },
             {
               "$type": "Document",
@@ -551,8 +526,7 @@
               "RelativeToolTip": "src\\ui\\components\\DevToolBar.tsx",
               "ViewState": "AgIAAEUAAAAAAAAAAAAAwGUAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-05T16:43:06.717Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-05T16:43:06.717Z"
             },
             {
               "$type": "Document",
@@ -564,8 +538,7 @@
               "RelativeToolTip": "src\\game\\entity\\entities\\DirtSoil.ts",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-05T16:13:56.934Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-05T16:13:56.934Z"
             },
             {
               "$type": "Document",
@@ -577,8 +550,7 @@
               "RelativeToolTip": "src\\game\\farming\\items\\HoeItem.ts",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAkAAAAhAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-05T15:21:44.117Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-05T15:21:44.117Z"
             },
             {
               "$type": "Document",
@@ -590,8 +562,7 @@
               "RelativeToolTip": "src\\ui\\components\\EntityPopup.tsx",
               "ViewState": "AgIAAHUAAAAAAAAAAAAqwNEAAAAgAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-05T08:30:15.335Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-05T08:30:15.335Z"
             },
             {
               "$type": "Document",
@@ -603,8 +574,7 @@
               "RelativeToolTip": "src\\game\\farming\\CropInstance.ts",
               "ViewState": "AgIAADgAAAAAAAAAAAAgwFcAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-05T08:08:19.215Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-05T08:08:19.215Z"
             },
             {
               "$type": "Document",
@@ -616,8 +586,7 @@
               "RelativeToolTip": "src\\game\\farming\\items\\CarrotItem.ts",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAMAAAAjAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-05T07:51:57.886Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-05T07:51:57.886Z"
             },
             {
               "$type": "Document",
@@ -629,8 +598,7 @@
               "RelativeToolTip": "src\\game\\farming\\items\\CarrotSeedItem.ts",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAoAAAAnAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-05T07:51:40.113Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-05T07:51:40.113Z"
             },
             {
               "$type": "Document",
@@ -642,8 +610,7 @@
               "RelativeToolTip": "src\\ui\\store\\PlacementStore.ts",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAGYAAAAyAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-05T07:50:36.692Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-05T07:50:36.692Z"
             },
             {
               "$type": "Document",
@@ -655,8 +622,7 @@
               "RelativeToolTip": "src\\game\\entity\\entities\\Rock1.ts",
               "ViewState": "AgIAAAAAAAAAAAAAAAAAAAgAAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-05T07:42:58.327Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-05T07:42:58.327Z"
             },
             {
               "$type": "Document",
@@ -668,8 +634,7 @@
               "RelativeToolTip": "src\\game\\entity\\InstancedEntityManager.ts",
               "ViewState": "AgIAAO4AAAAAAAAAAAAAABIBAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-05T07:42:47.876Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-05T07:42:47.876Z"
             },
             {
               "$type": "Document",
@@ -681,8 +646,7 @@
               "RelativeToolTip": "src\\game\\entity\\EntityFactory.ts",
               "ViewState": "AgIAAEMAAAAAAAAAAAAAAGcAAAABAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-05T07:42:42.731Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-05T07:42:42.731Z"
             },
             {
               "$type": "Document",
@@ -694,8 +658,7 @@
               "RelativeToolTip": "src\\game\\entity\\Entity.ts",
               "ViewState": "AgIAAAwAAAAAAAAAAAAqwC8AAAAAAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-05T07:42:35.091Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-05T07:42:35.091Z"
             },
             {
               "$type": "Document",
@@ -707,8 +670,7 @@
               "RelativeToolTip": "src\\ui\\store\\InventoryStore.ts",
               "ViewState": "AgIAAGMAAAAAAAAAAAAgwHIAAAAJAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-05T07:22:02.702Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-05T07:22:02.702Z"
             },
             {
               "$type": "Document",
@@ -720,8 +682,7 @@
               "RelativeToolTip": "src\\game\\world\\tile\\Tile.ts",
               "ViewState": "AgIAAH0AAAAAAAAAAAAYwBsAAAAIAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-05T07:21:10.608Z",
-              "EditorCaption": ""
+              "WhenOpened": "2026-03-05T07:21:10.608Z"
             },
             {
               "$type": "Document",
@@ -733,12 +694,7 @@
               "RelativeToolTip": "src\\render\\OutlineSystem.ts",
               "ViewState": "AgIAAHMAAAAAAAAAAAAAADMAAAAEAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.003213|",
-              "WhenOpened": "2026-03-05T07:09:40.625Z",
-              "EditorCaption": ""
-            },
-            {
-              "$type": "Bookmark",
-              "Name": "ST:0:0:{004be353-6879-467c-9d1e-9ac23cdf6d49}"
+              "WhenOpened": "2026-03-05T07:09:40.625Z"
             },
             {
               "$type": "Bookmark",

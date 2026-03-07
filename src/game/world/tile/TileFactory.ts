@@ -80,7 +80,7 @@ export class TileFactory {
     private readonly SOIL_MAX = 2000
 
     private wateredCells = new Set<string>()
-    private readonly SOIL_COLOR_DRY = new THREE.Color(0x3d2b1f)
+    private readonly SOIL_COLOR_DRY = new THREE.Color(1, 1, 1)
     private readonly SOIL_COLOR_WATERED = new THREE.Color(0x824C27)
     // ── Transitions ───────────────────────────────────────────────
     private transitions = new Map<string, SoilTransition>()
@@ -252,7 +252,6 @@ export class TileFactory {
 
         // Place le soil immédiatement à sa position finale
         this.setSoilMatrix(slot, cellX, cellZ)
-
         // Lance l'animation de l'herbe qui descend
         this.transitions.set(k, {
             slot, cellX, cellZ,
@@ -274,25 +273,24 @@ export class TileFactory {
 
         this.transitions.delete(k)
 
-        // recréer l’herbe sous le sol
+        // ← Reset couleur immédiatement, avant que le slot soit réutilisé
+        this.wateredCells.delete(k)
+        this.soilMesh.setColorAt(slot, this.SOIL_COLOR_DRY)
+        this.soilMesh.instanceColor!.needsUpdate = true
+
         this.showCell(cellX, cellZ, this.TERRAIN_Y_UNTILL_START)
 
         this.transitions.set(k, {
-            slot,
-            cellX,
-            cellZ,
+            slot, cellX, cellZ,
             progress: 0,
             direction: "out",
             onDone: () => {
-                // maintenant on peut cacher le soil
                 this.soilMesh.setMatrixAt(slot, _zero)
                 this.soilMesh.instanceMatrix.needsUpdate = true
-
                 this.soilSlots.delete(k)
-                this.wateredCells.delete(k)
                 this.soilFreeSlots.push(slot)
                 this.markFree(cellX, cellZ, 1)
-            }
+            },
         })
     }
 

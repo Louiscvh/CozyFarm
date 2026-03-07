@@ -1,32 +1,23 @@
 ﻿// src/game/interaction/ItemActionController.ts
 import * as THREE from "three"
-import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js"
 import { placementStore } from "../../ui/store/PlacementStore"
 import { inventoryStore } from "../../ui/store/InventoryStore"
 import { itemActionRegistry } from "./ItemActionRegistry"
 import { isPlaceable, isUsableOnEntity, isUsableOnTile, type ItemDef } from "../entity/ItemDef"
 import { World } from "../world/World"
 import { soundManager } from "../system/SoundManager"
-import { ghostMat, applyGhostMaterials } from "../shared/GhostMaterial"
-import { ALL_CROPS, type CropDefinition } from "../farming/CropDefinition"
+import { ghostMat } from "../shared/GhostMaterial"
+import { ALL_CROPS } from "../farming/CropDefinition"
 
 export class ItemActionController {
 
     // ── Three.js helpers ──────────────────────────────────────────────────────
     private readonly raycaster = new THREE.Raycaster()
     private readonly mouse = new THREE.Vector2()
-    private readonly gltfLoader = new GLTFLoader()
 
     // ── Highlight state ───────────────────────────────────────────────────────
     private lastHighlighted: THREE.Object3D | null = null
 
-    // ── Seed ghost state ──────────────────────────────────────────────────────
-    private seedGhost: THREE.Object3D | null = null
-    private seedGhostRaf: number = 0
-    private seedGhostCell: string = ""
-    private seedGhostTarget = new THREE.Vector3()
-    private seedGhostCurrent = new THREE.Vector3()
-    private seedGhostToken: number = 0 
     // ── Drag detection ────────────────────────────────────────────────────────
     private mouseDownPos = { x: 0, y: 0 }
 
@@ -38,6 +29,7 @@ export class ItemActionController {
     private readonly _onMouseMove = this.onMouseMove.bind(this)
     private readonly _onClick = this.onClick.bind(this)
 
+    // ── Injected dependencies ─────────────────────────────────────────────────
     private readonly camera: THREE.Camera
     private readonly renderer: THREE.WebGLRenderer
     private readonly world: World
@@ -60,7 +52,6 @@ export class ItemActionController {
     dispose(): void {
         this.unsubscribeStore?.()
         this.setHighlight(null)
-        this.removeSeedGhost()
         this.renderer.domElement.style.cursor = "default"
         window.removeEventListener("mousedown", this._onMouseDown)
         window.removeEventListener("mousemove", this._onMouseMove)
@@ -99,123 +90,52 @@ export class ItemActionController {
         return this.world.tilesFactory.getTileTypeAtCell(cellX, cellZ)
     }
 
-    private cellToWorldPos(cellX: number, cellZ: number): THREE.Vector3 {
-        const half = this.world.sizeInCells / 2
-        return new THREE.Vector3(
-            (cellX - half + 0.5) * this.world.cellSize,
-            0,
-            (cellZ - half + 0.5) * this.world.cellSize,
-        )
+    private isSeedItem(item: ItemDef | null): boolean {
+        return !!item && !!ALL_CROPS.find(def => def.seedItemId === item.id)
     }
 
-    // ─── Crop def helpers ─────────────────────────────────────────────────────
+    // ─── Sink ghost (animation de plantation) ────────────────────────────────
+    /**
+     * Anime le ghost de graine (géré par PlacementController via placementStore.ghostMesh)
+     * en l'enfonçant dans le sol au moment du clic.
+     */
+    private sinkSeedGhost(): void {
+        const ghost = placementStore.ghostMesh
+        if (!ghost) return
 
-    private getCropDefForSeed(item: ItemDef): CropDefinition | null {
-        return ALL_CROPS.find(def => def.seedItemId === item.id) ?? null
-    }
+        // Décroche immédiatement du store — PlacementController ne le touchera plus
+        placementStore.ghostMesh = null
 
-    private isSeedItem(item: ItemDef | null): item is ItemDef {
-        return !!item && !!this.getCropDefForSeed(item)
-    }
-
-    // ─── Seed ghost ───────────────────────────────────────────────────────────
-
-    private removeSeedGhost(): void {
-        cancelAnimationFrame(this.seedGhostRaf)
-        this.seedGhostRaf = 0
-        this.seedGhostCell = ""
-        this.seedGhostToken++   // ← invalide tout build en cours
-
-        if (!this.seedGhost) return
-        this.world.scene.remove(this.seedGhost)
-        this.seedGhost.traverse(obj => {
-            if (!(obj as THREE.Mesh).isMesh) return
-            const mesh = obj as THREE.Mesh
-            mesh.geometry?.dispose()
-            const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-            mats.forEach(m => { if (m !== ghostMat) m.dispose() })
-        })
-        this.seedGhost = null
-    }
-
-    private async buildSeedGhost(cropDef: CropDefinition, cellX: number, cellZ: number): Promise<void> {
-        const lastPhase = cropDef.phases[cropDef.phases.length - 1]
-        const modelPath = lastPhase?.modelPath ?? cropDef.phases.find(p => p.modelPath)?.modelPath
-        if (!modelPath) return
-
-        const token = ++this.seedGhostToken
-        const worldPos = this.cellToWorldPos(cellX, cellZ)
-        this.seedGhostTarget.copy(worldPos)
-        this.seedGhostCurrent.copy(worldPos)
-        this.seedGhostCell = `${cellX}|${cellZ}`
-
-        let root: THREE.Object3D
-        try {
-            const gltf = await new Promise<{ scene: THREE.Object3D }>((resolve, reject) => {
-                this.gltfLoader.load(modelPath, resolve, undefined, reject)
-            })
-            root = gltf.scene.clone()
-        } catch {
-            return
-        }
-
-        if (this.seedGhostToken !== token) return
-
-        const scale = lastPhase.modelScale ?? 1
-        root.scale.setScalar(scale)
-
-        const box = new THREE.Box3().setFromObject(root)
-        const yOffset = (box.min.y < 0 ? -box.min.y : 0)
-        root.position.set(worldPos.x, yOffset, worldPos.z)
-
-        applyGhostMaterials(root)
-        this.world.scene.add(root)
-        this.seedGhost = root
-
-        const baseY = yOffset
+        const startX = ghost.position.x
+        const startY = ghost.position.y
+        const startZ = ghost.position.z
+        const startScale = ghost.scale.x
+        const startRotY = ghost.rotation.y
         const startTime = performance.now()
+        const duration = 350
 
         const animate = () => {
-            this.seedGhostRaf = requestAnimationFrame(animate)
-            if (!this.seedGhost) return
+            const t = Math.min(1, (performance.now() - startTime) / duration)
+            const ease = t * t
 
-            this.seedGhostCurrent.lerp(this.seedGhostTarget, 0.25)
+            ghost.position.set(startX, startY - ease * 0.35, startZ)
+            ghost.rotation.y = startRotY + ease * Math.PI
+            ghost.scale.setScalar(Math.max(0, startScale * (1 - ease)))
 
-            const t = (performance.now() - startTime) / 1000
-            const floatY = Math.sin(t * 2) * 0.04
-
-            this.seedGhost.position.set(
-                this.seedGhostCurrent.x,
-                baseY + floatY,
-                this.seedGhostCurrent.z,
-            )
-            this.seedGhost.rotation.y += 0.012
+            if (t < 1) {
+                requestAnimationFrame(animate)
+            } else {
+                this.world.scene.remove(ghost)
+                ghost.traverse(obj => {
+                    if (!(obj as THREE.Mesh).isMesh) return
+                    const mesh = obj as THREE.Mesh
+                    mesh.geometry?.dispose()
+                    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+                    mats.forEach(m => { if (m !== ghostMat) m.dispose() })
+                })
+            }
         }
         animate()
-    }
-
-    private updateSeedGhost(item: ItemDef, cellX: number, cellZ: number): void {
-        const isSoil = this.world.tilesFactory.isSoil(cellX, cellZ)
-        const hasCrop = !!this.world.cropManager.getCrop(cellX, cellZ)
-
-        if (!isSoil || hasCrop) { this.removeSeedGhost(); return }
-
-        const cropDef = this.getCropDefForSeed(item)
-        if (!cropDef) { this.removeSeedGhost(); return }
-
-        const cellKey = `${cellX}|${cellZ}`
-
-        if (this.seedGhost) {
-            // Ghost déjà présent : met à jour la cible si on a changé de cellule
-            if (this.seedGhostCell !== cellKey) {
-                this.seedGhostTarget.copy(this.cellToWorldPos(cellX, cellZ))
-                this.seedGhostCell = cellKey
-            }
-            return
-        }
-
-        // Pas encore de ghost : on le construit (async)
-        this.buildSeedGhost(cropDef, cellX, cellZ)
     }
 
     // ─── Highlight ────────────────────────────────────────────────────────────
@@ -303,35 +223,27 @@ export class ItemActionController {
         const item = placementStore.selectedItem
         const hoveredCell = placementStore.hoveredCell
 
-        if (item && isPlaceable(item)) {
-            this.removeSeedGhost()
+        // Ghost item (plaçable ou graine) — cursor géré par PlacementController
+        if (item && (isPlaceable(item) || !!ALL_CROPS.find(c => c.seedItemId === item.id)?.usePlacementGhost)) {
             this.updateCursorForPlacement()
             return
         }
 
         if (hoveredCell && !item) {
-            this.removeSeedGhost()
             this.updateCursorForHarvestHover()
             return
         }
 
         if (isUsableOnEntity(item)) {
-            this.removeSeedGhost()
             this.updateCursorForEntityHover(e, item)
             return
         }
 
         if (isUsableOnTile(item)) {
-            if (hoveredCell && this.isSeedItem(item)) {
-                this.updateSeedGhost(item, hoveredCell.cellX, hoveredCell.cellZ)
-            } else {
-                this.removeSeedGhost()
-            }
             this.updateCursorForTileHover(item)
             return
         }
 
-        this.removeSeedGhost()
         this.setHighlight(null)
         this.setCursor("default")
     }
@@ -436,7 +348,7 @@ export class ItemActionController {
 
         if (success) {
             this.consumeItemIfNeeded(item)
-            if (this.isSeedItem(item)) this.removeSeedGhost()
+            if (this.isSeedItem(item)) this.sinkSeedGhost()
             soundManager.playSuccess()
         } else {
             soundManager.playError()
@@ -474,10 +386,10 @@ export class ItemActionController {
 
     private onStoreChange(): void {
         const item = placementStore.selectedItem
-        if (!item || (!isUsableOnEntity(item) && !isUsableOnTile(item))) {
+        const isSeedGhost = !!item && !!ALL_CROPS.find(c => c.seedItemId === item.id)?.usePlacementGhost
+        if (!item || (!isUsableOnEntity(item) && !isUsableOnTile(item) && !isSeedGhost)) {
             this.setCursor("default")
             this.setHighlight(null)
-            this.removeSeedGhost()
         }
     }
 }

@@ -30,17 +30,19 @@ import { LettuceSeedItemDef } from "../../game/farming/items/LettuceSeedItem"
 import { LettuceItemDef } from "../../game/farming/items/LettuceItem"
 import { ShovelItemDef } from "../../game/farming/items/ShovelItem"
 import { WateringCanItemDef } from "../../game/farming/items/WateringCanItem"
+import { TulipEntity } from "../../game/entity/entities/Tulip"
 
 // ─── Tous les items (construction + farming) ──────────────────────────────────
 
 const ALL_ITEMS: ItemDef[] = [
     HoeItemDef,
     ShovelItemDef,
+    WateringCanItemDef,
     { id: "tree1", label: "Pin", icon: "🌲", usage: { kind: "placeable", entity: Tree1Entity } },
     { id: "tree2", label: "Chêne", icon: "🌳", usage: { kind: "placeable", entity: Tree2Entity } },
     { id: "tree3", label: "Acacia", icon: "🌴", usage: { kind: "placeable", entity: Tree3Entity } },
     { id: "rock1", label: "Rocher", icon: "🪨", usage: { kind: "placeable", entity: Rock1Entity } },
-    { id: "flower1", label: "Fleur", icon: "🌸", usage: { kind: "placeable", entity: Flower1Entity } },
+    { id: "tulip", label: "Tulipe", icon: "🌸", usage: { kind: "placeable", entity: TulipEntity } },
     { id: "farm", label: "Ferme", icon: "🏚️", usage: { kind: "placeable", entity: FarmEntity } },
     CarrotSeedItemDef,
     LettuceSeedItemDef,
@@ -54,9 +56,9 @@ const ALL_ITEMS: ItemDef[] = [
     { id: "grass", label: "Herbe", icon: "🌱", usage: { kind: "placeable", entity: GrassEntity } },
     { id: "bench", label: "Banc", icon: "🪑", usage: { kind: "placeable", entity: BenchEntity } },
     { id: "dirt_soil", label: "Champ", icon: "🥔", usage: { kind: "placeable", entity: DirtSoilEntity } },
+    { id: "flower1", label: "Fleur", icon: "🌸", usage: { kind: "placeable", entity: Flower1Entity } },
     CarrotItemDef,
-    LettuceItemDef,
-    WateringCanItemDef
+    LettuceItemDef
 ]
 
 // ─── Pool defs (plaçables uniquement) ────────────────────────────────────────
@@ -75,6 +77,7 @@ inventoryStore.register([
     { id: "tree_orange", maxQty: 4 },
     { id: "rock1", maxQty: 32 },
     { id: "flower1", maxQty: 64 },
+    { id: "tulip", maxQty: 64 },
     { id: "farm", maxQty: 4 },
     { id: "wheatField", maxQty: 16 },
     { id: "lettuce_seed", maxQty: 64, initialQty: 20 },      // ← farming

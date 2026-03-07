@@ -5,6 +5,7 @@ export const HoeItemDef: ItemDef = {
     id: "hoe",
     label: "Houe",
     icon: "⛏️",
+    showCursorItem: true,
     usage: {
         kind: "use_on_tile",
         targetTileTypes: ["grass"],

@@ -3,7 +3,8 @@
     "",
     "\\src",
     "\\src\\game",
-    "\\src\\game\\interaction"
+    "\\src\\ui",
+    "\\src\\ui\\components"
   ],
   "PreviewInSolutionExplorer": false
 }

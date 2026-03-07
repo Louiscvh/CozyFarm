@@ -122,7 +122,11 @@ class InventoryStore {
         this.notify()
 
         const selId = placementStore.selectedItem?.id
-        if (selId && (this.quantities.get(selId) ?? 0) <= 0) {
+        if (
+            selId &&
+            !placementStore.moveEntity &&              // ← ne pas annuler pendant un move
+            (this.quantities.get(selId) ?? 0) <= 0
+        ) {
             placementStore.cancel()
         }
     }
