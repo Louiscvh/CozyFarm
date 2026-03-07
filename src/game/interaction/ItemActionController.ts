@@ -26,7 +26,7 @@ export class ItemActionController {
     private seedGhostCell: string = ""
     private seedGhostTarget = new THREE.Vector3()
     private seedGhostCurrent = new THREE.Vector3()
-
+    private seedGhostToken: number = 0 
     // ── Drag detection ────────────────────────────────────────────────────────
     private mouseDownPos = { x: 0, y: 0 }
 
@@ -124,6 +124,7 @@ export class ItemActionController {
         cancelAnimationFrame(this.seedGhostRaf)
         this.seedGhostRaf = 0
         this.seedGhostCell = ""
+        this.seedGhostToken++   // ← invalide tout build en cours
 
         if (!this.seedGhost) return
         this.world.scene.remove(this.seedGhost)
@@ -138,11 +139,11 @@ export class ItemActionController {
     }
 
     private async buildSeedGhost(cropDef: CropDefinition, cellX: number, cellZ: number): Promise<void> {
-        // Cherche le modelPath sur la dernière phase, ou la première phase qui en a un
         const lastPhase = cropDef.phases[cropDef.phases.length - 1]
         const modelPath = lastPhase?.modelPath ?? cropDef.phases.find(p => p.modelPath)?.modelPath
         if (!modelPath) return
 
+        const token = ++this.seedGhostToken
         const worldPos = this.cellToWorldPos(cellX, cellZ)
         this.seedGhostTarget.copy(worldPos)
         this.seedGhostCurrent.copy(worldPos)
@@ -158,22 +159,19 @@ export class ItemActionController {
             return
         }
 
-        // Si une autre cellule a été ciblée pendant le chargement async, on abandonne
-        if (this.seedGhostCell !== `${cellX}|${cellZ}`) return
+        if (this.seedGhostToken !== token) return
 
         const scale = lastPhase.modelScale ?? 1
         root.scale.setScalar(scale)
 
-        // Pivot au sol
         const box = new THREE.Box3().setFromObject(root)
-        const yOffset = (box.min.y < 0 ? -box.min.y : 0) + (cropDef.yOffset ?? 0)
+        const yOffset = (box.min.y < 0 ? -box.min.y : 0)
         root.position.set(worldPos.x, yOffset, worldPos.z)
 
         applyGhostMaterials(root)
         this.world.scene.add(root)
         this.seedGhost = root
 
-        // Animation : lerp + flottement + rotation
         const baseY = yOffset
         const startTime = performance.now()
 
