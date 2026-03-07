@@ -1,5 +1,5 @@
 ﻿// src/game/farming/items/HoeItem.ts
-import type { ItemDef } from "../../entity/ItemDef"
+import type { ItemDef } from "../entity/ItemDef";
 
 export const HoeItemDef: ItemDef = {
     id: "hoe",

@@ -1,5 +1,5 @@
 ﻿// src/game/farming/items/LettuceSeedItem.ts
-import type { ItemDef } from "../../entity/ItemDef"
+import type { ItemDef } from "../entity/ItemDef";
 
 export const LettuceSeedItemDef: ItemDef = {
     id: "lettuce_seed",

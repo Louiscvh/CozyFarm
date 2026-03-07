@@ -8,6 +8,7 @@ import { useItemAction } from "../hooks/useItemAction"
 import { isPlaceable } from "../../game/entity/ItemDef"
 import { CursorItem } from "./CursorItem"
 import { ALL_CROPS } from "../../game/farming/CropDefinition"
+import { useWoodcutting } from "../hooks/useWoodcutting"
 
 export function PlacementManager() {
     const r = Renderer.instance!
@@ -17,6 +18,8 @@ export function PlacementManager() {
     usePlacement({ camera, renderer })
     useItemAction({ camera, renderer })
     useFarming()
+    useWoodcutting()
+
 
     useEffect(() => {
         const canvas = renderer.domElement

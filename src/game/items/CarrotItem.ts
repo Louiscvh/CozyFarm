@@ -1,5 +1,6 @@
 ﻿// src/game/farming/items/CarrotItem.ts
-import type { ItemDef } from "../../entity/ItemDef"
+
+import type { ItemDef } from "../entity/ItemDef";
 
 export const CarrotItemDef: ItemDef = {
     id: "carrot",

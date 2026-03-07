@@ -1,4 +1,4 @@
-﻿import type { ItemDef } from "../../entity/ItemDef"
+﻿import type { ItemDef } from "../entity/ItemDef";
 
 export const ShovelItemDef: ItemDef = {
     id: "shovel",

@@ -74,17 +74,6 @@ export class ItemActionController {
         return Math.sqrt(dx * dx + dy * dy) > 5
     }
 
-    private getHitboxesForEntityIds(targetIds: readonly string[]): THREE.Object3D[] {
-        const boxes: THREE.Object3D[] = []
-        for (const entity of this.world.entities) {
-            if (!targetIds.includes(entity.userData.id as string)) continue
-            entity.traverse(child => {
-                if (child.userData.isHitBox) boxes.push(child)
-            })
-        }
-        return boxes
-    }
-
     private getEffectiveTileType(cellX: number, cellZ: number): string | undefined {
         if (this.world.tilesFactory.isSoil(cellX, cellZ)) return "soil"
         return this.world.tilesFactory.getTileTypeAtCell(cellX, cellZ)
@@ -183,19 +172,25 @@ export class ItemActionController {
         this.setCursor(crop?.isReady ? "pointer" : "default")
     }
 
-    private updateCursorForEntityHover(e: MouseEvent, item: ItemDef): void {
-        this.mouse.copy(this.toNDC(e))
-        this.raycaster.setFromCamera(this.mouse, this.camera)
+    private updateCursorForEntityHover(item: ItemDef): void {
+        const { hoveredCell } = placementStore
+        if (!hoveredCell) { this.setHighlight(null); this.setCursor("default"); return }
 
-        const hitboxes = this.getHitboxesForEntityIds((item as any).usage.targetEntityIds)
-        const hits = this.raycaster.intersectObjects(hitboxes, false)
+        const { cellX, cellZ } = hoveredCell
+        const targetIds = (item.usage as { targetEntityIds: readonly string[] }).targetEntityIds
 
-        if (hits.length > 0) {
-            this.setHighlight(hits[0].object.parent ?? null)
+        const entity = this.world.entities.find(ent =>
+            targetIds.includes(ent.userData.id as string) &&
+            ent.userData.cellX <= cellX && cellX < ent.userData.cellX + (ent.userData.sizeInCells ?? 1) &&
+            ent.userData.cellZ <= cellZ && cellZ < ent.userData.cellZ + (ent.userData.sizeInCells ?? 1)
+        )
+
+        if (entity) {
+            this.setHighlight(entity)
             this.setCursor("pointer")
         } else {
             this.setHighlight(null)
-            this.setCursor("default")
+            this.setCursor("not-allowed")   // ← était "default"
         }
     }
 
@@ -219,7 +214,7 @@ export class ItemActionController {
         this.mouseDownPos = { x: e.clientX, y: e.clientY }
     }
 
-    private onMouseMove(e: MouseEvent): void {
+    private onMouseMove(): void {
         const item = placementStore.selectedItem
         const hoveredCell = placementStore.hoveredCell
 
@@ -235,7 +230,7 @@ export class ItemActionController {
         }
 
         if (isUsableOnEntity(item)) {
-            this.updateCursorForEntityHover(e, item)
+            this.updateCursorForEntityHover(item)
             return
         }
 
@@ -292,24 +287,25 @@ export class ItemActionController {
     private handleUseOnEntity(item: ItemDef): void {
         if (!isUsableOnEntity(item)) return
 
-        const hitboxes = this.getHitboxesForEntityIds(item.usage.targetEntityIds)
-        if (!hitboxes.length) return
+        const { hoveredCell } = placementStore
+        if (!hoveredCell) return
 
-        const hits = this.raycaster.intersectObjects(hitboxes, false)
-        if (!hits.length) return
+        const { cellX, cellZ } = hoveredCell
 
-        const proxy = hits[0].object.parent
-        if (!proxy) return
+        // Trouve l'entité ciblée à la cellule survolée
+        const entity = this.world.entities.find(e =>
+            item.usage.targetEntityIds.includes(e.userData.id as string) &&
+            e.userData.cellX <= cellX && cellX < e.userData.cellX + (e.userData.sizeInCells ?? 1) &&
+            e.userData.cellZ <= cellZ && cellZ < e.userData.cellZ + (e.userData.sizeInCells ?? 1)
+        )
+        if (!entity) { soundManager.playError(); return }
 
         if (inventoryStore.getQty(item.id) <= 0) { soundManager.playError(); return }
 
-        const { cellX, cellZ } = this.hitPointToCell(hits[0].point)
-        if (!this.isHitInEntityBounds(proxy, cellX, cellZ)) { soundManager.playError(); return }
-
         const success = itemActionRegistry.executeEntityAction(item.usage.actionId, {
-            targetEntityId: proxy.userData.id as string,
-            cellX,
-            cellZ,
+            targetEntityId: entity.userData.id as string,
+            cellX: entity.userData.cellX as number,
+            cellZ: entity.userData.cellZ as number,
             itemId: item.id,
         })
 
@@ -363,23 +359,6 @@ export class ItemActionController {
 
         inventoryStore.consume(item.id)
         if (inventoryStore.getQty(item.id) <= 0) placementStore.cancel()
-    }
-
-    // ─── Coordinate helpers ───────────────────────────────────────────────────
-
-    private hitPointToCell(point: THREE.Vector3): { cellX: number; cellZ: number } {
-        const half = this.world.sizeInCells / 2
-        return {
-            cellX: Math.floor(point.x / this.world.cellSize + half),
-            cellZ: Math.floor(point.z / this.world.cellSize + half),
-        }
-    }
-
-    private isHitInEntityBounds(proxy: THREE.Object3D, cellX: number, cellZ: number): boolean {
-        const { cellX: ecx, cellZ: ecz, sizeInCells: size } = proxy.userData as {
-            cellX: number; cellZ: number; sizeInCells: number
-        }
-        return cellX >= ecx && cellX < ecx + size && cellZ >= ecz && cellZ < ecz + size
     }
 
     // ─── Store change ─────────────────────────────────────────────────────────

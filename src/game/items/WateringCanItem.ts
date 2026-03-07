@@ -1,5 +1,5 @@
 ﻿// src/game/farming/items/WateringCanItem.ts
-import type { ItemDef } from "../../entity/ItemDef"
+import type { ItemDef } from "../entity/ItemDef";
 
 export const WATERING_CAN_MAX_CHARGES = 10
 

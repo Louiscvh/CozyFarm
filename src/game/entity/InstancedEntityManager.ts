@@ -256,6 +256,12 @@ export class InstancedEntityManager {
     }
   }
 
+   reserveSlot(def: Entity, slot: number): void {
+        const pool = this._pool(def)
+        pool.active[slot] = true
+        pool.highWater = Math.max(pool.highWater, slot + 1)
+  }
+
   /** Recompute `count` (= last active slot + 1) and push to all sub-meshes. */
   private _flush(pool: Pool): void {
     let hw = 0

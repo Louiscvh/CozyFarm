@@ -124,7 +124,8 @@ class InventoryStore {
         const selId = placementStore.selectedItem?.id
         if (
             selId &&
-            !placementStore.moveEntity &&              // ← ne pas annuler pendant un move
+            !placementStore.moveEntity &&
+            !this.farmingItems.has(selId) &&        // ← ne pas annuler les infinis / farming
             (this.quantities.get(selId) ?? 0) <= 0
         ) {
             placementStore.cancel()

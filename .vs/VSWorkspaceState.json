@@ -1,10 +1,15 @@
 {
   "ExpandedNodes": [
     "",
+    "\\public",
     "\\src",
     "\\src\\game",
+    "\\src\\game\\entity",
+    "\\src\\game\\entity\\animations",
+    "\\src\\game\\interaction",
     "\\src\\ui",
-    "\\src\\ui\\components"
+    "\\src\\ui\\components",
+    "\\src\\ui\\store"
   ],
   "PreviewInSolutionExplorer": false
 }

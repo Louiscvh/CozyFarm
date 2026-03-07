@@ -20,17 +20,19 @@ import { GrassEntity } from "../../game/entity/entities/Grass"
 import { WindMillEntity } from "../../game/entity/entities/WindMill"
 import { BenchEntity } from "../../game/entity/entities/Bench"
 import { DirtSoilEntity } from "../../game/entity/entities/DirtSoil"
-import { CarrotSeedItemDef } from "../../game/farming/items/CarrotSeedItem"
-import { CarrotItemDef } from "../../game/farming/items/CarrotItem"
-import { HoeItemDef } from "../../game/farming/items/HoeItem"
+import { CarrotSeedItemDef } from "../../game/items/CarrotSeedItem"
+import { CarrotItemDef } from "../../game/items/CarrotItem"
+import { HoeItemDef } from "../../game/items/HoeItem"
 import { World } from "../../game/world/World"
 import { UIButton } from "./UIButton"
 import "./InventoryBar.css"
-import { LettuceSeedItemDef } from "../../game/farming/items/LettuceSeedItem"
-import { LettuceItemDef } from "../../game/farming/items/LettuceItem"
-import { ShovelItemDef } from "../../game/farming/items/ShovelItem"
-import { WateringCanItemDef } from "../../game/farming/items/WateringCanItem"
+import { LettuceSeedItemDef } from "../../game/items/LettuceSeedItem"
+import { LettuceItemDef } from "../../game/items/LettuceItem"
+import { ShovelItemDef } from "../../game/items/ShovelItem"
+import { WateringCanItemDef } from "../../game/items/WateringCanItem"
 import { TulipEntity } from "../../game/entity/entities/Tulip"
+import { AxeItemDef } from "../../game/items/AxeItem"
+import { WoodItemDef } from "../../game/items/WoodItem"
 
 // ─── Tous les items (construction + farming) ──────────────────────────────────
 
@@ -38,6 +40,9 @@ const ALL_ITEMS: ItemDef[] = [
     HoeItemDef,
     ShovelItemDef,
     WateringCanItemDef,
+    AxeItemDef,
+    WoodItemDef,
+
     { id: "tree1", label: "Pin", icon: "🌲", usage: { kind: "placeable", entity: Tree1Entity } },
     { id: "tree2", label: "Chêne", icon: "🌳", usage: { kind: "placeable", entity: Tree2Entity } },
     { id: "tree3", label: "Acacia", icon: "🌴", usage: { kind: "placeable", entity: Tree3Entity } },
@@ -93,7 +98,9 @@ inventoryStore.register([
     { id: "carrot", maxQty: 99, initialQty: 0 },
     { id: "lettuce", maxQty: 99, initialQty: 0 },      // ← farming
     { id: "shovel", maxQty: 1, infinite: true },
-    { id: "watering_can", maxQty: 1, infinite: true }
+    { id: "watering_can", maxQty: 1, infinite: true },
+    { id: "axe", maxQty: 1, infinite: true },
+    { id: "wood", maxQty: 64, initialQty: 24 },
 ])
 
 const isInfinite = (item: ItemDef): boolean =>
@@ -236,8 +243,6 @@ export function InventoryBar() {
         if (isUsableOnEntity(item)) {
             return (
                 <div id="placement-hint">
-                    {item.icon} Mode utilisation · Cliquez sur un champ 🥔
-                    <span className="hint-sep">·</span>
                     <span className="hint-key">Échap</span> Annuler
                 </div>
             )
