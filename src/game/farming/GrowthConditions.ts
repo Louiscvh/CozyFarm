@@ -3,42 +3,52 @@ import { Time } from "../core/Time"
 import type { Weather } from "../system/Weather"
 
 export interface GrowthConditions {
-    /** Multiplicateur final appliqué à deltaTime pour la croissance */
+    /** Multiplicateur final appliqué à deltaTime pour la croissance (hors arrosage) */
     readonly growthRate: number
+    /** Bonus appliqué par cellule si le sol est arrosé */
+    readonly wateredMult: number
     /** Détail pour debug/UI */
     readonly breakdown: {
         timePaused: boolean
         temperatureMult: number
         rainMult: number
         timeSpeedMult: number
+        wateredMult: number
     }
 }
 
+/** Bonus de croissance quand le sol est arrosé */
+const WATERED_MULT = 1.5
+
 /**
- * Calcule le multiplicateur de croissance global.
+ * Calcule le multiplicateur de croissance global (météo + temps).
+ * Le bonus d'arrosage (wateredMult) est retourné séparément car il
+ * s'applique par cellule dans CropManager.update().
  *
  * Règles :
- *  - Pause          → 0 (arrêt total)
- *  - Température    → courbe gaussienne centrée sur 18°C, min 0 à -5°C et +45°C
- *  - Pluie          → bonus +30% (l'eau aide)
- *  - Vitesse du temps → appliquée directement (x5 = pousse 5× plus vite)
+ *  - Pause        → 0 (arrêt total)
+ *  - Température  → courbe gaussienne centrée sur 18°C, min 0 à -5°C et +45°C
+ *  - Pluie        → bonus +20-30% (l'eau aide)
+ *  - Arrosage     → bonus +50% si le sol est arrosé
+ *  - Vitesse      → appliquée directement (x5 = pousse 5× plus vite)
  */
 export function computeGrowthRate(weather: Weather | null): GrowthConditions {
     // ── Pause ──────────────────────────────────────────────────────
     if (Time.timeScale === 0) {
         return {
             growthRate: 0,
+            wateredMult: WATERED_MULT,
             breakdown: {
                 timePaused: true,
                 temperatureMult: 0,
                 rainMult: 0,
                 timeSpeedMult: 0,
+                wateredMult: WATERED_MULT,
             },
         }
     }
 
     // ── Température ────────────────────────────────────────────────
-    // Gaussienne : optimal à 18°C, tombe à 0 en dehors de [-5, 45]
     const temp = weather?.getTemperature() ?? 18
     const temperatureMult = temperatureMultiplier(temp)
 
@@ -55,11 +65,13 @@ export function computeGrowthRate(weather: Weather | null): GrowthConditions {
 
     return {
         growthRate,
+        wateredMult: WATERED_MULT,
         breakdown: {
             timePaused: false,
             temperatureMult,
             rainMult,
             timeSpeedMult,
+            wateredMult: WATERED_MULT,
         },
     }
 }
@@ -76,16 +88,12 @@ export function computeGrowthRate(weather: Weather | null): GrowthConditions {
 function temperatureMultiplier(temp: number): number {
     if (temp <= -5) return 0
     if (temp >= 45) return 0
-
-    // Deux demi-gaussiennes pour avoir des pentes asymétriques
     const optimal = 18
     if (temp <= optimal) {
-        // Côté froid : de -5 à 18
-        const t = (temp - (-5)) / (optimal - (-5))   // 0→1
+        const t = (temp - (-5)) / (optimal - (-5))
         return smoothstep(t)
     } else {
-        // Côté chaud : de 18 à 45
-        const t = 1 - (temp - optimal) / (45 - optimal)  // 1→0
+        const t = 1 - (temp - optimal) / (45 - optimal)
         return smoothstep(t)
     }
 }

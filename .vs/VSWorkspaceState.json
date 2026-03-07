@@ -3,8 +3,8 @@
     "",
     "\\src",
     "\\src\\game",
-    "\\src\\game\\farming"
+    "\\src\\game\\interaction"
   ],
-  "SelectedNode": "\\src\\game\\interaction\\useItemAction.ts",
+  "SelectedNode": "\\src\\game\\interaction\\PlacementController.ts",
   "PreviewInSolutionExplorer": false
 }

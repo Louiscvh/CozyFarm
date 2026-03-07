@@ -79,6 +79,9 @@ export class TileFactory {
     private soilHighWater = 0
     private readonly SOIL_MAX = 2000
 
+    private wateredCells = new Set<string>()
+    private readonly SOIL_COLOR_DRY = new THREE.Color(0x3d2b1f)
+    private readonly SOIL_COLOR_WATERED = new THREE.Color(0x824C27)
     // ── Transitions ───────────────────────────────────────────────
     private transitions = new Map<string, SoilTransition>()
     private readonly TRANSITION_SPEED = 1   // ~125ms
@@ -91,6 +94,32 @@ export class TileFactory {
         this.worldSizeInCells = worldSize * 2
         this.generateGrid()
         this.initSoilMesh()
+    }
+
+    waterCell(cellX: number, cellZ: number): boolean {
+        const k = this.cellKey(cellX, cellZ)
+        const slot = this.soilSlots.get(k)
+        if (slot === undefined) return false   // pas un soil
+        if (this.wateredCells.has(k)) return false  // déjà arrosé
+
+        this.wateredCells.add(k)
+        this.soilMesh.setColorAt(slot, this.SOIL_COLOR_WATERED)
+        this.soilMesh.instanceColor!.needsUpdate = true
+        return true
+    }
+
+    unwaterCell(cellX: number, cellZ: number): void {
+        const k = this.cellKey(cellX, cellZ)
+        const slot = this.soilSlots.get(k)
+        if (slot === undefined) return
+
+        this.wateredCells.delete(k)
+        this.soilMesh.setColorAt(slot, this.SOIL_COLOR_DRY)
+        this.soilMesh.instanceColor!.needsUpdate = true
+    }
+
+    isWatered(cellX: number, cellZ: number): boolean {
+        return this.wateredCells.has(this.cellKey(cellX, cellZ))
     }
 
     // ─── Soil layer ───────────────────────────────────────────────
@@ -260,6 +289,7 @@ export class TileFactory {
                 this.soilMesh.instanceMatrix.needsUpdate = true
 
                 this.soilSlots.delete(k)
+                this.wateredCells.delete(k)
                 this.soilFreeSlots.push(slot)
                 this.markFree(cellX, cellZ, 1)
             }

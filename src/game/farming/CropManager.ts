@@ -93,31 +93,27 @@ export class CropManager {
 
     // ─── Boucle ────────────────────────────────────────────────────────────────
 
-    update(deltaTime: number, growthRate: number = 1): void {
-        // Les crops en cours de récolte (hors map) ont leur propre suivi via les instances
-        // On les tick séparément dans _harvestingInstances
-
+    update(deltaTime: number, growthRate: number, wateredMult: number): void {
+        // Tick des instances en cours de récolte (temps réel, non scalé)
         for (const inst of this._harvestingInstances) {
-            if (!inst.isTransition) {
-                this._harvestingInstances.delete(inst)
-                continue
-            }
-            inst.tickTransition(deltaTime, 5)
-            this.applyScale(inst)
+            inst.tickTransition(deltaTime)
+            if (!inst.isTransition) this._harvestingInstances.delete(inst)
         }
 
         if (growthRate <= 0) return
-        const effective = deltaTime * growthRate
 
-        for (const instance of this.crops.values()) {
-            // ── Transition en cours ──────────────────────────────────
+        for (const [key, instance] of this.crops) {
             if (instance.isTransition) {
-                instance.tickTransition(deltaTime, 4)
+                instance.tickTransition(deltaTime)
                 this.applyScale(instance)
-                continue   // pas de croissance pendant la transition
+                continue
             }
 
-            // ── Croissance ───────────────────────────────────────────
+            // Bonus d'arrosage per-cell
+            const [cx, cz] = key.split("|").map(Number)
+            const isWatered = this.world.tilesFactory.isWatered(cx, cz)
+            const effective = deltaTime * growthRate * (isWatered ? wateredMult : 1)
+
             const phaseChanged = instance.advance(effective)
             if (phaseChanged) this.spawnMesh(instance, "phase")
         }

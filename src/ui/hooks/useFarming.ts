@@ -1,35 +1,27 @@
 ﻿// src/game/farming/useFarming.ts
 import { useEffect } from "react"
-import { World } from "../world/World"
-import { itemActionRegistry } from "../interaction/ItemActionRegistry"
 import { inventoryStore } from "../../ui/store/InventoryStore"
-import { ALL_CROPS } from "./CropDefinition"
-import type { UseOnEntityContext } from "../interaction/ItemActionRegistry"
-
-/**
- * Enregistre une action de plantation générique pour chaque CropDefinition.
- * Pour ajouter un nouveau légume :
- *   1. Crée sa CropDefinition dans CropDefinition.ts
- *   2. Ajoute-la dans ALL_CROPS
- *   3. Crée son ItemDef avec actionId: `farming:plant_${def.id}`
- * C'est tout — aucune modification ici requise.
- */
-function registerPlantActions() {
-    for (const def of ALL_CROPS) {
-        itemActionRegistry.registerTileAction(
-            `farming:plant_${def.id}`,
-            (ctx) => {
-                const world = World.current
-                if (!world) return false
-                if (!world.tilesFactory.isSoil(ctx.cellX, ctx.cellZ)) return false
-                if (world.cropManager.hasCrop(ctx.cellX, ctx.cellZ)) return false
-                return world.cropManager.plant(def, ctx.cellX, ctx.cellZ) !== null
-            }
-        )
-    }
-}
+import { ALL_CROPS } from "../../game/farming/CropDefinition"
+import { itemActionRegistry, type UseOnEntityContext } from "../../game/interaction/ItemActionRegistry"
+import { World } from "../../game/world/World"
 
 export function useFarming() {
+
+    function registerPlantActions() {
+        for (const def of ALL_CROPS) {
+            itemActionRegistry.registerTileAction(
+                `farming:plant_${def.id}`,
+                (ctx) => {
+                    const world = World.current
+                    if (!world) return false
+                    if (!world.tilesFactory.isSoil(ctx.cellX, ctx.cellZ)) return false
+                    if (world.cropManager.hasCrop(ctx.cellX, ctx.cellZ)) return false
+                    return world.cropManager.plant(def, ctx.cellX, ctx.cellZ) !== null
+                }
+            )
+        }
+    }
+
     useEffect(() => {
 
         // ── Bêcher ────────────────────────────────────────────────────
@@ -48,7 +40,14 @@ export function useFarming() {
             return true
         })
 
-        // ── Plantation — une action par crop, générée automatiquement ─
+        itemActionRegistry.registerTileAction("farming:water", ({ cellX, cellZ }) => {
+            const world = World.current
+            if (!world) return false
+
+            // waterCell retourne false si déjà arrosé → on refuse l'action
+            return world.tilesFactory.waterCell(cellX, cellZ)
+        })
+
         registerPlantActions()
 
         // ── Récolte ───────────────────────────────────────────────────

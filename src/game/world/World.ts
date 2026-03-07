@@ -63,9 +63,8 @@ export class World {
         this.tilesFactory.tickTransitions(deltaTime)   // ← ajouter ici
 
         // ── Conditions de croissance ──────────────────────────────────
-        const { growthRate } = computeGrowthRate(this.weather ?? null)
-
-        this.cropManager.update(deltaTime, growthRate)
+        const { growthRate, wateredMult } = computeGrowthRate(this.weather ?? null)
+        this.cropManager.update(deltaTime, growthRate, wateredMult)
         this.cropManager.updateReadyPulse(now)
 
         const torchIntensity = this.weather ? 1 - this.weather.daylight : 1

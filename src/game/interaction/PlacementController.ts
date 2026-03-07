@@ -1,0 +1,498 @@
+﻿// src/game/placement/PlacementController.ts
+import * as THREE from "three"
+import { Line2 } from "three/addons/lines/Line2.js"
+import { LineGeometry } from "three/addons/lines/LineGeometry.js"
+import { LineMaterial } from "three/addons/lines/LineMaterial.js"
+import { placementStore } from "../../ui/store/PlacementStore"
+import { historyStore } from "../../ui/store/HistoryStore"
+import { World } from "../world/World"
+import { getFootprint } from "../entity/Entity"
+import { isPlaceable, getItemEntity } from "../entity/ItemDef"
+import type { ItemDef } from "../entity/ItemDef"
+import {
+    staticGridGroup,
+    buildStaticGrid,
+    showGridForGhost,
+    hideGridForGhost,
+    revealGroup,
+    buildRevealGrid,
+    GRID_Y,
+} from "../system/Grid"
+import { soundManager } from "../system/SoundManager"
+import { ghostMat, applyGhostMaterials } from "../shared/GhostMaterial"
+
+// ─── Shared meshes (module-level, instanciés une seule fois) ──────────────────
+
+const groundPlane = new THREE.Mesh(
+    new THREE.PlaneGeometry(10000, 10000),
+    new THREE.MeshBasicMaterial({ visible: false }),
+)
+groundPlane.rotation.x = -Math.PI / 2
+
+const highlightMatOk = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.35, depthWrite: false, depthTest: false })
+const highlightMatBad = new THREE.MeshBasicMaterial({ color: 0xff2244, transparent: true, opacity: 0.35, depthWrite: false, depthTest: false })
+const highlightMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), highlightMatOk)
+highlightMesh.rotation.x = -Math.PI / 2
+highlightMesh.position.y = 0.055
+highlightMesh.visible = false
+
+const hoverBorderGeo = new LineGeometry()
+hoverBorderGeo.setPositions([-0.5, 0, 0.5, 0.5, 0, 0.5, 0.5, 0, -0.5, -0.5, 0, -0.5, -0.5, 0, 0.5])
+const hoverBorderMat = new LineMaterial({
+    color: 0xffffff, linewidth: 4, opacity: 1, transparent: true,
+    resolution: new THREE.Vector2(window.innerWidth, window.innerHeight),
+})
+const hoverCellMesh = new Line2(hoverBorderGeo, hoverBorderMat)
+hoverCellMesh.position.y = GRID_Y + 0.002
+hoverCellMesh.visible = false
+
+// ─── Controller ───────────────────────────────────────────────────────────────
+
+export class PlacementController {
+
+    // ── Three.js helpers ──────────────────────────────────────────────────────
+    private readonly raycaster = new THREE.Raycaster()
+    private readonly mouse = new THREE.Vector2()
+
+    // ── Ghost state ───────────────────────────────────────────────────────────
+    private ghost: THREE.Object3D | null = null
+    private yOffset: number = 0
+    private targetPos = new THREE.Vector3()
+    private currentPos = new THREE.Vector3()
+    private targetRotY = 0
+    private currentRotY = 0
+    private ghostRaf = 0
+    private ghostStartTime = 0   // ← pour le flottement
+
+    // ── Hover state ───────────────────────────────────────────────────────────
+    private hoverTargetPos = new THREE.Vector3()
+    private hoverCurrentPos = new THREE.Vector3()
+    private hoverRaf = 0
+    private hoverInitialized = false
+
+    // ── Click state ───────────────────────────────────────────────────────────
+    private mouseDownPos = { x: 0, y: 0 }
+    private skipNextClick = false
+
+    // ── Store subscription ────────────────────────────────────────────────────
+    private lastSelectedId: string | null = null
+    private unsubscribeStore: (() => void) | null = null
+
+    // ── Bound listeners ───────────────────────────────────────────────────────
+    private readonly _onMouseMove = this.onMouseMove.bind(this)
+    private readonly _onMouseDown = this.onMouseDown.bind(this)
+    private readonly _onClick = this.onClick.bind(this)
+    private readonly _onKeyDown = this.onKeyDown.bind(this)
+
+    private readonly camera: THREE.Camera
+    private readonly renderer: THREE.WebGLRenderer
+    private readonly world: World
+
+    constructor(camera: THREE.Camera, renderer: THREE.WebGLRenderer, world: World) {
+        this.camera = camera
+        this.renderer = renderer
+        this.world = world
+    }
+
+    // ─── Lifecycle ────────────────────────────────────────────────────────────
+
+    init(): void {
+        this.world.scene.add(groundPlane, highlightMesh, hoverCellMesh, staticGridGroup, revealGroup)
+        buildStaticGrid(this.world.cellSize)
+
+        window.addEventListener("mousemove", this._onMouseMove)
+        window.addEventListener("mousedown", this._onMouseDown)
+        window.addEventListener("click", this._onClick)
+        window.addEventListener("keydown", this._onKeyDown)
+
+        this.unsubscribeStore = placementStore.subscribe(() => this.onStoreChange())
+    }
+
+    dispose(): void {
+        this.unsubscribeStore?.()
+        this.removeGhost()
+        this.stopHoverAnim()
+
+        this.world.scene.remove(groundPlane, highlightMesh, hoverCellMesh, staticGridGroup, revealGroup)
+
+        window.removeEventListener("mousemove", this._onMouseMove)
+        window.removeEventListener("mousedown", this._onMouseDown)
+        window.removeEventListener("click", this._onClick)
+        window.removeEventListener("keydown", this._onKeyDown)
+    }
+
+    // ─── Helpers de coordonnées ───────────────────────────────────────────────
+
+    private snapToCell(x: number, z: number): { cellX: number; cellZ: number } {
+        const half = this.world.sizeInCells / 2
+        return {
+            cellX: Math.floor(x / this.world.cellSize + half),
+            cellZ: Math.floor(z / this.world.cellSize + half),
+        }
+    }
+
+    private cellToWorld(cellX: number, cellZ: number, footprint: number): { x: number; z: number } {
+        const half = this.world.sizeInCells / 2
+        const startX = (cellX - half) * this.world.cellSize
+        const startZ = (cellZ - half) * this.world.cellSize
+        return {
+            x: startX + footprint * this.world.cellSize / 2,
+            z: startZ + footprint * this.world.cellSize / 2,
+        }
+    }
+
+    private getPlaceCells(cellX: number, cellZ: number, footprint: number): { placeCellX: number; placeCellZ: number } {
+        const half = Math.floor(footprint / 2)
+        return { placeCellX: cellX - half, placeCellZ: cellZ - half }
+    }
+
+    // ─── Hover animation ──────────────────────────────────────────────────────
+
+    private startHoverAnim(): void {
+        if (this.hoverRaf) return
+        const loop = () => {
+            this.hoverRaf = requestAnimationFrame(loop)
+            const dist = this.hoverCurrentPos.distanceTo(this.hoverTargetPos)
+            if (dist < 0.005) {
+                this.hoverCurrentPos.copy(this.hoverTargetPos)
+            } else {
+                this.hoverCurrentPos.lerp(this.hoverTargetPos, Math.min(1, 0.28 + dist * 0.6))
+            }
+            hoverCellMesh.position.set(this.hoverCurrentPos.x, GRID_Y + 0.002, this.hoverCurrentPos.z)
+        }
+        loop()
+    }
+
+    private stopHoverAnim(): void {
+        cancelAnimationFrame(this.hoverRaf)
+        this.hoverRaf = 0
+        this.hoverInitialized = false
+    }
+
+    // ─── Ghost ────────────────────────────────────────────────────────────────
+
+    private removeGhost(): void {
+        cancelAnimationFrame(this.ghostRaf)
+        if (this.ghost) {
+            this.world.scene.remove(this.ghost)
+            this.ghost.traverse(obj => {
+                if (!(obj as THREE.Mesh).isMesh) return
+                const mesh = obj as THREE.Mesh
+                mesh.geometry?.dispose()
+                const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+                mats.forEach(m => { if (m !== ghostMat) m.dispose() })
+            })
+            this.ghost = null
+            placementStore.ghostMesh = null
+        }
+        this.yOffset = 0
+        highlightMesh.visible = false
+        hoverCellMesh.visible = false
+        this.stopHoverAnim()
+        revealGroup.visible = false
+        hideGridForGhost()
+    }
+
+    private startGhostAnimation(): void {
+        this.ghostStartTime = performance.now()
+
+        const animate = () => {
+            this.ghostRaf = requestAnimationFrame(animate)
+            if (!this.ghost) return
+
+            // Lerp position horizontale
+            this.currentPos.lerp(this.targetPos, 0.35)
+
+            // Flottement sinusoïdal sur Y
+            const t = (performance.now() - this.ghostStartTime) / 1000
+            const floatY = Math.sin(t * 2) * 0.04
+
+            this.ghost.position.set(
+                this.currentPos.x,
+                this.yOffset + floatY,
+                this.currentPos.z,
+            )
+
+            // Lerp rotation
+            this.currentRotY += (this.targetRotY - this.currentRotY) * 0.3
+            this.ghost.rotation.y = this.currentRotY
+
+            if (highlightMesh.visible) {
+                highlightMesh.position.set(this.currentPos.x, GRID_Y, this.currentPos.z)
+            }
+        }
+        animate()
+    }
+
+    private async buildGhost(item: ItemDef): Promise<void> {
+        if (!item || !isPlaceable(item)) return this.removeGhost()
+
+        const entity = getItemEntity(item)
+
+        const initialRotDeg = placementStore.moveOrigin
+            ? Math.round(THREE.MathUtils.radToDeg(placementStore.moveOrigin.rotY))
+            : entity.rotation?.y || 0
+
+        placementStore.rotation = initialRotDeg
+        const targetRotRad = THREE.MathUtils.degToRad(initialRotDeg)
+
+        this.removeGhost()
+
+        const { createEntity } = await import("../entity/EntityFactory")
+        const root = await createEntity(entity, this.world.tileSize)
+
+        const info = this.world.instanceManager.getInfo(entity)
+        const groundSnap = info?.yOffset ?? (() => {
+            const box = new THREE.Box3().setFromObject(root)
+            return -box.min.y
+        })()
+        this.yOffset = groundSnap + (entity.yOffset ?? 0)
+
+        applyGhostMaterials(root)
+        root.rotation.y = targetRotRad
+        this.currentRotY = targetRotRad
+        this.targetRotY = targetRotRad
+
+        const footprint = getFootprint(entity)
+        buildRevealGrid(this.world.cellSize, footprint)
+        revealGroup.visible = true
+
+        if (placementStore.hoveredCell) {
+            const { cellX, cellZ } = placementStore.hoveredCell
+            const { placeCellX, placeCellZ } = this.getPlaceCells(cellX, cellZ, footprint)
+            const { x, z } = this.cellToWorld(placeCellX, placeCellZ, footprint)
+            const canPlace = this.world.tilesFactory.canSpawn(placeCellX, placeCellZ, footprint)
+
+            this.targetPos.set(x, this.yOffset, z)
+            this.currentPos.copy(this.targetPos)
+            ghostMat.color.set(canPlace ? 0x00ff00 : 0xff2244)
+
+            highlightMesh.scale.set(footprint * this.world.cellSize, footprint * this.world.cellSize, 1)
+            highlightMesh.position.set(x, GRID_Y, z)
+            highlightMesh.material = canPlace ? highlightMatOk : highlightMatBad
+            highlightMesh.visible = true
+            revealGroup.position.set(x, GRID_Y + 0.0055, z)
+            showGridForGhost()
+        }
+
+        root.position.copy(this.currentPos)
+        this.world.scene.add(root)
+        this.ghost = root
+        placementStore.ghostMesh = root
+
+        this.startGhostAnimation()
+    }
+
+    // ─── Mouse move ───────────────────────────────────────────────────────────
+
+    private updateHoverCursor(cellX: number, cellZ: number): void {
+        const { x, z } = this.cellToWorld(cellX, cellZ, 1)
+        this.hoverTargetPos.set(x, GRID_Y + 0.002, z)
+
+        if (!this.hoverInitialized) {
+            this.hoverCurrentPos.copy(this.hoverTargetPos)
+            hoverCellMesh.position.set(x, GRID_Y + 0.002, z)
+            hoverCellMesh.scale.set(this.world.cellSize, 1, this.world.cellSize)
+            this.hoverInitialized = true
+        }
+
+        hoverCellMesh.visible = true
+        revealGroup.visible = false
+        this.startHoverAnim()
+    }
+
+    private updatePlacementGhost(cellX: number, cellZ: number, item: ItemDef): void {
+        hoverCellMesh.visible = false
+        this.stopHoverAnim()
+
+        const entity = getItemEntity(item)
+        const footprint = getFootprint(entity)
+        const { placeCellX, placeCellZ } = this.getPlaceCells(cellX, cellZ, footprint)
+        const canPlace = this.world.tilesFactory.canSpawn(placeCellX, placeCellZ, footprint)
+        const { x, z } = this.cellToWorld(placeCellX, placeCellZ, footprint)
+
+        placementStore.canPlace = canPlace
+        this.targetPos.set(x, this.yOffset, z)
+        ghostMat.color.set(canPlace ? 0x00ff00 : 0xff2244)
+
+        highlightMesh.visible = true
+        highlightMesh.position.set(x, GRID_Y, z)
+        highlightMesh.material = canPlace ? highlightMatOk : highlightMatBad
+        revealGroup.position.set(x, GRID_Y + 0.0055, z)
+        revealGroup.visible = true
+    }
+
+    private onMouseMove(e: MouseEvent): void {
+        const rect = this.renderer.domElement.getBoundingClientRect()
+        this.mouse.set(
+            ((e.clientX - rect.left) / rect.width) * 2 - 1,
+            ((e.clientY - rect.top) / rect.height) * -2 + 1,
+        )
+        this.raycaster.setFromCamera(this.mouse, this.camera)
+        const hits = this.raycaster.intersectObject(groundPlane)
+        if (!hits.length) return
+
+        const { cellX, cellZ } = this.snapToCell(hits[0].point.x, hits[0].point.z)
+        placementStore.hoveredCell = { cellX, cellZ }
+
+        const selectedItem = placementStore.selectedItem
+        if (!selectedItem || !isPlaceable(selectedItem)) {
+            this.updateHoverCursor(cellX, cellZ)
+        } else {
+            this.updatePlacementGhost(cellX, cellZ, selectedItem)
+        }
+    }
+
+    // ─── Click ────────────────────────────────────────────────────────────────
+
+    private onMouseDown(e: MouseEvent): void {
+        this.mouseDownPos = { x: e.clientX, y: e.clientY }
+    }
+
+    private isDrag(e: MouseEvent): boolean {
+        const dx = e.clientX - this.mouseDownPos.x
+        const dy = e.clientY - this.mouseDownPos.y
+        return Math.sqrt(dx * dx + dy * dy) > 5
+    }
+
+    private handleMove(placeCellX: number, placeCellZ: number, footprint: number): void {
+        const ent = placementStore.moveEntity!
+        const fromCellX = ent.userData.cellX as number
+        const fromCellZ = ent.userData.cellZ as number
+        const fromRotY = ent.userData.rotY as number
+        const newRotY = this.targetRotY
+        const extraY = (ent.userData.def?.yOffset ?? 0) as number
+
+        const half = this.world.sizeInCells / 2
+        const startX = (placeCellX - half) * this.world.cellSize
+        const startZ = (placeCellZ - half) * this.world.cellSize
+        const newPos = new THREE.Vector3(
+            startX + footprint * this.world.cellSize / 2,
+            extraY,
+            startZ + footprint * this.world.cellSize / 2,
+        )
+
+        ent.position.copy(newPos)
+        ent.rotation.y = newRotY
+        ent.userData.cellX = placeCellX
+        ent.userData.cellZ = placeCellZ
+        ent.userData.rotY = newRotY
+        ent.updateMatrix()
+        ent.updateMatrixWorld(true)
+
+        if (ent.userData.isInstanced) {
+            this.world.instanceManager.show(ent.userData.def, ent.userData.instanceSlot, newPos, newRotY)
+        }
+
+        this.world.scene.add(ent)
+        if (!this.world.entities.includes(ent)) this.world.entities.push(ent)
+        this.world.tilesFactory.markOccupied(placeCellX, placeCellZ, footprint)
+
+        historyStore.push({
+            type: "move",
+            entityObject: ent,
+            fromCell: { x: fromCellX, z: fromCellZ },
+            toCell: { x: placeCellX, z: placeCellZ },
+            fromRot: fromRotY,
+            toRot: newRotY,
+            size: footprint,
+        })
+
+        placementStore.completeMove()
+        this.removeGhost()
+        soundManager.playSuccess()
+    }
+
+    private async handlePlace(item: ItemDef, placeCellX: number, placeCellZ: number, footprint: number): Promise<void> {
+        const entity = getItemEntity(item)
+        const spawnedEntity = await this.world.spawnEntitySafe(entity, placeCellX, placeCellZ, footprint)
+        if (!spawnedEntity) { soundManager.playError(); return }
+
+        spawnedEntity.userData.cellX = placeCellX
+        spawnedEntity.userData.cellZ = placeCellZ
+        spawnedEntity.userData.sizeInCells = footprint
+
+        if (spawnedEntity.userData.isInstanced) {
+            spawnedEntity.userData.rotY = this.targetRotY
+            spawnedEntity.rotation.y = this.targetRotY
+            this.world.instanceManager.setTransform(
+                spawnedEntity.userData.def as any,
+                spawnedEntity.userData.instanceSlot,
+                spawnedEntity.position,
+                this.targetRotY,
+            )
+        } else {
+            spawnedEntity.rotation.y = this.targetRotY
+        }
+
+        historyStore.push({
+            type: "place",
+            entityObject: spawnedEntity,
+            cellX: placeCellX,
+            cellZ: placeCellZ,
+            sizeInCells: footprint,
+            originalY: spawnedEntity.position.y,
+            originalScale: spawnedEntity.scale.clone(),
+            originalRotation: spawnedEntity.rotation.clone(),
+        })
+
+        soundManager.playSuccess()
+    }
+
+    private async onClick(e: MouseEvent): Promise<void> {
+        if ((e.target as HTMLElement).closest("#ui-root")) return
+        if (this.skipNextClick) { this.skipNextClick = false; return }
+        if (this.isDrag(e)) return
+
+        const item = placementStore.selectedItem
+        if (!item || !isPlaceable(item)) return
+        if (!placementStore.hoveredCell) return
+        if (!placementStore.canPlace) { soundManager.playError(); return }
+
+        const entity = getItemEntity(item)
+        const footprint = getFootprint(entity)
+        const { cellX, cellZ } = placementStore.hoveredCell
+        const { placeCellX, placeCellZ } = this.getPlaceCells(cellX, cellZ, footprint)
+
+        if (placementStore.moveEntity) {
+            this.handleMove(placeCellX, placeCellZ, footprint)
+        } else {
+            await this.handlePlace(item, placeCellX, placeCellZ, footprint)
+        }
+    }
+
+    // ─── Clavier ──────────────────────────────────────────────────────────────
+
+    private onKeyDown(e: KeyboardEvent): void {
+        if (e.key === "Escape") {
+            placementStore.cancel()
+            this.removeGhost()
+            return
+        }
+
+        if ((e.key === "r" || e.key === "R") && placementStore.selectedItem && isPlaceable(placementStore.selectedItem)) {
+            placementStore.rotate()
+            this.targetRotY += THREE.MathUtils.degToRad(90)
+        }
+    }
+
+    // ─── Store ────────────────────────────────────────────────────────────────
+
+    private onStoreChange(): void {
+        const currentId = placementStore.selectedItem?.id ?? null
+        if (currentId === this.lastSelectedId) return
+        this.lastSelectedId = currentId
+
+        if (!placementStore.selectedItem || !isPlaceable(placementStore.selectedItem)) {
+            this.removeGhost()
+            return
+        }
+
+        if (placementStore.moveOrigin) {
+            this.targetRotY = placementStore.moveOrigin.rotY
+            this.skipNextClick = true
+        }
+
+        this.buildGhost(placementStore.selectedItem)
+    }
+}

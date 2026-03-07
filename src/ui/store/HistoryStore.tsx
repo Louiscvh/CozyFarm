@@ -176,13 +176,10 @@ export function applyUndo() {
           !w.tilesFactory.isOccupied(c.x, c.z)
       )
 
-      console.log(allFree)
-
       if (!allFree) {
-          // Remet l'action dans la stack pour ne pas la perdre
-          // (ou simplement l'ignorer selon la préférence)
           return
       }
+
     if (action.onRestore) {
       w.scene.add(en)
       w.entities.push(en)

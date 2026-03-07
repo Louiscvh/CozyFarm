@@ -30,6 +30,7 @@ export interface UseOnTileUsage {
     readonly targetTileTypes: readonly string[]
     readonly actionId: string
     readonly consumeOnUse?: boolean  // défaut true
+    readonly allowOnCrop?: boolean   // ← ajout
 }
 
 /**

@@ -3,6 +3,7 @@ import * as THREE from "three"
 import { CameraController } from "./CameraController"
 import { World } from "../game/world/World"
 import { OutlineSystem } from "./OutlineSystem"
+import { soundManager } from "../game/system/SoundManager"
 
 export class Renderer {
   static instance: Renderer | null = null
@@ -20,7 +21,6 @@ export class Renderer {
   world: World
   outlineSystem: OutlineSystem
   mouse = new THREE.Vector2()
-  private ambientAudio: HTMLAudioElement | null = null
 
   constructor() {
     Renderer.instance = this
@@ -58,7 +58,7 @@ export class Renderer {
 
 
     // --- Ambiance sonore ---
-    this.setupAmbientAudio()
+     soundManager.initAmbient()
 
     // --- Input ---
     window.addEventListener("mousemove", e => {
@@ -70,18 +70,6 @@ export class Renderer {
     window.addEventListener("resize", this.onResize)
   }
 
-  private setupAmbientAudio() {
-    this.ambientAudio = new Audio("/sounds/ambient.mp3")
-    this.ambientAudio.loop = true
-    this.ambientAudio.volume = 0.5
-
-    const startOnce = () => this.ambientAudio?.play().catch(() => {})
-    const opts: AddEventListenerOptions = { once: true }
-
-    window.addEventListener("pointerdown", startOnce, opts)
-    window.addEventListener("keydown", startOnce, opts)
-    window.addEventListener("touchstart", startOnce, opts)
-  }
 
   private onResize = () => {
     const aspect = window.innerWidth / window.innerHeight

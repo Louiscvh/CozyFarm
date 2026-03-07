@@ -3,8 +3,8 @@ import { useEffect } from "react"
 import { Renderer } from "../../render/Renderer"
 import { usePlacement } from "../hooks/usePlacement"
 import { placementStore } from "../store/PlacementStore"
-import { useItemAction } from "../../game/interaction/useItemAction"
-import { useFarming } from "../../game/farming/useFarming"
+import { useFarming } from "../hooks/useFarming"
+import { useItemAction } from "../hooks/useItemAction"
 
 export function PlacementManager() {
     const r = Renderer.instance!

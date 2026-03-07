@@ -29,6 +29,7 @@ import "./InventoryBar.css"
 import { LettuceSeedItemDef } from "../../game/farming/items/LettuceSeedItem"
 import { LettuceItemDef } from "../../game/farming/items/LettuceItem"
 import { ShovelItemDef } from "../../game/farming/items/ShovelItem"
+import { WateringCanItemDef } from "../../game/farming/items/WateringCanItem"
 
 // ─── Tous les items (construction + farming) ──────────────────────────────────
 
@@ -54,7 +55,8 @@ const ALL_ITEMS: ItemDef[] = [
     { id: "bench", label: "Banc", icon: "🪑", usage: { kind: "placeable", entity: BenchEntity } },
     { id: "dirt_soil", label: "Champ", icon: "🥔", usage: { kind: "placeable", entity: DirtSoilEntity } },
     CarrotItemDef,
-    LettuceItemDef
+    LettuceItemDef,
+    WateringCanItemDef
 ]
 
 // ─── Pool defs (plaçables uniquement) ────────────────────────────────────────
@@ -88,6 +90,7 @@ inventoryStore.register([
     { id: "carrot", maxQty: 99, initialQty: 0 },
     { id: "lettuce", maxQty: 99, initialQty: 0 },      // ← farming
     { id: "shovel", maxQty: 1, infinite: true },
+    { id: "watering_can", maxQty: 1, infinite: true }
 ])
 
 const isInfinite = (item: ItemDef): boolean =>
