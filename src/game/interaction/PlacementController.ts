@@ -58,7 +58,6 @@ hoverCellMesh.visible = false
 
 const SOIL_SURFACE_Y = -0.05
 const HOVER_SURFACE_OFFSET_Y = 0.005
-const PLACEMENT_HOVER_Y = GRID_Y + HOVER_SURFACE_OFFSET_Y
 
 // ─── Controller ───────────────────────────────────────────────────────────────
 
@@ -347,7 +346,7 @@ export class PlacementController {
             ghostMat.color.set(canPlace ? 0x00ff00 : 0xff2244)
 
             highlightMesh.scale.set(footprint * this.world.cellSize, footprint * this.world.cellSize, 1)
-            highlightMesh.position.set(x, PLACEMENT_HOVER_Y, z)
+            highlightMesh.position.set(x, this.getSeedHoverY(cellX, cellZ), z)
             highlightMesh.material = canPlace ? highlightMatOk : highlightMatBad
             highlightMesh.visible = true
             revealGroup.position.set(x, GRID_Y + 0.0055, z)
@@ -471,7 +470,7 @@ export class PlacementController {
         let canPlace: boolean
         let x: number
         let z: number
-        let highlightY = PLACEMENT_HOVER_Y
+        let highlightY = this.getSeedHoverY(cellX, cellZ)
 
         if (this.isSeedGhostItem(item)) {
             const cropDef = ALL_CROPS.find(c => c.seedItemId === item.id)
@@ -500,6 +499,7 @@ export class PlacementController {
             x = pos.x
             z = pos.z
             canPlace = this.world.tilesFactory.canSpawn(placeCellX, placeCellZ, footprint)
+            highlightY = this.getSeedHoverY(cellX, cellZ)
             highlightMesh.scale.set(footprint * this.world.cellSize, footprint * this.world.cellSize, 1)
             revealGroup.position.set(x, GRID_Y + 0.0055, z)
             revealGroup.visible = true
