@@ -7,9 +7,8 @@ export class Time {
   static elapsed = Time.cycleSeconds / 2 // commence à midi
   static timeScale = 1
 
-  // transition VISUELLE uniquement
-  private static visualFrom: number | null = null
-  private static visualTo: number | null = null
+  // transition VISUELLE uniquement (offset temporaire par rapport au temps logique)
+  private static visualOffsetFrom: number | null = null
   private static visualT = 0
   private static visualDuration = 0
 
@@ -18,18 +17,12 @@ export class Time {
     this.delta = safeDt * this.timeScale
     this.elapsed += this.delta
 
-    if (this.visualFrom !== null && this.visualTo !== null) {
+    if (this.visualOffsetFrom !== null) {
       // Delta constant, indépendant du timeScale
       this.visualT += dt / this.visualDuration
 
       if (this.visualT >= 1) {
-        // ✅ Resynchroniser elapsed sur visualTo pour éviter le saut
-        // quand on repasse sur getLogicalDayT()
-        const cycles = Math.floor(this.elapsed / this.cycleSeconds)
-        this.elapsed = cycles * this.cycleSeconds + this.visualTo! * this.cycleSeconds
-
-        this.visualFrom = null
-        this.visualTo = null
+        this.visualOffsetFrom = null
         this.visualT = 0
       }
     }
@@ -48,12 +41,13 @@ export class Time {
   static getVisualDayT() {
     const base = this.getLogicalDayT()
 
-    if (this.visualFrom === null || this.visualTo === null) {
+    if (this.visualOffsetFrom === null) {
       return base
     }
 
-    const t = this.easeInOut(this.visualT)
-    return this.lerpAngle(this.visualFrom, this.visualTo, t)
+    const eased = this.easeInOut(this.visualT)
+    const remainingOffset = this.visualOffsetFrom * (1 - eased)
+    return this.wrap01(base + remainingOffset)
   }
 
   /** Aller à une heure cible (0..1) */
@@ -65,11 +59,12 @@ export class Time {
     const cycles = Math.floor(this.elapsed / this.cycleSeconds)
     this.elapsed = cycles * this.cycleSeconds + targetT * this.cycleSeconds
 
-    // 3. Lancer la transition visuelle depuis la position visuelle actuelle
-    this.visualFrom = currentVisualT
-    this.visualTo = targetT
+    // 3. Lancer la transition visuelle en conservant un offset qui s'atténue
+    // pendant que le temps logique continue d'avancer.
+    const baseStart = this.getLogicalDayT()
+    this.visualOffsetFrom = this.signedDelta(baseStart, currentVisualT)
     this.visualT = 0
-    this.visualDuration = transition
+    this.visualDuration = Math.max(0.001, transition)
   }
 
   // helpers
@@ -79,10 +74,14 @@ export class Time {
       : 1 - Math.pow(-2 * t + 2, 2) / 2
   }
 
-  private static lerpAngle(a: number, b: number, t: number) {
-    let d = b - a
+  private static signedDelta(from: number, to: number) {
+    let d = to - from
     if (d > 0.5) d -= 1
     if (d < -0.5) d += 1
-    return (a + d * t + 1) % 1
+    return d
+  }
+
+  private static wrap01(t: number) {
+    return ((t % 1) + 1) % 1
   }
 }
