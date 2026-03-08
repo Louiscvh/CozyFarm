@@ -8,36 +8,43 @@ type RollingDigitProps = {
 }
 
 const RollingDigit = ({ digit }: RollingDigitProps) => {
-  const [displayDigit, setDisplayDigit] = useState(digit)
-  const [offset, setOffset] = useState(0)
+  const [startDigit, setStartDigit] = useState(digit)
+  const [steps, setSteps] = useState(0)
   const [animate, setAnimate] = useState(false)
 
   useEffect(() => {
-    if (digit === displayDigit) return
+    if (digit === startDigit) return
 
-    const nextOffset = ((displayDigit - digit + 10) % 10) * 100
+    const nextSteps = (digit - startDigit + 10) % 10
 
     setAnimate(false)
-    setOffset(nextOffset)
+    setSteps(0)
 
     const id = window.requestAnimationFrame(() => {
       setAnimate(true)
-      setOffset(0)
-      setDisplayDigit(digit)
+      setSteps(nextSteps)
     })
 
     return () => window.cancelAnimationFrame(id)
-  }, [digit, displayDigit])
+  }, [digit, startDigit])
+
+  const handleTransitionEnd = () => {
+    if (!animate) return
+    setAnimate(false)
+    setSteps(0)
+    setStartDigit(digit)
+  }
 
   return (
     <span className="digit-window" aria-hidden="true">
       <span
         className={`digit-strip ${animate ? "is-animating" : ""}`}
-        style={{ transform: `translateY(-${offset}%)` }}
+        style={{ transform: `translateY(-${steps * 100}%)` }}
+        onTransitionEnd={handleTransitionEnd}
       >
         {Array.from({ length: 11 }, (_, i) => (
-          <span key={`${digit}-${i}`} className="digit-cell">
-            {(digit + i) % 10}
+          <span key={`${startDigit}-${i}`} className="digit-cell">
+            {(startDigit + i) % 10}
           </span>
         ))}
       </span>
