@@ -222,6 +222,11 @@ export class CropManager {
         return (this.hash01(cellX, cellZ, 11) - 0.5) * 0.45
     }
 
+    private uprootDirection(cellX: number, cellZ: number): { x: number; z: number } {
+        const angle = this.hash01(cellX, cellZ, 12) * Math.PI * 2
+        return { x: Math.cos(angle), z: Math.sin(angle) }
+    }
+
     private applyScale(instance: CropInstance): void {
         if (!instance.mesh) return
             ; (instance.mesh as unknown as THREE.Object3D).scale.setScalar(
@@ -234,15 +239,35 @@ export class CropManager {
 
         const root = instance.mesh as unknown as THREE.Object3D & { userData: Record<string, unknown> }
         const t = instance.smoothT
-        const jump = Math.sin(t * Math.PI) * this.world.cellSize * 0.9
+        const arcHeight = this.world.cellSize * 0.32
+        const arc = 4 * t * (1 - t)
 
         const baseY = typeof root.userData.uprootBaseY === "number" ? root.userData.uprootBaseY as number : root.position.y
-        root.userData.uprootBaseY = baseY
+        const baseX = typeof root.userData.uprootBaseX === "number" ? root.userData.uprootBaseX as number : root.position.x
+        const baseZ = typeof root.userData.uprootBaseZ === "number" ? root.userData.uprootBaseZ as number : root.position.z
 
-        root.position.y = baseY + jump
+        root.userData.uprootBaseY = baseY
+        root.userData.uprootBaseX = baseX
+        root.userData.uprootBaseZ = baseZ
+
+        const savedDirX = typeof root.userData.uprootDirX === "number" ? root.userData.uprootDirX as number : null
+        const savedDirZ = typeof root.userData.uprootDirZ === "number" ? root.userData.uprootDirZ as number : null
+        const dir = savedDirX !== null && savedDirZ !== null
+            ? { x: savedDirX, z: savedDirZ }
+            : this.uprootDirection(instance.cellX, instance.cellZ)
+        root.userData.uprootDirX = dir.x
+        root.userData.uprootDirZ = dir.z
+
+        const driftDistance = this.world.cellSize * 0.2
+        root.position.set(
+            baseX + dir.x * driftDistance * t,
+            baseY + arcHeight * arc,
+            baseZ + dir.z * driftDistance * t,
+        )
         root.rotation.y += this.uprootSpin(instance.cellX, instance.cellZ)
 
-        this.setOpacity(root, 1 - t)
+        const fade = 1 - Math.max(0, (t - 0.45) / 0.55)
+        this.setOpacity(root, fade)
     }
 
     private setOpacity(root: THREE.Object3D, opacity: number): void {
