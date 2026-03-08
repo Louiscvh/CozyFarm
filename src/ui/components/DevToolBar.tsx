@@ -54,8 +54,8 @@ export const DevToolBar = () => {
     World.current?.tilesFactory.toggleDebugMarkers()
     setFootprintVisible(v => !v)
   }
-  const goDay   = () => Time.jumpToDayT(0.5, 2)
-  const goNight = () => Time.jumpToDayT(0.0, 2)
+  const goDay   = () => Time.jumpToDayT(0.5, 1.2)
+  const goNight = () => Time.jumpToDayT(0.0, 1.2)
 
   const toggleRain = () => {
     World.current?.weather.toggleRain()

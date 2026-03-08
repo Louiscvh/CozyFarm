@@ -4,7 +4,7 @@ import { formatGameTime } from "../hooks/useGameTime"
 import "./GameClock.css"
 
 export const GameClock = () => {
-  const elapsed = useGameTime(500)
+  const elapsed = useGameTime({ source: "visual", smooth: true })
   const timeStr = formatGameTime(elapsed)
 
   return <p className="game-clock">{timeStr}</p>
