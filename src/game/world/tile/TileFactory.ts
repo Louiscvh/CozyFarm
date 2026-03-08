@@ -19,6 +19,7 @@ import { Tree3Entity } from "../../entity/entities/Tree3"
 import { TreeOrangeEntity } from "../../entity/entities/TreeOrange"
 import { TulipEntity } from "../../entity/entities/Tulip"
 import { GrassEntity } from "../../entity/entities/Grass"
+import { WaterSplashParticles } from "../../system/WaterSplashParticles"
 
 export interface DecorCategory { types: Entity[]; density: number }
 export interface FixedEntityDef { def: Entity; tileX: number; tileZ: number; size: number }
@@ -57,12 +58,6 @@ interface SoilTransition {
     onDone?: () => void
 }
 
-interface WaterParticle {
-    mesh: THREE.Mesh
-    velocity: THREE.Vector3
-    age: number
-    lifetime: number
-}
 
 export class TileFactory {
     private scene: THREE.Scene
@@ -94,15 +89,7 @@ export class TileFactory {
     private readonly TRANSITION_SPEED = 1   // ~125ms
 
     // ── Water particles ───────────────────────────────────────────
-    private waterParticles: WaterParticle[] = []
-    private readonly waterParticleGeometry = new THREE.SphereGeometry(0.045, 6, 6)
-    private readonly waterParticleMaterial = new THREE.MeshStandardMaterial({
-        color: 0x5ab8ff,
-        roughness: 0.2,
-        metalness: 0,
-        transparent: true,
-        opacity: 0.9,
-    })
+    private readonly waterSplashParticles: WaterSplashParticles
 
     constructor(scene: THREE.Scene, worldSize: number, tileSize: number) {
         this.scene = scene
@@ -112,6 +99,7 @@ export class TileFactory {
         this.worldSizeInCells = worldSize * 2
         this.generateGrid()
         this.initSoilMesh()
+        this.waterSplashParticles = new WaterSplashParticles(this.scene, this.cellSize, this.worldSizeInCells)
     }
 
     waterCell(cellX: number, cellZ: number): boolean {
@@ -123,59 +111,8 @@ export class TileFactory {
         this.wateredCells.add(k)
         this.soilMesh.setColorAt(slot, this.SOIL_COLOR_WATERED)
         this.soilMesh.instanceColor!.needsUpdate = true
-        this.spawnWaterParticles(cellX, cellZ)
+        this.waterSplashParticles.spawnAtCell(cellX, cellZ)
         return true
-    }
-
-    private spawnWaterParticles(cellX: number, cellZ: number): void {
-        const halfCells = this.worldSizeInCells / 2
-        const baseX = (cellX - halfCells + 0.5) * this.cellSize
-        const baseZ = (cellZ - halfCells + 0.5) * this.cellSize
-
-        for (let i = 0; i < 10; i++) {
-            const mesh = new THREE.Mesh(this.waterParticleGeometry, this.waterParticleMaterial.clone())
-            const spread = 0.12
-            mesh.position.set(
-                baseX + (Math.random() - 0.5) * spread,
-                0.2 + Math.random() * 0.08,
-                baseZ + (Math.random() - 0.5) * spread,
-            )
-            mesh.scale.setScalar(0.8 + Math.random() * 0.45)
-            this.scene.add(mesh)
-
-            this.waterParticles.push({
-                mesh,
-                velocity: new THREE.Vector3(
-                    (Math.random() - 0.5) * 0.55,
-                    0.75 + Math.random() * 0.6,
-                    (Math.random() - 0.5) * 0.55,
-                ),
-                age: 0,
-                lifetime: 0.38 + Math.random() * 0.2,
-            })
-        }
-    }
-
-    private updateWaterParticles(deltaTime: number): void {
-        if (this.waterParticles.length === 0) return
-
-        const gravity = 2.8
-        for (let i = this.waterParticles.length - 1; i >= 0; i--) {
-            const particle = this.waterParticles[i]
-            particle.age += deltaTime
-            particle.velocity.y -= gravity * deltaTime
-            particle.mesh.position.addScaledVector(particle.velocity, deltaTime)
-
-            const lifeRatio = 1 - (particle.age / particle.lifetime)
-            const material = particle.mesh.material as THREE.MeshStandardMaterial
-            material.opacity = Math.max(0, lifeRatio * 0.9)
-
-            if (particle.age >= particle.lifetime) {
-                this.scene.remove(particle.mesh)
-                material.dispose()
-                this.waterParticles.splice(i, 1)
-            }
-        }
     }
 
     unwaterCell(cellX: number, cellZ: number): void {
@@ -260,7 +197,7 @@ export class TileFactory {
     // ── Tick transitions — à appeler depuis World.update ───────────
 
     tickTransitions(deltaTime: number): void {
-        this.updateWaterParticles(deltaTime)
+        this.waterSplashParticles.update(deltaTime)
 
         if (this.transitions.size === 0) return
 
