@@ -102,7 +102,8 @@ export class CropManager {
         this._harvestingInstances.add(instance)
 
         const currentScale = instance.currentScale > 0 ? instance.currentScale : (instance.currentPhase.modelScale ?? 1)
-        instance.startTransition("uproot", currentScale, 0, () => {
+        // Sur un déracinage: on garde l'échelle constante, le fade se fait uniquement en opacité.
+        instance.startTransition("uproot", currentScale, currentScale, () => {
             this.disposeMesh(instance)
             this._harvestingInstances.delete(instance)
         })
@@ -239,7 +240,7 @@ export class CropManager {
 
         const root = instance.mesh as unknown as THREE.Object3D & { userData: Record<string, unknown> }
         const t = instance.smoothT
-        const arcHeight = this.world.cellSize * 0.32
+        const arcHeight = this.world.cellSize * 0.42
         const arc = 4 * t * (1 - t)
 
         const baseY = typeof root.userData.uprootBaseY === "number" ? root.userData.uprootBaseY as number : root.position.y
