@@ -207,12 +207,12 @@ export class TileFactory {
 
         const hsl = { h: 0, s: 0, l: 0 }
         base.getHSL(hsl)
-        hsl.h = (hsl.h + (n - 0.5) * 0.02 + 1) % 1
-        hsl.s = THREE.MathUtils.clamp(hsl.s + (n - 0.5) * 0.08, 0, 1)
-        hsl.l = THREE.MathUtils.clamp(hsl.l + (n - 0.5) * 0.10, 0, 1)
+        hsl.h = (hsl.h + (n - 0.5) * 0.04 + 1) % 1
+        hsl.s = THREE.MathUtils.clamp(hsl.s + (n - 0.5) * 0.14, 0, 1)
+        hsl.l = THREE.MathUtils.clamp(hsl.l + (n - 0.5) * 0.18, 0, 1)
 
         const tinted = new THREE.Color().setHSL(hsl.h, hsl.s, hsl.l)
-        return tinted.lerp(new THREE.Color("#ffffff"), 0.72)
+        return tinted.lerp(new THREE.Color("#ffffff"), 0.62)
     }
 
     private generateTerrainTexture(type: TileType): THREE.CanvasTexture {
@@ -265,20 +265,23 @@ export class TileFactory {
         } else if (type === "stone") {
             ctx.fillStyle = "#8a8a8a"
             ctx.fillRect(0, 0, size, size)
-            for (let y = 0; y < size; y++) {
-                for (let x = 0; x < size; x++) {
-                    const n = this.textureNoise(x, y, 5)
-                    const shade = Math.floor(110 + n * 80)
-                    ctx.fillStyle = `rgb(${shade}, ${shade}, ${shade + 6})`
-                    ctx.fillRect(x, y, 1, 1)
-                }
+
+            for (let i = 0; i < 48; i++) {
+                const x = Math.random() * size
+                const y = Math.random() * size
+                const r = 8 + Math.random() * 18
+                ctx.fillStyle = Math.random() > 0.5 ? "rgba(160, 160, 160, 0.22)" : "rgba(108, 108, 108, 0.20)"
+                ctx.beginPath()
+                ctx.arc(x, y, r, 0, Math.PI * 2)
+                ctx.fill()
             }
+
             for (let i = 0; i < 22; i++) {
                 const x0 = Math.random() * size
                 const y0 = Math.random() * size
                 const len = 20 + Math.random() * 45
                 const angle = Math.random() * Math.PI * 2
-                ctx.strokeStyle = "rgba(70, 70, 70, 0.6)"
+                ctx.strokeStyle = "rgba(70, 70, 70, 0.58)"
                 ctx.lineWidth = 1.5
                 ctx.beginPath()
                 ctx.moveTo(x0, y0)
