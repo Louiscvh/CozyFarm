@@ -363,11 +363,8 @@ export class PlacementController {
             this._ghostToken++
         }
 
-        // Maintient le hover pendant le chargement async
-        if (placementStore.hoveredCell) {
-            const { cellX, cellZ } = placementStore.hoveredCell
-            this.updateHoverCursor(cellX, cellZ)
-        }
+        // Ne pas afficher le curseur hover blanc pendant ce chargement async,
+        // sinon il flash brièvement après la plantation en changeant de cellule.
 
         const token = ++this._ghostToken
         let root: THREE.Object3D
