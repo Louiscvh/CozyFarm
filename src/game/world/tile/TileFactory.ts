@@ -200,67 +200,96 @@ export class TileFactory {
     }
 
     private generateTerrainTexture(type: TileType): THREE.CanvasTexture {
-        const size = 128
+        const size = 256
         const canvas = document.createElement("canvas")
         canvas.width = size
         canvas.height = size
         const ctx = canvas.getContext("2d")!
-        const image = ctx.createImageData(size, size)
-        const data = image.data
 
-        for (let y = 0; y < size; y++) {
-            for (let x = 0; x < size; x++) {
-                const i = (y * size + x) * 4
-                const n1 = this.textureNoise(x, y, 1)
-                const n2 = this.textureNoise(x, y, 7)
-                const n3 = this.textureNoise(x, y, 13)
-
-                let r = 120
-                let g = 120
-                let b = 120
-
-                if (type === "grass") {
-                    const blade = (Math.sin((x + n2 * 8) * 0.55) + 1) * 0.5
-                    const variation = n1 * 36 - 18
-                    r = 55 + variation * 0.3
-                    g = 112 + variation + blade * 24
-                    b = 48 + variation * 0.25
-                } else if (type === "sand") {
-                    const grain = n1 * 30
-                    const dune = (Math.sin((x + y) * 0.08 + n3 * 2) + 1) * 8
-                    r = 200 + grain + dune
-                    g = 166 + grain * 0.7 + dune * 0.6
-                    b = 108 + grain * 0.5
-                } else if (type === "stone") {
-                    const grain = n1 * 42
-                    const crack = n2 > 0.9 ? -25 : 0
-                    r = 106 + grain * 0.8 + crack
-                    g = 104 + grain * 0.75 + crack
-                    b = 108 + grain * 0.9 + crack
-                } else if (type === "water") {
-                    const ripple = Math.sin((x * 0.24) + (y * 0.11) + n2 * 3)
-                    const shimmer = Math.max(ripple, 0) * 24
-                    r = 28 + n1 * 8 + shimmer * 0.2
-                    g = 102 + n2 * 16 + shimmer * 0.45
-                    b = 152 + n3 * 28 + shimmer
+        if (type === "grass") {
+            ctx.fillStyle = "#72bf63"
+            ctx.fillRect(0, 0, size, size)
+            for (let i = 0; i < 2400; i++) {
+                const x = Math.random() * size
+                const y = Math.random() * size
+                const h = 3 + Math.random() * 6
+                const tilt = (Math.random() - 0.5) * 2
+                ctx.strokeStyle = Math.random() > 0.4 ? "#5aa74e" : "#87d777"
+                ctx.lineWidth = 1
+                ctx.beginPath()
+                ctx.moveTo(x, y)
+                ctx.lineTo(x + tilt, y - h)
+                ctx.stroke()
+            }
+        } else if (type === "sand") {
+            ctx.fillStyle = "#e8cb8e"
+            ctx.fillRect(0, 0, size, size)
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
+                    const n = this.textureNoise(x, y, 3)
+                    if (n > 0.7) {
+                        const alpha = (n - 0.7) * 1.8
+                        ctx.fillStyle = `rgba(195, 160, 104, ${alpha.toFixed(3)})`
+                        ctx.fillRect(x, y, 1, 1)
+                    }
                 }
-
-                data[i] = Math.max(0, Math.min(255, Math.round(r)))
-                data[i + 1] = Math.max(0, Math.min(255, Math.round(g)))
-                data[i + 2] = Math.max(0, Math.min(255, Math.round(b)))
-                data[i + 3] = 255
+            }
+            for (let i = 0; i < 30; i++) {
+                const y = (i / 30) * size
+                ctx.strokeStyle = "rgba(214, 186, 128, 0.35)"
+                ctx.lineWidth = 2
+                ctx.beginPath()
+                for (let x = 0; x < size; x += 8) {
+                    const dy = Math.sin(x * 0.05 + i) * 2
+                    if (x === 0) ctx.moveTo(x, y + dy)
+                    else ctx.lineTo(x, y + dy)
+                }
+                ctx.stroke()
+            }
+        } else if (type === "stone") {
+            ctx.fillStyle = "#8a8a8a"
+            ctx.fillRect(0, 0, size, size)
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
+                    const n = this.textureNoise(x, y, 5)
+                    const shade = Math.floor(110 + n * 80)
+                    ctx.fillStyle = `rgb(${shade}, ${shade}, ${shade + 6})`
+                    ctx.fillRect(x, y, 1, 1)
+                }
+            }
+            for (let i = 0; i < 22; i++) {
+                const x0 = Math.random() * size
+                const y0 = Math.random() * size
+                const len = 20 + Math.random() * 45
+                const angle = Math.random() * Math.PI * 2
+                ctx.strokeStyle = "rgba(70, 70, 70, 0.6)"
+                ctx.lineWidth = 1.5
+                ctx.beginPath()
+                ctx.moveTo(x0, y0)
+                ctx.lineTo(x0 + Math.cos(angle) * len, y0 + Math.sin(angle) * len)
+                ctx.stroke()
+            }
+        } else if (type === "water") {
+            ctx.fillStyle = "#4fadd9"
+            ctx.fillRect(0, 0, size, size)
+            for (let y = 0; y < size; y += 3) {
+                ctx.strokeStyle = "rgba(180, 235, 255, 0.22)"
+                ctx.lineWidth = 1
+                ctx.beginPath()
+                for (let x = 0; x < size; x += 6) {
+                    const dy = Math.sin(x * 0.09 + y * 0.15) * 2
+                    if (x === 0) ctx.moveTo(x, y + dy)
+                    else ctx.lineTo(x, y + dy)
+                }
+                ctx.stroke()
             }
         }
-
-        ctx.putImageData(image, 0, 0)
 
         const texture = new THREE.CanvasTexture(canvas)
         texture.colorSpace = THREE.SRGBColorSpace
         texture.wrapS = THREE.RepeatWrapping
         texture.wrapT = THREE.RepeatWrapping
-
-        const repeat = type === "water" ? 2 : 4
-        texture.repeat.set(repeat, repeat)
+        texture.repeat.set(1, 1)
         texture.needsUpdate = true
 
         return texture
@@ -485,12 +514,12 @@ export class TileFactory {
         const indexPerType: Record<string, number> = { grass: 0, water: 0, sand: 0, stone: 0 }
 
         for (const type of TILE_TYPES) {
-            const { color, roughness, metalness } = TILE_VISUALS[type]
+            const { roughness, metalness } = TILE_VISUALS[type]
             const geometry = new THREE.BoxGeometry(this.cellSize, 0.5, this.cellSize)
             geometry.translate(0, -0.25, 0)
             const texture = this.generateTerrainTexture(type)
             const material = new THREE.MeshStandardMaterial({
-                color,
+                color: "#ffffff",
                 roughness,
                 metalness,
                 map: texture,
