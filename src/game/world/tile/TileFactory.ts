@@ -319,6 +319,7 @@ export class TileFactory {
         const slot = this.soilSlots.get(k)
         if (slot === undefined) return
 
+        this.tillParticles.spawnAtCell(cellX, cellZ)
         this.transitions.delete(k)
 
         // ← Reset couleur immédiatement, avant que le slot soit réutilisé
