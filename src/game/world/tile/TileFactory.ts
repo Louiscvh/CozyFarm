@@ -20,6 +20,7 @@ import { TreeOrangeEntity } from "../../entity/entities/TreeOrange"
 import { TulipEntity } from "../../entity/entities/Tulip"
 import { GrassEntity } from "../../entity/entities/Grass"
 import { WaterSplashParticles } from "../../system/WaterSplashParticles"
+import { TillParticles } from "../../system/TillParticles"
 
 export interface DecorCategory { types: Entity[]; density: number }
 export interface FixedEntityDef { def: Entity; tileX: number; tileZ: number; size: number }
@@ -99,6 +100,7 @@ export class TileFactory {
 
     // ── Water particles ───────────────────────────────────────────
     private readonly waterSplashParticles: WaterSplashParticles
+    private readonly tillParticles: TillParticles
 
     constructor(scene: THREE.Scene, worldSize: number, tileSize: number) {
         this.scene = scene
@@ -109,6 +111,7 @@ export class TileFactory {
         this.generateGrid()
         this.initSoilMesh()
         this.waterSplashParticles = new WaterSplashParticles(this.scene, this.cellSize, this.worldSizeInCells)
+        this.tillParticles = new TillParticles(this.scene, this.cellSize, this.worldSizeInCells)
     }
 
     waterCell(cellX: number, cellZ: number): boolean {
@@ -229,6 +232,7 @@ export class TileFactory {
 
     tickTransitions(deltaTime: number): void {
         this.waterSplashParticles.update(deltaTime)
+        this.tillParticles.update(deltaTime)
         this.updateSoilWaterColorTransitions(deltaTime)
 
         if (this.transitions.size === 0) return
@@ -284,6 +288,7 @@ export class TileFactory {
         const k = this.cellKey(cellX, cellZ)
         if (this.soilSlots.has(k)) return false
         if (this.occupiedCells.has(k)) return false
+        if (this.getTileTypeAtCell(cellX, cellZ) !== "grass") return false
 
         this.markOccupied(cellX, cellZ, 1)
 
@@ -304,15 +309,18 @@ export class TileFactory {
             },
         })
 
+        this.tillParticles.spawnAtCell(cellX, cellZ)
+
         return true
     }
 
-    untillCell(cellX: number, cellZ: number): void {
+    untillCell(cellX: number, cellZ: number): boolean {
         const k = this.cellKey(cellX, cellZ)
         const slot = this.soilSlots.get(k)
-        if (slot === undefined) return
+        if (slot === undefined) return false
+        if (this.transitions.has(k)) return false
 
-        this.transitions.delete(k)
+        this.tillParticles.spawnAtCell(cellX, cellZ)
 
         // ← Reset couleur immédiatement, avant que le slot soit réutilisé
         this.wateredCells.delete(k)
@@ -334,6 +342,8 @@ export class TileFactory {
                 this.markFree(cellX, cellZ, 1)
             },
         })
+
+        return true
     }
 
     isSoil(cellX: number, cellZ: number): boolean {
