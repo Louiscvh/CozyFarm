@@ -90,6 +90,26 @@ export class CropManager {
         return instance
     }
 
+    /**
+     * Déplante un crop, qu'il soit en pousse ou mature,
+     * puis joue une animation de projection vers le haut + fade out.
+     */
+    uproot(cellX: number, cellZ: number): CropInstance | null {
+        const instance = this.crops.get(this.key(cellX, cellZ))
+        if (!instance) return null
+
+        this.crops.delete(this.key(cellX, cellZ))
+        this._harvestingInstances.add(instance)
+
+        const currentScale = instance.currentScale > 0 ? instance.currentScale : (instance.currentPhase.modelScale ?? 1)
+        instance.startTransition("uproot", currentScale, 0, () => {
+            this.disposeMesh(instance)
+            this._harvestingInstances.delete(instance)
+        })
+
+        return instance
+    }
+
     getMeshes(): THREE.Mesh[] {
         return Array.from(this.crops.values())
             .map(c => c.mesh)
@@ -101,7 +121,8 @@ export class CropManager {
     update(deltaTime: number, growthRate: number, wateredMult: number): void {
         for (const inst of this._harvestingInstances) {
             inst.tickTransition(deltaTime)
-            this.applyScale(inst)   // ← manquait
+            this.applyScale(inst)
+            if (inst.transitionType === "uproot") this.applyUprootEffect(inst)
             if (!inst.isTransition) this._harvestingInstances.delete(inst)
         }
 
@@ -197,11 +218,46 @@ export class CropManager {
         }
     }
 
+    private uprootSpin(cellX: number, cellZ: number): number {
+        return (this.hash01(cellX, cellZ, 11) - 0.5) * 0.45
+    }
+
     private applyScale(instance: CropInstance): void {
         if (!instance.mesh) return
             ; (instance.mesh as unknown as THREE.Object3D).scale.setScalar(
                 Math.max(0, instance.currentScale)
             )
+    }
+
+    private applyUprootEffect(instance: CropInstance): void {
+        if (!instance.mesh) return
+
+        const root = instance.mesh as unknown as THREE.Object3D & { userData: Record<string, unknown> }
+        const t = instance.smoothT
+        const jump = Math.sin(t * Math.PI) * this.world.cellSize * 0.9
+
+        const baseY = typeof root.userData.uprootBaseY === "number" ? root.userData.uprootBaseY as number : root.position.y
+        root.userData.uprootBaseY = baseY
+
+        root.position.y = baseY + jump
+        root.rotation.y += this.uprootSpin(instance.cellX, instance.cellZ)
+
+        this.setOpacity(root, 1 - t)
+    }
+
+    private setOpacity(root: THREE.Object3D, opacity: number): void {
+        const clamped = THREE.MathUtils.clamp(opacity, 0, 1)
+        root.traverse(obj => {
+            const mesh = obj as THREE.Mesh
+            if (!mesh.isMesh) return
+            const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+            mats.forEach(mat => {
+                const m = mat as THREE.Material & { transparent?: boolean; opacity?: number; depthWrite?: boolean }
+                m.transparent = clamped < 1
+                m.opacity = clamped
+                m.depthWrite = clamped > 0.2
+            })
+        })
     }
 
     private spawnMesh(instance: CropInstance, transitionType: "spawn" | "phase"): void {

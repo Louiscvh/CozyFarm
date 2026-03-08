@@ -39,6 +39,16 @@ export function useFarming() {
             return world.tilesFactory.untillCell(ctx.cellX, ctx.cellZ)
         })
 
+        itemActionRegistry.registerTileAction("farming:uproot_or_untill", (ctx) => {
+            const world = World.current
+            if (!world) return false
+
+            const uprooted = world.cropManager.uproot(ctx.cellX, ctx.cellZ)
+            if (uprooted) return true
+
+            return world.tilesFactory.untillCell(ctx.cellX, ctx.cellZ)
+        })
+
         itemActionRegistry.registerTileAction("farming:water", ({ cellX, cellZ }) => {
             const world = World.current
             if (!world) return false
