@@ -31,8 +31,8 @@ const groundPlane = new THREE.Mesh(
 )
 groundPlane.rotation.x = -Math.PI / 2
 
-const highlightMatOk = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.35, depthWrite: false, depthTest: false })
-const highlightMatBad = new THREE.MeshBasicMaterial({ color: 0xff2244, transparent: true, opacity: 0.35, depthWrite: false, depthTest: false })
+const highlightMatOk = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.35, depthWrite: false, depthTest: true })
+const highlightMatBad = new THREE.MeshBasicMaterial({ color: 0xff2244, transparent: true, opacity: 0.35, depthWrite: false, depthTest: true })
 const highlightMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), highlightMatOk)
 highlightMesh.rotation.x = -Math.PI / 2
 highlightMesh.position.y = 0.055
@@ -47,6 +47,9 @@ const hoverBorderMat = new LineMaterial({
 const hoverCellMesh = new Line2(hoverBorderGeo, hoverBorderMat)
 hoverCellMesh.position.y = GRID_Y + 0.002
 hoverCellMesh.visible = false
+
+const SOIL_SURFACE_Y = -0.05
+const HOVER_SURFACE_OFFSET_Y = 0.005
 
 // ─── Controller ───────────────────────────────────────────────────────────────
 
@@ -142,6 +145,11 @@ export class PlacementController {
     private canPlaceSeed(cellX: number, cellZ: number): boolean {
         return this.world.tilesFactory.isSoil(cellX, cellZ)
             && !this.world.cropManager.hasCrop(cellX, cellZ)
+    }
+
+    private getSeedHoverY(cellX: number, cellZ: number): number {
+        const baseY = this.world.tilesFactory.isSoil(cellX, cellZ) ? SOIL_SURFACE_Y : GRID_Y
+        return baseY + HOVER_SURFACE_OFFSET_Y
     }
 
     // ─── Helpers de coordonnées ───────────────────────────────────────────────
@@ -264,7 +272,7 @@ export class PlacementController {
             this.ghost.rotation.y = this.currentRotY
 
             if (highlightMesh.visible) {
-                highlightMesh.position.set(this.currentPos.x, GRID_Y, this.currentPos.z)
+                highlightMesh.position.set(this.currentPos.x, highlightMesh.position.y, this.currentPos.z)
             }
         }
         animate()
@@ -395,13 +403,14 @@ export class PlacementController {
             const { cellX, cellZ } = placementStore.hoveredCell
             const { x, z } = this.cellToWorld(cellX, cellZ, 1)
             const canPlace = this.canPlaceSeed(cellX, cellZ)
+            const hoverY = this.getSeedHoverY(cellX, cellZ)
 
             this.targetPos.set(x, this.yOffset, z)
             this.currentPos.copy(this.targetPos)
             ghostMat.color.set(canPlace ? 0x00ff00 : 0xff2244)
 
             highlightMesh.scale.set(this.world.cellSize, this.world.cellSize, 1)
-            highlightMesh.position.set(x, GRID_Y, z)
+            highlightMesh.position.set(x, hoverY, z)
             highlightMesh.material = canPlace ? highlightMatOk : highlightMatBad
             highlightMesh.visible = true
 
@@ -450,6 +459,7 @@ export class PlacementController {
         let canPlace: boolean
         let x: number
         let z: number
+        let highlightY = GRID_Y
 
         if (this.isSeedGhostItem(item)) {
             const cropDef = ALL_CROPS.find(c => c.seedItemId === item.id)
@@ -459,6 +469,7 @@ export class PlacementController {
             x = pos.x
             z = pos.z
             canPlace = this.canPlaceSeed(cellX, cellZ)
+            highlightY = this.getSeedHoverY(cellX, cellZ)
             highlightMesh.scale.set(this.world.cellSize, this.world.cellSize, 1)
 
             if (showGrid) {
@@ -488,7 +499,7 @@ export class PlacementController {
         ghostMat.color.set(canPlace ? 0x00ff00 : 0xff2244)
 
         highlightMesh.visible = true
-        highlightMesh.position.set(x, GRID_Y, z)
+        highlightMesh.position.set(x, highlightY, z)
         highlightMesh.material = canPlace ? highlightMatOk : highlightMatBad
     }
 
