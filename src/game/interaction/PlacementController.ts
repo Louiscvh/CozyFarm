@@ -49,6 +49,7 @@ hoverCellMesh.position.y = GRID_Y + 0.002
 hoverCellMesh.visible = false
 
 const SOIL_SURFACE_Y = -0.05
+const HOVER_SURFACE_OFFSET_Y = 0.01
 
 // ─── Controller ───────────────────────────────────────────────────────────────
 
@@ -147,7 +148,8 @@ export class PlacementController {
     }
 
     private getSeedHoverY(cellX: number, cellZ: number): number {
-        return this.world.tilesFactory.isSoil(cellX, cellZ) ? SOIL_SURFACE_Y : GRID_Y
+        const baseY = this.world.tilesFactory.isSoil(cellX, cellZ) ? SOIL_SURFACE_Y : GRID_Y
+        return baseY + HOVER_SURFACE_OFFSET_Y
     }
 
     // ─── Helpers de coordonnées ───────────────────────────────────────────────
