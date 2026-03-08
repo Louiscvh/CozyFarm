@@ -49,7 +49,7 @@ hoverCellMesh.position.y = GRID_Y + 0.002
 hoverCellMesh.visible = false
 
 const SOIL_SURFACE_Y = -0.05
-const HOVER_SURFACE_OFFSET_Y = 0.01
+const HOVER_SURFACE_OFFSET_Y = 0.005
 
 // ─── Controller ───────────────────────────────────────────────────────────────
 
