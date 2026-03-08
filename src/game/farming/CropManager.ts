@@ -282,7 +282,7 @@ export class CropManager {
         root.rotation.z = baseRotZ + dir.x * tiltAmount
         root.rotation.y = baseRotY + (travelYaw - baseRotY) * 0.35 + this.uprootSpin(instance.cellX, instance.cellZ) * t
 
-        const fade = 1 - Math.max(0, (t - 0.45) / 0.55)
+        const fade = 1 - t
         this.setOpacity(root, fade)
     }
 
