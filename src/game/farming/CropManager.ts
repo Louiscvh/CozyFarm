@@ -220,7 +220,7 @@ export class CropManager {
     }
 
     private uprootSpin(cellX: number, cellZ: number): number {
-        return (this.hash01(cellX, cellZ, 11) - 0.5) * 0.45
+        return (this.hash01(cellX, cellZ, 11) - 0.5) * 1.1
     }
 
     private uprootDirection(cellX: number, cellZ: number): { x: number; z: number } {
@@ -240,16 +240,23 @@ export class CropManager {
 
         const root = instance.mesh as unknown as THREE.Object3D & { userData: Record<string, unknown> }
         const t = instance.smoothT
-        const arcHeight = this.world.cellSize * 0.42
+        const baseArcHeight = this.world.cellSize * 0.42
         const arc = 4 * t * (1 - t)
 
         const baseY = typeof root.userData.uprootBaseY === "number" ? root.userData.uprootBaseY as number : root.position.y
         const baseX = typeof root.userData.uprootBaseX === "number" ? root.userData.uprootBaseX as number : root.position.x
         const baseZ = typeof root.userData.uprootBaseZ === "number" ? root.userData.uprootBaseZ as number : root.position.z
+        const baseRotX = typeof root.userData.uprootBaseRotX === "number" ? root.userData.uprootBaseRotX as number : root.rotation.x
+        const baseRotY = typeof root.userData.uprootBaseRotY === "number" ? root.userData.uprootBaseRotY as number : root.rotation.y
+        const baseRotZ = typeof root.userData.uprootBaseRotZ === "number" ? root.userData.uprootBaseRotZ as number : root.rotation.z
+        const arcBoost = typeof root.userData.uprootArcBoost === "number" ? root.userData.uprootArcBoost as number : 0
 
         root.userData.uprootBaseY = baseY
         root.userData.uprootBaseX = baseX
         root.userData.uprootBaseZ = baseZ
+        root.userData.uprootBaseRotX = baseRotX
+        root.userData.uprootBaseRotY = baseRotY
+        root.userData.uprootBaseRotZ = baseRotZ
 
         const savedDirX = typeof root.userData.uprootDirX === "number" ? root.userData.uprootDirX as number : null
         const savedDirZ = typeof root.userData.uprootDirZ === "number" ? root.userData.uprootDirZ as number : null
@@ -260,12 +267,20 @@ export class CropManager {
         root.userData.uprootDirZ = dir.z
 
         const driftDistance = this.world.cellSize * 0.2
+        const arcHeight = baseArcHeight + arcBoost
         root.position.set(
             baseX + dir.x * driftDistance * t,
             baseY + arcHeight * arc,
             baseZ + dir.z * driftDistance * t,
         )
-        root.rotation.y += this.uprootSpin(instance.cellX, instance.cellZ)
+
+        const travelYaw = Math.atan2(dir.x, dir.z)
+        const maxTilt = Math.PI * 0.2
+        const tiltT = Math.sin(t * Math.PI)
+        const tiltAmount = maxTilt * tiltT
+        root.rotation.x = baseRotX - dir.z * tiltAmount
+        root.rotation.z = baseRotZ + dir.x * tiltAmount
+        root.rotation.y = baseRotY + (travelYaw - baseRotY) * 0.35 + this.uprootSpin(instance.cellX, instance.cellZ) * t
 
         const fade = 1 - Math.max(0, (t - 0.45) / 0.55)
         this.setOpacity(root, fade)
@@ -348,6 +363,7 @@ export class CropManager {
                 model.userData.isCrop = true
                 model.userData.cellX = instance.cellX
                 model.userData.cellZ = instance.cellZ
+                model.userData.uprootArcBoost = Math.max(0, -cropYOffset) * 0.9
 
                 model.traverse(child => {
                     if (!(child as THREE.Mesh).isMesh) return
@@ -392,6 +408,7 @@ export class CropManager {
         mesh.userData.isCrop = true
         mesh.userData.cellX = instance.cellX
         mesh.userData.cellZ = instance.cellZ
+        mesh.userData.uprootArcBoost = Math.max(0, -cropYOffset) * 0.9
 
         const h = phase.height ?? 0.05
         mesh.position.set(pos.x, h / 2 + cropYOffset, pos.z)
