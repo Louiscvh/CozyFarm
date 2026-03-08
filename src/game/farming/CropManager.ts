@@ -90,6 +90,27 @@ export class CropManager {
         return instance
     }
 
+    /**
+     * Déplante un crop, qu'il soit en pousse ou mature,
+     * puis joue une animation de projection vers le haut + fade out.
+     */
+    uproot(cellX: number, cellZ: number): CropInstance | null {
+        const instance = this.crops.get(this.key(cellX, cellZ))
+        if (!instance) return null
+
+        this.crops.delete(this.key(cellX, cellZ))
+        this._harvestingInstances.add(instance)
+
+        const currentScale = instance.currentScale > 0 ? instance.currentScale : (instance.currentPhase.modelScale ?? 1)
+        // Sur un déracinage: on garde l'échelle constante, le fade se fait uniquement en opacité.
+        instance.startTransition("uproot", currentScale, currentScale, () => {
+            this.disposeMesh(instance)
+            this._harvestingInstances.delete(instance)
+        })
+
+        return instance
+    }
+
     getMeshes(): THREE.Mesh[] {
         return Array.from(this.crops.values())
             .map(c => c.mesh)
@@ -101,7 +122,8 @@ export class CropManager {
     update(deltaTime: number, growthRate: number, wateredMult: number): void {
         for (const inst of this._harvestingInstances) {
             inst.tickTransition(deltaTime)
-            this.applyScale(inst)   // ← manquait
+            this.applyScale(inst)
+            if (inst.transitionType === "uproot") this.applyUprootEffect(inst)
             if (!inst.isTransition) this._harvestingInstances.delete(inst)
         }
 
@@ -197,11 +219,99 @@ export class CropManager {
         }
     }
 
+    private uprootSpin(cellX: number, cellZ: number): number {
+        return (this.hash01(cellX, cellZ, 11) - 0.5) * 1.1
+    }
+
+    private uprootDirection(cellX: number, cellZ: number): { x: number; z: number } {
+        const angle = this.hash01(cellX, cellZ, 12) * Math.PI * 2
+        return { x: Math.cos(angle), z: Math.sin(angle) }
+    }
+
     private applyScale(instance: CropInstance): void {
         if (!instance.mesh) return
             ; (instance.mesh as unknown as THREE.Object3D).scale.setScalar(
                 Math.max(0, instance.currentScale)
             )
+    }
+
+    private applyUprootEffect(instance: CropInstance): void {
+        if (!instance.mesh) return
+
+        const root = instance.mesh as unknown as THREE.Object3D & { userData: Record<string, unknown> }
+        const t = instance.smoothT
+        const baseArcHeight = this.world.cellSize * 0.42
+        const arc = 4 * t * (1 - t)
+
+        const baseY = typeof root.userData.uprootBaseY === "number" ? root.userData.uprootBaseY as number : root.position.y
+        const baseX = typeof root.userData.uprootBaseX === "number" ? root.userData.uprootBaseX as number : root.position.x
+        const baseZ = typeof root.userData.uprootBaseZ === "number" ? root.userData.uprootBaseZ as number : root.position.z
+        const baseRotX = typeof root.userData.uprootBaseRotX === "number" ? root.userData.uprootBaseRotX as number : root.rotation.x
+        const baseRotY = typeof root.userData.uprootBaseRotY === "number" ? root.userData.uprootBaseRotY as number : root.rotation.y
+        const baseRotZ = typeof root.userData.uprootBaseRotZ === "number" ? root.userData.uprootBaseRotZ as number : root.rotation.z
+        const arcBoost = typeof root.userData.uprootArcBoost === "number" ? root.userData.uprootArcBoost as number : 0
+
+        root.userData.uprootBaseY = baseY
+        root.userData.uprootBaseX = baseX
+        root.userData.uprootBaseZ = baseZ
+        root.userData.uprootBaseRotX = baseRotX
+        root.userData.uprootBaseRotY = baseRotY
+        root.userData.uprootBaseRotZ = baseRotZ
+
+        const savedDirX = typeof root.userData.uprootDirX === "number" ? root.userData.uprootDirX as number : null
+        const savedDirZ = typeof root.userData.uprootDirZ === "number" ? root.userData.uprootDirZ as number : null
+        const dir = savedDirX !== null && savedDirZ !== null
+            ? { x: savedDirX, z: savedDirZ }
+            : this.uprootDirection(instance.cellX, instance.cellZ)
+        root.userData.uprootDirX = dir.x
+        root.userData.uprootDirZ = dir.z
+
+        const driftDistance = this.world.cellSize * 0.2
+        const arcHeight = baseArcHeight + arcBoost
+        root.position.set(
+            baseX + dir.x * driftDistance * t,
+            baseY + arcHeight * arc,
+            baseZ + dir.z * driftDistance * t,
+        )
+
+        const travelYaw = Math.atan2(dir.x, dir.z)
+        const maxTilt = Math.PI * 0.2
+        const tiltT = Math.sin(t * Math.PI)
+        const tiltAmount = maxTilt * tiltT
+        root.rotation.x = baseRotX - dir.z * tiltAmount
+        root.rotation.z = baseRotZ + dir.x * tiltAmount
+        root.rotation.y = baseRotY + (travelYaw - baseRotY) * 0.35 + this.uprootSpin(instance.cellX, instance.cellZ) * t
+
+        const fade = 1 - t
+        this.setOpacity(root, fade)
+    }
+
+    private setOpacity(root: THREE.Object3D, opacity: number): void {
+        const clamped = THREE.MathUtils.clamp(opacity, 0, 1)
+        root.traverse(obj => {
+            const mesh = obj as THREE.Mesh
+            if (!mesh.isMesh) return
+            const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+            mats.forEach(mat => {
+                const m = mat as THREE.Material & { transparent?: boolean; opacity?: number; depthWrite?: boolean }
+                m.transparent = clamped < 1
+                m.opacity = clamped
+                m.depthWrite = clamped > 0.2
+            })
+        })
+    }
+
+
+    private makeMaterialsUnique(root: THREE.Object3D): void {
+        root.traverse(obj => {
+            const mesh = obj as THREE.Mesh
+            if (!mesh.isMesh || !mesh.material) return
+            if (Array.isArray(mesh.material)) {
+                mesh.material = mesh.material.map(mat => mat.clone())
+            } else {
+                mesh.material = mesh.material.clone()
+            }
+        })
     }
 
     private spawnMesh(instance: CropInstance, transitionType: "spawn" | "phase"): void {
@@ -247,10 +357,13 @@ export class CropManager {
                 model.position.set(pos.x, yFix + cropYOffset, pos.z)
                 model.rotation.set(jitter.tiltX, jitter.rotY, jitter.tiltZ)
 
+                this.makeMaterialsUnique(model)
+
                 model.frustumCulled = false
                 model.userData.isCrop = true
                 model.userData.cellX = instance.cellX
                 model.userData.cellZ = instance.cellZ
+                model.userData.uprootArcBoost = Math.max(0, -cropYOffset) * 0.9
 
                 model.traverse(child => {
                     if (!(child as THREE.Mesh).isMesh) return
@@ -295,6 +408,7 @@ export class CropManager {
         mesh.userData.isCrop = true
         mesh.userData.cellX = instance.cellX
         mesh.userData.cellZ = instance.cellZ
+        mesh.userData.uprootArcBoost = Math.max(0, -cropYOffset) * 0.9
 
         const h = phase.height ?? 0.05
         mesh.position.set(pos.x, h / 2 + cropYOffset, pos.z)

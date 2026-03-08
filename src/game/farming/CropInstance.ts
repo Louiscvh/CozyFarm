@@ -4,7 +4,7 @@ import type * as THREE from "three"
 
 let _idCounter = 0
 
-export type TransitionType = "spawn" | "phase" | "harvest"
+export type TransitionType = "spawn" | "phase" | "harvest" | "uproot"
 
 export class CropInstance {
     readonly instanceId: string
