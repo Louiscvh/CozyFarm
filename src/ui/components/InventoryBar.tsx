@@ -257,7 +257,8 @@ export function InventoryBar() {
         const item = itemById(id)
         const qty = item ? inventoryStore.getQty(item.id) : 0
         const over = dragOver?.zone === "hotbar" && dragOver.index === index
-        const noStock = !isResource(item ?? undefined as any) && qty <= 0
+        const noStock = !!item && !isInfinite(item) && qty <= 0
+        const isDisabled = !item || isResource(item) || (!isInfinite(item) && qty <= 0)
 
         return (
             <div
@@ -278,7 +279,7 @@ export function InventoryBar() {
                         onClick={() => handleItemClick(item)}
                         title={item.label}
                         onMouseDown={e => e.stopPropagation()}
-                        disabled={isResource(item) || (!isInfinite(item) && qty <= 0)}
+                        disabled={isDisabled}
                         draggable
                         onDragStart={() => onDragStartHotbar(index)}
                         onDragEnd={cancelDrag}
@@ -302,7 +303,8 @@ export function InventoryBar() {
     function renderExtraItem(item: ItemDef) {
         const qty = inventoryStore.getQty(item.id)
         const over = dragOver?.zone === "extra" && dragOver.id === item.id
-        const noStock = !isResource(item) && qty <= 0
+        const noStock = !isInfinite(item) && qty <= 0
+        const isDisabled = isResource(item) || (!isInfinite(item) && qty <= 0)
 
         return (
             <div
@@ -322,7 +324,7 @@ export function InventoryBar() {
                     onClick={() => handleItemClick(item)}
                     title={item.label}
                     onMouseDown={e => e.stopPropagation()}
-                    disabled={isResource(item) || (!isInfinite(item) && qty <= 0)}
+                    disabled={isDisabled}
                     draggable
                     onDragStart={() => onDragStartExtra(item.id)}
                     onDragEnd={cancelDrag}
