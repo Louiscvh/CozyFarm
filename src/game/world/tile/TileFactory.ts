@@ -199,6 +199,22 @@ export class TileFactory {
         return v - Math.floor(v)
     }
 
+    private generateCellTint(type: TileType, cellX: number, cellZ: number): THREE.Color {
+        const base = new THREE.Color(TILE_VISUALS[type].color)
+        const variationSeed = cellX * 928371 + cellZ * 1237 + (type.charCodeAt(0) * 17)
+        const noise = Math.sin(variationSeed * 0.013) * 43758.5453
+        const n = noise - Math.floor(noise)
+
+        const hsl = { h: 0, s: 0, l: 0 }
+        base.getHSL(hsl)
+        hsl.h = (hsl.h + (n - 0.5) * 0.02 + 1) % 1
+        hsl.s = THREE.MathUtils.clamp(hsl.s + (n - 0.5) * 0.08, 0, 1)
+        hsl.l = THREE.MathUtils.clamp(hsl.l + (n - 0.5) * 0.10, 0, 1)
+
+        const tinted = new THREE.Color().setHSL(hsl.h, hsl.s, hsl.l)
+        return tinted.lerp(new THREE.Color("#ffffff"), 0.72)
+    }
+
     private generateTerrainTexture(type: TileType): THREE.CanvasTexture {
         const size = 256
         const canvas = document.createElement("canvas")
@@ -555,12 +571,14 @@ export class TileFactory {
                     )
                     dummy.updateMatrix()
                     mesh.setMatrixAt(idx, dummy.matrix)
+                    mesh.setColorAt(idx, this.generateCellTint(type, cx, cz))
                 }
             }
         }
 
         for (const mesh of this.instancedMeshes.values()) {
             mesh.instanceMatrix.needsUpdate = true
+            if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
         }
 
         return tiles
