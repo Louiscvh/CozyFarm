@@ -90,7 +90,7 @@ export class TileFactory {
 
     private wateredCells = new Set<string>()
     private readonly SOIL_COLOR_DRY = new THREE.Color(1, 1, 1)
-    private readonly SOIL_COLOR_WATERED = new THREE.Color(0x824C27)
+    private readonly SOIL_COLOR_WATERED = new THREE.Color(0xB07A56)
     private readonly SOIL_WATER_TRANSITION_DURATION = 0.12
     private readonly soilWaterColorTransitions = new Map<string, SoilWaterColorTransition>()
     private readonly soilDryColors = new Map<string, THREE.Color>()
@@ -175,14 +175,14 @@ export class TileFactory {
         canvas.height = size
         const ctx = canvas.getContext("2d")!
 
-        ctx.fillStyle = "#3d2b1f"
+        ctx.fillStyle = "#5a4030"
         ctx.fillRect(0, 0, size, size)
 
         for (let i = 0; i < 5; i++) {
             const x = Math.random() * size
             const y = Math.random() * size
             const r = Math.random() * 6 + 4
-            ctx.fillStyle = "#1e0f07"
+            ctx.fillStyle = "#3a2418"
             ctx.beginPath()
             ctx.arc(x, y, r, 0, Math.PI * 2)
             ctx.fill()
@@ -318,7 +318,7 @@ export class TileFactory {
     }
 
     private generateSoilDryTint(cellX: number, cellZ: number): THREE.Color {
-        const base = new THREE.Color("#f0dfcc")
+        const base = new THREE.Color("#fbefdf")
         const seed = cellX * 4131587 + cellZ * 2917 + 97
         const noise = Math.sin(seed * 0.017) * 43758.5453
         const n = noise - Math.floor(noise)
