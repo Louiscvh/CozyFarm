@@ -36,8 +36,7 @@ export function useFarming() {
             if (!world) return false
             // Bloqué si une plante est dessus
             if (world.cropManager.hasCrop(ctx.cellX, ctx.cellZ)) return false
-            world.tilesFactory.untillCell(ctx.cellX, ctx.cellZ)
-            return true
+            return world.tilesFactory.untillCell(ctx.cellX, ctx.cellZ)
         })
 
         itemActionRegistry.registerTileAction("farming:water", ({ cellX, cellZ }) => {

@@ -314,13 +314,13 @@ export class TileFactory {
         return true
     }
 
-    untillCell(cellX: number, cellZ: number): void {
+    untillCell(cellX: number, cellZ: number): boolean {
         const k = this.cellKey(cellX, cellZ)
         const slot = this.soilSlots.get(k)
-        if (slot === undefined) return
+        if (slot === undefined) return false
+        if (this.transitions.has(k)) return false
 
         this.tillParticles.spawnAtCell(cellX, cellZ)
-        this.transitions.delete(k)
 
         // ← Reset couleur immédiatement, avant que le slot soit réutilisé
         this.wateredCells.delete(k)
@@ -342,6 +342,8 @@ export class TileFactory {
                 this.markFree(cellX, cellZ, 1)
             },
         })
+
+        return true
     }
 
     isSoil(cellX: number, cellZ: number): boolean {
