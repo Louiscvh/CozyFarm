@@ -19,11 +19,11 @@
     transition: 
       opacity 0.3s cubic-bezier(0.2, 1, 0.3, 1),
       transform 0.3s cubic-bezier(0.2, 1, 0.3, 1);
+    will-change: transform, opacity;
 
       padding: 6px;
       border-radius: 12px;
       background: rgba(10, 10, 15, 0.72);
-      backdrop-filter: blur(12px);
       border: 1px solid rgba(255, 255, 255, 0.1);
       box-shadow:
         0 8px 32px rgba(0, 0, 0, 0.4),
@@ -47,3 +47,10 @@
     pointer-events: auto;
   }
   
+
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .dev-toolbar {
+    -webkit-backdrop-filter: blur(8px) saturate(1.05);
+    backdrop-filter: blur(8px) saturate(1.05);
+  }
+}

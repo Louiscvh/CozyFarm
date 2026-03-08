@@ -6,7 +6,6 @@
     right: 12px;
     width: 260px;
     background: rgba(8, 8, 12, 0.88);
-    backdrop-filter: blur(16px);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 10px;
     box-shadow: 0 8px 32px rgba(0,0,0,0.5);
@@ -17,6 +16,7 @@
     z-index: 999;
     font-family: "JetBrains Mono", "Fira Code", monospace;
     animation: pm-in 0.18s ease;
+    contain: layout paint;
   }
   
   @keyframes pm-in {
@@ -128,3 +128,10 @@
     color: rgba(255,255,255,0.35);
     margin-left: 1px;
   }
+
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .pm-panel {
+    -webkit-backdrop-filter: blur(10px) saturate(1.05);
+    backdrop-filter: blur(10px) saturate(1.05);
+  }
+}
