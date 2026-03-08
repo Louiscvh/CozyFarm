@@ -93,6 +93,8 @@ export class TileFactory {
     private readonly SOIL_COLOR_WATERED = new THREE.Color(0x824C27)
     private readonly SOIL_WATER_TRANSITION_DURATION = 0.12
     private readonly soilWaterColorTransitions = new Map<string, SoilWaterColorTransition>()
+    private readonly soilDryColors = new Map<string, THREE.Color>()
+    private readonly soilWateredColors = new Map<string, THREE.Color>()
     private readonly soilColorLerpTmp = new THREE.Color()
     // ── Transitions ───────────────────────────────────────────────
     private transitions = new Map<string, SoilTransition>()
@@ -137,7 +139,8 @@ export class TileFactory {
 
         this.wateredCells.delete(k)
         this.soilWaterColorTransitions.delete(k)
-        this.soilMesh.setColorAt(slot, this.SOIL_COLOR_DRY)
+        const dry = this.soilDryColors.get(k) ?? this.SOIL_COLOR_DRY
+        this.soilMesh.setColorAt(slot, dry)
         this.soilMesh.instanceColor!.needsUpdate = true
     }
 
@@ -186,9 +189,150 @@ export class TileFactory {
         }
 
         const texture = new THREE.CanvasTexture(canvas)
+        texture.colorSpace = THREE.SRGBColorSpace
         texture.wrapS = THREE.RepeatWrapping
         texture.wrapT = THREE.RepeatWrapping
+        texture.repeat.set(1.5, 1.5)
+        texture.needsUpdate = true
         return texture
+    }
+
+    private textureNoise(x: number, y: number, seed: number): number {
+        const v = Math.sin((x * 127.1 + y * 311.7 + seed * 19.19) * 0.07) * 43758.5453
+        return v - Math.floor(v)
+    }
+
+    private generateCellTint(type: TileType, cellX: number, cellZ: number): THREE.Color {
+        const base = new THREE.Color(TILE_VISUALS[type].color)
+        const variationSeed = cellX * 928371 + cellZ * 1237 + (type.charCodeAt(0) * 17)
+        const noise = Math.sin(variationSeed * 0.013) * 43758.5453
+        const n = noise - Math.floor(noise)
+
+        const hsl = { h: 0, s: 0, l: 0 }
+        base.getHSL(hsl)
+        hsl.h = (hsl.h + (n - 0.5) * 0.04 + 1) % 1
+        hsl.s = THREE.MathUtils.clamp(hsl.s + (n - 0.5) * 0.14, 0, 1)
+        hsl.l = THREE.MathUtils.clamp(hsl.l + (n - 0.5) * 0.18, 0, 1)
+
+        const tinted = new THREE.Color().setHSL(hsl.h, hsl.s, hsl.l)
+        return tinted.lerp(new THREE.Color("#ffffff"), 0.62)
+    }
+
+    private generateTerrainTexture(type: TileType): THREE.CanvasTexture {
+        const size = 256
+        const canvas = document.createElement("canvas")
+        canvas.width = size
+        canvas.height = size
+        const ctx = canvas.getContext("2d")!
+
+        if (type === "grass") {
+            ctx.fillStyle = "#72bf63"
+            ctx.fillRect(0, 0, size, size)
+            for (let i = 0; i < 2400; i++) {
+                const x = Math.random() * size
+                const y = Math.random() * size
+                const h = 3 + Math.random() * 6
+                const tilt = (Math.random() - 0.5) * 2
+                ctx.strokeStyle = Math.random() > 0.4 ? "#5aa74e" : "#87d777"
+                ctx.lineWidth = 1
+                ctx.beginPath()
+                ctx.moveTo(x, y)
+                ctx.lineTo(x + tilt, y - h)
+                ctx.stroke()
+            }
+        } else if (type === "sand") {
+            ctx.fillStyle = "#e8cb8e"
+            ctx.fillRect(0, 0, size, size)
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
+                    const n = this.textureNoise(x, y, 3)
+                    if (n > 0.7) {
+                        const alpha = (n - 0.7) * 1.8
+                        ctx.fillStyle = `rgba(195, 160, 104, ${alpha.toFixed(3)})`
+                        ctx.fillRect(x, y, 1, 1)
+                    }
+                }
+            }
+            for (let i = 0; i < 30; i++) {
+                const y = (i / 30) * size
+                ctx.strokeStyle = "rgba(214, 186, 128, 0.35)"
+                ctx.lineWidth = 2
+                ctx.beginPath()
+                for (let x = 0; x < size; x += 8) {
+                    const dy = Math.sin(x * 0.05 + i) * 2
+                    if (x === 0) ctx.moveTo(x, y + dy)
+                    else ctx.lineTo(x, y + dy)
+                }
+                ctx.stroke()
+            }
+        } else if (type === "stone") {
+            ctx.fillStyle = "#8a8a8a"
+            ctx.fillRect(0, 0, size, size)
+
+            for (let i = 0; i < 48; i++) {
+                const x = Math.random() * size
+                const y = Math.random() * size
+                const r = 8 + Math.random() * 18
+                ctx.fillStyle = Math.random() > 0.5 ? "rgba(160, 160, 160, 0.22)" : "rgba(108, 108, 108, 0.20)"
+                ctx.beginPath()
+                ctx.arc(x, y, r, 0, Math.PI * 2)
+                ctx.fill()
+            }
+
+            for (let i = 0; i < 22; i++) {
+                const x0 = Math.random() * size
+                const y0 = Math.random() * size
+                const len = 20 + Math.random() * 45
+                const angle = Math.random() * Math.PI * 2
+                ctx.strokeStyle = "rgba(70, 70, 70, 0.58)"
+                ctx.lineWidth = 1.5
+                ctx.beginPath()
+                ctx.moveTo(x0, y0)
+                ctx.lineTo(x0 + Math.cos(angle) * len, y0 + Math.sin(angle) * len)
+                ctx.stroke()
+            }
+        } else if (type === "water") {
+            ctx.fillStyle = "#4fadd9"
+            ctx.fillRect(0, 0, size, size)
+            for (let y = 0; y < size; y += 3) {
+                ctx.strokeStyle = "rgba(180, 235, 255, 0.22)"
+                ctx.lineWidth = 1
+                ctx.beginPath()
+                for (let x = 0; x < size; x += 6) {
+                    const dy = Math.sin(x * 0.09 + y * 0.15) * 2
+                    if (x === 0) ctx.moveTo(x, y + dy)
+                    else ctx.lineTo(x, y + dy)
+                }
+                ctx.stroke()
+            }
+        }
+
+        const texture = new THREE.CanvasTexture(canvas)
+        texture.colorSpace = THREE.SRGBColorSpace
+        texture.wrapS = THREE.RepeatWrapping
+        texture.wrapT = THREE.RepeatWrapping
+        texture.repeat.set(1, 1)
+        texture.needsUpdate = true
+
+        return texture
+    }
+
+    private generateSoilDryTint(cellX: number, cellZ: number): THREE.Color {
+        const base = new THREE.Color("#f0dfcc")
+        const seed = cellX * 4131587 + cellZ * 2917 + 97
+        const noise = Math.sin(seed * 0.017) * 43758.5453
+        const n = noise - Math.floor(noise)
+
+        const hsl = { h: 0, s: 0, l: 0 }
+        base.getHSL(hsl)
+        hsl.h = (hsl.h + (n - 0.5) * 0.03 + 1) % 1
+        hsl.s = THREE.MathUtils.clamp(hsl.s + (n - 0.5) * 0.18, 0, 1)
+        hsl.l = THREE.MathUtils.clamp(hsl.l + (n - 0.5) * 0.20, 0, 1)
+        return new THREE.Color().setHSL(hsl.h, hsl.s, hsl.l)
+    }
+
+    private generateSoilWateredTint(dry: THREE.Color): THREE.Color {
+        return dry.clone().lerp(this.SOIL_COLOR_WATERED, 0.72)
     }
 
     // ── Écrit la matrice d'une instance soil avec un scaleY donné ──
@@ -217,7 +361,9 @@ export class TileFactory {
         for (const [cellKey, transition] of this.soilWaterColorTransitions) {
             transition.progress = Math.min(transition.duration, transition.progress + deltaTime)
             const t = transition.duration <= 0 ? 1 : transition.progress / transition.duration
-            this.soilColorLerpTmp.copy(this.SOIL_COLOR_DRY).lerp(this.SOIL_COLOR_WATERED, t)
+            const dry = this.soilDryColors.get(cellKey) ?? this.SOIL_COLOR_DRY
+            const watered = this.soilWateredColors.get(cellKey) ?? this.SOIL_COLOR_WATERED
+            this.soilColorLerpTmp.copy(dry).lerp(watered, t)
             this.soilMesh.setColorAt(transition.slot, this.soilColorLerpTmp)
 
             if (transition.progress >= transition.duration) {
@@ -298,6 +444,13 @@ export class TileFactory {
 
         // Place le soil immédiatement à sa position finale
         this.setSoilMatrix(slot, cellX, cellZ)
+
+        const dryColor = this.generateSoilDryTint(cellX, cellZ)
+        const wateredColor = this.generateSoilWateredTint(dryColor)
+        this.soilDryColors.set(k, dryColor)
+        this.soilWateredColors.set(k, wateredColor)
+        this.soilMesh.setColorAt(slot, dryColor)
+        this.soilMesh.instanceColor!.needsUpdate = true
         // Lance l'animation de l'herbe qui descend
         this.transitions.set(k, {
             slot, cellX, cellZ,
@@ -325,7 +478,8 @@ export class TileFactory {
         // ← Reset couleur immédiatement, avant que le slot soit réutilisé
         this.wateredCells.delete(k)
         this.soilWaterColorTransitions.delete(k)
-        this.soilMesh.setColorAt(slot, this.SOIL_COLOR_DRY)
+        const dry = this.soilDryColors.get(k) ?? this.SOIL_COLOR_DRY
+        this.soilMesh.setColorAt(slot, dry)
         this.soilMesh.instanceColor!.needsUpdate = true
 
         this.showCell(cellX, cellZ, this.TERRAIN_Y_UNTILL_START)
@@ -338,6 +492,8 @@ export class TileFactory {
                 this.soilMesh.setMatrixAt(slot, _zero)
                 this.soilMesh.instanceMatrix.needsUpdate = true
                 this.soilSlots.delete(k)
+                this.soilDryColors.delete(k)
+                this.soilWateredColors.delete(k)
                 this.soilFreeSlots.push(slot)
                 this.markFree(cellX, cellZ, 1)
             },
@@ -410,10 +566,16 @@ export class TileFactory {
         const indexPerType: Record<string, number> = { grass: 0, water: 0, sand: 0, stone: 0 }
 
         for (const type of TILE_TYPES) {
-            const { color, roughness, metalness } = TILE_VISUALS[type]
+            const { roughness, metalness } = TILE_VISUALS[type]
             const geometry = new THREE.BoxGeometry(this.cellSize, 0.5, this.cellSize)
             geometry.translate(0, -0.25, 0)
-            const material = new THREE.MeshStandardMaterial({ color, roughness, metalness })
+            const texture = this.generateTerrainTexture(type)
+            const material = new THREE.MeshStandardMaterial({
+                color: "#ffffff",
+                roughness,
+                metalness,
+                map: texture,
+            })
             const mesh = new THREE.InstancedMesh(geometry, material, Math.max(1, countPerType[type]))
             mesh.receiveShadow = true
             mesh.castShadow = false
@@ -445,12 +607,14 @@ export class TileFactory {
                     )
                     dummy.updateMatrix()
                     mesh.setMatrixAt(idx, dummy.matrix)
+                    mesh.setColorAt(idx, this.generateCellTint(type, cx, cz))
                 }
             }
         }
 
         for (const mesh of this.instancedMeshes.values()) {
             mesh.instanceMatrix.needsUpdate = true
+            if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true
         }
 
         return tiles
