@@ -93,6 +93,8 @@ export class TileFactory {
     private readonly SOIL_COLOR_WATERED = new THREE.Color(0x824C27)
     private readonly SOIL_WATER_TRANSITION_DURATION = 0.12
     private readonly soilWaterColorTransitions = new Map<string, SoilWaterColorTransition>()
+    private readonly soilDryColors = new Map<string, THREE.Color>()
+    private readonly soilWateredColors = new Map<string, THREE.Color>()
     private readonly soilColorLerpTmp = new THREE.Color()
     // ── Transitions ───────────────────────────────────────────────
     private transitions = new Map<string, SoilTransition>()
@@ -137,7 +139,8 @@ export class TileFactory {
 
         this.wateredCells.delete(k)
         this.soilWaterColorTransitions.delete(k)
-        this.soilMesh.setColorAt(slot, this.SOIL_COLOR_DRY)
+        const dry = this.soilDryColors.get(k) ?? this.SOIL_COLOR_DRY
+        this.soilMesh.setColorAt(slot, dry)
         this.soilMesh.instanceColor!.needsUpdate = true
     }
 
@@ -314,6 +317,24 @@ export class TileFactory {
         return texture
     }
 
+    private generateSoilDryTint(cellX: number, cellZ: number): THREE.Color {
+        const base = new THREE.Color("#f0dfcc")
+        const seed = cellX * 4131587 + cellZ * 2917 + 97
+        const noise = Math.sin(seed * 0.017) * 43758.5453
+        const n = noise - Math.floor(noise)
+
+        const hsl = { h: 0, s: 0, l: 0 }
+        base.getHSL(hsl)
+        hsl.h = (hsl.h + (n - 0.5) * 0.03 + 1) % 1
+        hsl.s = THREE.MathUtils.clamp(hsl.s + (n - 0.5) * 0.18, 0, 1)
+        hsl.l = THREE.MathUtils.clamp(hsl.l + (n - 0.5) * 0.20, 0, 1)
+        return new THREE.Color().setHSL(hsl.h, hsl.s, hsl.l)
+    }
+
+    private generateSoilWateredTint(dry: THREE.Color): THREE.Color {
+        return dry.clone().lerp(this.SOIL_COLOR_WATERED, 0.72)
+    }
+
     // ── Écrit la matrice d'une instance soil avec un scaleY donné ──
 
     private setSoilMatrix(slot: number, cellX: number, cellZ: number): void {
@@ -340,7 +361,9 @@ export class TileFactory {
         for (const [cellKey, transition] of this.soilWaterColorTransitions) {
             transition.progress = Math.min(transition.duration, transition.progress + deltaTime)
             const t = transition.duration <= 0 ? 1 : transition.progress / transition.duration
-            this.soilColorLerpTmp.copy(this.SOIL_COLOR_DRY).lerp(this.SOIL_COLOR_WATERED, t)
+            const dry = this.soilDryColors.get(cellKey) ?? this.SOIL_COLOR_DRY
+            const watered = this.soilWateredColors.get(cellKey) ?? this.SOIL_COLOR_WATERED
+            this.soilColorLerpTmp.copy(dry).lerp(watered, t)
             this.soilMesh.setColorAt(transition.slot, this.soilColorLerpTmp)
 
             if (transition.progress >= transition.duration) {
@@ -421,6 +444,13 @@ export class TileFactory {
 
         // Place le soil immédiatement à sa position finale
         this.setSoilMatrix(slot, cellX, cellZ)
+
+        const dryColor = this.generateSoilDryTint(cellX, cellZ)
+        const wateredColor = this.generateSoilWateredTint(dryColor)
+        this.soilDryColors.set(k, dryColor)
+        this.soilWateredColors.set(k, wateredColor)
+        this.soilMesh.setColorAt(slot, dryColor)
+        this.soilMesh.instanceColor!.needsUpdate = true
         // Lance l'animation de l'herbe qui descend
         this.transitions.set(k, {
             slot, cellX, cellZ,
@@ -448,7 +478,8 @@ export class TileFactory {
         // ← Reset couleur immédiatement, avant que le slot soit réutilisé
         this.wateredCells.delete(k)
         this.soilWaterColorTransitions.delete(k)
-        this.soilMesh.setColorAt(slot, this.SOIL_COLOR_DRY)
+        const dry = this.soilDryColors.get(k) ?? this.SOIL_COLOR_DRY
+        this.soilMesh.setColorAt(slot, dry)
         this.soilMesh.instanceColor!.needsUpdate = true
 
         this.showCell(cellX, cellZ, this.TERRAIN_Y_UNTILL_START)
@@ -461,6 +492,8 @@ export class TileFactory {
                 this.soilMesh.setMatrixAt(slot, _zero)
                 this.soilMesh.instanceMatrix.needsUpdate = true
                 this.soilSlots.delete(k)
+                this.soilDryColors.delete(k)
+                this.soilWateredColors.delete(k)
                 this.soilFreeSlots.push(slot)
                 this.markFree(cellX, cellZ, 1)
             },
