@@ -151,24 +151,49 @@ export class CropManager {
         )
     }
 
+    private hash01(cellX: number, cellZ: number, salt: number): number {
+        const s = Math.sin(cellX * (127.1 + salt * 3.13) + cellZ * (311.7 + salt * 1.73) + salt * 19.19) * 43758.5453
+        return s - Math.floor(s)
+    }
+
     /**
      * Décalage pseudo-aléatoire déterministe basé sur les coordonnées de cellule.
      * Stable entre les changements de phase — la plante ne "saute" pas.
      */
-    private cellJitter(cellX: number, cellZ: number): { dx: number; dz: number; rotY: number } {
-        const s1 = Math.sin(cellX * 127.1 + cellZ * 311.7) * 43758.5453
-        const s2 = Math.sin(cellX * 269.5 + cellZ * 183.3) * 43758.5453
-        const s3 = Math.sin(cellX * 419.2 + cellZ * 371.9) * 43758.5453
+    private cellJitter(cellX: number, cellZ: number): {
+        dx: number
+        dz: number
+        rotY: number
+        tiltX: number
+        tiltZ: number
+    } {
+        const r1 = this.hash01(cellX, cellZ, 1)
+        const r2 = this.hash01(cellX, cellZ, 2)
+        const r3 = this.hash01(cellX, cellZ, 3)
+        const r4 = this.hash01(cellX, cellZ, 4)
+        const r5 = this.hash01(cellX, cellZ, 5)
 
-        const r1 = s1 - Math.floor(s1)   // 0..1
-        const r2 = s2 - Math.floor(s2)
-        const r3 = s3 - Math.floor(s3)
+        const maxRadius = this.world.cellSize * 0.24
+        const radius = Math.sqrt(r1) * maxRadius
+        const angle = r2 * Math.PI * 2
 
-        const margin = this.world.cellSize * 0.12   // ~28% du rayon de la cellule
+        const radialX = Math.cos(angle) * radius
+        const radialZ = Math.sin(angle) * radius
+
+        // Légère dérive "de parcelle" pour casser l'effet grille trop propre.
+        const driftX = Math.sin(cellX * 0.47 + cellZ * 0.19) * this.world.cellSize * 0.08
+        const driftZ = Math.cos(cellX * 0.23 - cellZ * 0.41) * this.world.cellSize * 0.08
+
+        const hardLimit = this.world.cellSize * 0.28
+        const dx = THREE.MathUtils.clamp(radialX + driftX, -hardLimit, hardLimit)
+        const dz = THREE.MathUtils.clamp(radialZ + driftZ, -hardLimit, hardLimit)
+
         return {
-            dx: (r1 - 0.5) * 2 * margin,
-            dz: (r2 - 0.5) * 2 * margin,
+            dx,
+            dz,
             rotY: r3 * Math.PI * 2,
+            tiltX: (r4 - 0.5) * 0.16,
+            tiltZ: (r5 - 0.5) * 0.16,
         }
     }
 
@@ -220,7 +245,7 @@ export class CropManager {
                 const box = new THREE.Box3().setFromObject(model)
                 const yFix = box.min.y < 0 ? -box.min.y : 0
                 model.position.set(pos.x, yFix + cropYOffset, pos.z)
-                model.rotation.y = jitter.rotY   // ← rotation aléatoire
+                model.rotation.set(jitter.tiltX, jitter.rotY, jitter.tiltZ)
 
                 model.frustumCulled = false
                 model.userData.isCrop = true
@@ -246,11 +271,11 @@ export class CropManager {
 
             }).catch(err => {
                 console.error(`[CropManager] Impossible de charger ${phase.modelPath}`, err)
-                this.spawnCube(instance, phase, pos, cropYOffset, jitter.rotY, transitionType)
+                this.spawnCube(instance, phase, pos, cropYOffset, jitter.rotY, jitter.tiltX, jitter.tiltZ, transitionType)
             })
 
         } else {
-            this.spawnCube(instance, phase, pos, cropYOffset, jitter.rotY, transitionType)
+            this.spawnCube(instance, phase, pos, cropYOffset, jitter.rotY, jitter.tiltX, jitter.tiltZ, transitionType)
         }
     }
 
@@ -260,6 +285,8 @@ export class CropManager {
         pos: THREE.Vector3,
         cropYOffset: number = 0,
         rotY: number = 0,
+        tiltX: number = 0,
+        tiltZ: number = 0,
         transitionType: "spawn" | "phase" = "spawn",
     ): void {
         const mesh = buildCubeMesh(phase)
@@ -271,7 +298,7 @@ export class CropManager {
 
         const h = phase.height ?? 0.05
         mesh.position.set(pos.x, h / 2 + cropYOffset, pos.z)
-        mesh.rotation.y = rotY   // ← rotation aléatoire
+        mesh.rotation.set(tiltX, rotY, tiltZ)
         mesh.scale.setScalar(0)
 
         if (instance.isReady) {
