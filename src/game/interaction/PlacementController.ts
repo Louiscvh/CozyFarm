@@ -31,8 +31,8 @@ const groundPlane = new THREE.Mesh(
 )
 groundPlane.rotation.x = -Math.PI / 2
 
-const highlightMatOk = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.35, depthWrite: false, depthTest: false })
-const highlightMatBad = new THREE.MeshBasicMaterial({ color: 0xff2244, transparent: true, opacity: 0.35, depthWrite: false, depthTest: false })
+const highlightMatOk = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.35, depthWrite: false, depthTest: true })
+const highlightMatBad = new THREE.MeshBasicMaterial({ color: 0xff2244, transparent: true, opacity: 0.35, depthWrite: false, depthTest: true })
 const highlightMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), highlightMatOk)
 highlightMesh.rotation.x = -Math.PI / 2
 highlightMesh.position.y = 0.055
@@ -270,7 +270,7 @@ export class PlacementController {
             this.ghost.rotation.y = this.currentRotY
 
             if (highlightMesh.visible) {
-                highlightMesh.position.set(this.currentPos.x, GRID_Y, this.currentPos.z)
+                highlightMesh.position.set(this.currentPos.x, highlightMesh.position.y, this.currentPos.z)
             }
         }
         animate()
