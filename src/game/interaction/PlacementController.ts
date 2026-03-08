@@ -38,8 +38,16 @@ highlightMesh.rotation.x = -Math.PI / 2
 highlightMesh.position.y = 0.055
 highlightMesh.visible = false
 
+const HOVER_BORDER_INSET = 0.06
 const hoverBorderGeo = new LineGeometry()
-hoverBorderGeo.setPositions([-0.5, 0, 0.5, 0.5, 0, 0.5, 0.5, 0, -0.5, -0.5, 0, -0.5, -0.5, 0, 0.5])
+const hoverInnerHalf = 0.5 - HOVER_BORDER_INSET
+hoverBorderGeo.setPositions([
+    -hoverInnerHalf, 0, hoverInnerHalf,
+    hoverInnerHalf, 0, hoverInnerHalf,
+    hoverInnerHalf, 0, -hoverInnerHalf,
+    -hoverInnerHalf, 0, -hoverInnerHalf,
+    -hoverInnerHalf, 0, hoverInnerHalf,
+])
 const hoverBorderMat = new LineMaterial({
     color: 0xffffff, linewidth: 4, opacity: 1, transparent: true,
     resolution: new THREE.Vector2(window.innerWidth, window.innerHeight),
