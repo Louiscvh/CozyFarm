@@ -186,8 +186,83 @@ export class TileFactory {
         }
 
         const texture = new THREE.CanvasTexture(canvas)
+        texture.colorSpace = THREE.SRGBColorSpace
         texture.wrapS = THREE.RepeatWrapping
         texture.wrapT = THREE.RepeatWrapping
+        texture.repeat.set(1.5, 1.5)
+        texture.needsUpdate = true
+        return texture
+    }
+
+    private textureNoise(x: number, y: number, seed: number): number {
+        const v = Math.sin((x * 127.1 + y * 311.7 + seed * 19.19) * 0.07) * 43758.5453
+        return v - Math.floor(v)
+    }
+
+    private generateTerrainTexture(type: TileType): THREE.CanvasTexture {
+        const size = 128
+        const canvas = document.createElement("canvas")
+        canvas.width = size
+        canvas.height = size
+        const ctx = canvas.getContext("2d")!
+        const image = ctx.createImageData(size, size)
+        const data = image.data
+
+        for (let y = 0; y < size; y++) {
+            for (let x = 0; x < size; x++) {
+                const i = (y * size + x) * 4
+                const n1 = this.textureNoise(x, y, 1)
+                const n2 = this.textureNoise(x, y, 7)
+                const n3 = this.textureNoise(x, y, 13)
+
+                let r = 120
+                let g = 120
+                let b = 120
+
+                if (type === "grass") {
+                    const blade = (Math.sin((x + n2 * 8) * 0.55) + 1) * 0.5
+                    const variation = n1 * 36 - 18
+                    r = 55 + variation * 0.3
+                    g = 112 + variation + blade * 24
+                    b = 48 + variation * 0.25
+                } else if (type === "sand") {
+                    const grain = n1 * 30
+                    const dune = (Math.sin((x + y) * 0.08 + n3 * 2) + 1) * 8
+                    r = 200 + grain + dune
+                    g = 166 + grain * 0.7 + dune * 0.6
+                    b = 108 + grain * 0.5
+                } else if (type === "stone") {
+                    const grain = n1 * 42
+                    const crack = n2 > 0.9 ? -25 : 0
+                    r = 106 + grain * 0.8 + crack
+                    g = 104 + grain * 0.75 + crack
+                    b = 108 + grain * 0.9 + crack
+                } else if (type === "water") {
+                    const ripple = Math.sin((x * 0.24) + (y * 0.11) + n2 * 3)
+                    const shimmer = Math.max(ripple, 0) * 24
+                    r = 28 + n1 * 8 + shimmer * 0.2
+                    g = 102 + n2 * 16 + shimmer * 0.45
+                    b = 152 + n3 * 28 + shimmer
+                }
+
+                data[i] = Math.max(0, Math.min(255, Math.round(r)))
+                data[i + 1] = Math.max(0, Math.min(255, Math.round(g)))
+                data[i + 2] = Math.max(0, Math.min(255, Math.round(b)))
+                data[i + 3] = 255
+            }
+        }
+
+        ctx.putImageData(image, 0, 0)
+
+        const texture = new THREE.CanvasTexture(canvas)
+        texture.colorSpace = THREE.SRGBColorSpace
+        texture.wrapS = THREE.RepeatWrapping
+        texture.wrapT = THREE.RepeatWrapping
+
+        const repeat = type === "water" ? 2 : 4
+        texture.repeat.set(repeat, repeat)
+        texture.needsUpdate = true
+
         return texture
     }
 
@@ -413,7 +488,13 @@ export class TileFactory {
             const { color, roughness, metalness } = TILE_VISUALS[type]
             const geometry = new THREE.BoxGeometry(this.cellSize, 0.5, this.cellSize)
             geometry.translate(0, -0.25, 0)
-            const material = new THREE.MeshStandardMaterial({ color, roughness, metalness })
+            const texture = this.generateTerrainTexture(type)
+            const material = new THREE.MeshStandardMaterial({
+                color,
+                roughness,
+                metalness,
+                map: texture,
+            })
             const mesh = new THREE.InstancedMesh(geometry, material, Math.max(1, countPerType[type]))
             mesh.receiveShadow = true
             mesh.castShadow = false
