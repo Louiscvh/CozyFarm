@@ -19,6 +19,7 @@ import { Tree3Entity } from "../../entity/entities/Tree3"
 import { TreeOrangeEntity } from "../../entity/entities/TreeOrange"
 import { TulipEntity } from "../../entity/entities/Tulip"
 import { GrassEntity } from "../../entity/entities/Grass"
+import { WaterSplashParticles } from "../../system/WaterSplashParticles"
 
 export interface DecorCategory { types: Entity[]; density: number }
 export interface FixedEntityDef { def: Entity; tileX: number; tileZ: number; size: number }
@@ -57,6 +58,13 @@ interface SoilTransition {
     onDone?: () => void
 }
 
+interface SoilWaterColorTransition {
+    slot: number
+    progress: number
+    duration: number
+}
+
+
 export class TileFactory {
     private scene: THREE.Scene
     readonly worldSize: number
@@ -82,9 +90,15 @@ export class TileFactory {
     private wateredCells = new Set<string>()
     private readonly SOIL_COLOR_DRY = new THREE.Color(1, 1, 1)
     private readonly SOIL_COLOR_WATERED = new THREE.Color(0x824C27)
+    private readonly SOIL_WATER_TRANSITION_DURATION = 0.12
+    private readonly soilWaterColorTransitions = new Map<string, SoilWaterColorTransition>()
+    private readonly soilColorLerpTmp = new THREE.Color()
     // ── Transitions ───────────────────────────────────────────────
     private transitions = new Map<string, SoilTransition>()
     private readonly TRANSITION_SPEED = 1   // ~125ms
+
+    // ── Water particles ───────────────────────────────────────────
+    private readonly waterSplashParticles: WaterSplashParticles
 
     constructor(scene: THREE.Scene, worldSize: number, tileSize: number) {
         this.scene = scene
@@ -94,6 +108,7 @@ export class TileFactory {
         this.worldSizeInCells = worldSize * 2
         this.generateGrid()
         this.initSoilMesh()
+        this.waterSplashParticles = new WaterSplashParticles(this.scene, this.cellSize, this.worldSizeInCells)
     }
 
     waterCell(cellX: number, cellZ: number): boolean {
@@ -103,8 +118,12 @@ export class TileFactory {
         if (this.wateredCells.has(k)) return false  // déjà arrosé
 
         this.wateredCells.add(k)
-        this.soilMesh.setColorAt(slot, this.SOIL_COLOR_WATERED)
-        this.soilMesh.instanceColor!.needsUpdate = true
+        this.soilWaterColorTransitions.set(k, {
+            slot,
+            progress: 0,
+            duration: this.SOIL_WATER_TRANSITION_DURATION,
+        })
+        this.waterSplashParticles.spawnAtCell(cellX, cellZ)
         return true
     }
 
@@ -114,6 +133,7 @@ export class TileFactory {
         if (slot === undefined) return
 
         this.wateredCells.delete(k)
+        this.soilWaterColorTransitions.delete(k)
         this.soilMesh.setColorAt(slot, this.SOIL_COLOR_DRY)
         this.soilMesh.instanceColor!.needsUpdate = true
     }
@@ -187,9 +207,30 @@ export class TileFactory {
     private readonly TERRAIN_Y_VISIBLE: number = 0.0
     private readonly TERRAIN_Y_HIDDEN: number = -0.45
     private readonly TERRAIN_Y_UNTILL_START: number = -0.05 // juste sous le soil
+
+    private updateSoilWaterColorTransitions(deltaTime: number): void {
+        if (this.soilWaterColorTransitions.size === 0) return
+
+        for (const [cellKey, transition] of this.soilWaterColorTransitions) {
+            transition.progress = Math.min(transition.duration, transition.progress + deltaTime)
+            const t = transition.duration <= 0 ? 1 : transition.progress / transition.duration
+            this.soilColorLerpTmp.copy(this.SOIL_COLOR_DRY).lerp(this.SOIL_COLOR_WATERED, t)
+            this.soilMesh.setColorAt(transition.slot, this.soilColorLerpTmp)
+
+            if (transition.progress >= transition.duration) {
+                this.soilWaterColorTransitions.delete(cellKey)
+            }
+        }
+
+        this.soilMesh.instanceColor!.needsUpdate = true
+    }
+
     // ── Tick transitions — à appeler depuis World.update ───────────
 
     tickTransitions(deltaTime: number): void {
+        this.waterSplashParticles.update(deltaTime)
+        this.updateSoilWaterColorTransitions(deltaTime)
+
         if (this.transitions.size === 0) return
 
         for (const [k, t] of this.transitions) {
@@ -275,6 +316,7 @@ export class TileFactory {
 
         // ← Reset couleur immédiatement, avant que le slot soit réutilisé
         this.wateredCells.delete(k)
+        this.soilWaterColorTransitions.delete(k)
         this.soilMesh.setColorAt(slot, this.SOIL_COLOR_DRY)
         this.soilMesh.instanceColor!.needsUpdate = true
 
