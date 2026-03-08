@@ -1,6 +1,10 @@
 /* src/ui/components/InventoryBar.css */
 
 #inventory-bar {
+  --inv-slot-size: 60px;
+  --inv-slot-gap: 4px;
+  --inv-columns: 9;
+  --inv-hotbar-width: calc(var(--inv-columns) * var(--inv-slot-size) + (var(--inv-columns) - 1) * var(--inv-slot-gap));
   position: fixed;
   bottom: 24px;
   left: 50%;
@@ -88,6 +92,8 @@
 #inventory-slots {
   display: flex;
   flex-direction: column;
+  width: var(--inv-hotbar-width);
+  box-sizing: border-box;
   padding: 6px;
   border-radius: 12px;
   background: rgba(10, 10, 15, 0.72);
@@ -130,12 +136,13 @@
 /* ── Row ── */
 .inventory-row {
   display: flex;
-  gap: 4px;
+  gap: var(--inv-slot-gap);
+  width: 100%;
 }
 
 .extra-row {
   flex-wrap: wrap;
-  max-width: calc(9 * (60px + 4px));
+  max-width: var(--inv-hotbar-width);
 }
 
 /* ── Slot wrapper (zone de drop) ── */
@@ -153,8 +160,8 @@
 /* ── Individual slot ── */
 .inv-slot {
   position: relative;
-  width: 60px;
-  height: 60px;
+  width: var(--inv-slot-size);
+  height: var(--inv-slot-size);
   border-radius: 8px;
   border: 1.5px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.04);
