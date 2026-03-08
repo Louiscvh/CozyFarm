@@ -153,6 +153,11 @@ export class PlacementController {
         return baseY + HOVER_SURFACE_OFFSET_Y
     }
 
+    private getHoverCursorY(cellX: number, cellZ: number): number {
+        const baseY = this.world.tilesFactory.isSoil(cellX, cellZ) ? SOIL_SURFACE_Y : GRID_Y
+        return baseY + 0.002
+    }
+
     // ─── Helpers de coordonnées ───────────────────────────────────────────────
 
     private snapToCell(x: number, z: number): { cellX: number; cellZ: number } {
@@ -190,7 +195,7 @@ export class PlacementController {
             } else {
                 this.hoverCurrentPos.lerp(this.hoverTargetPos, Math.min(1, 0.28 + dist * 0.6))
             }
-            hoverCellMesh.position.set(this.hoverCurrentPos.x, GRID_Y + 0.002, this.hoverCurrentPos.z)
+            hoverCellMesh.position.set(this.hoverCurrentPos.x, this.hoverCurrentPos.y, this.hoverCurrentPos.z)
         }
         loop()
     }
@@ -427,11 +432,12 @@ export class PlacementController {
 
     private updateHoverCursor(cellX: number, cellZ: number): void {
         const { x, z } = this.cellToWorld(cellX, cellZ, 1)
-        this.hoverTargetPos.set(x, GRID_Y + 0.002, z)
+        const hoverY = this.getHoverCursorY(cellX, cellZ)
+        this.hoverTargetPos.set(x, hoverY, z)
 
         if (!this.hoverInitialized) {
             this.hoverCurrentPos.copy(this.hoverTargetPos)
-            hoverCellMesh.position.set(x, GRID_Y + 0.002, z)
+            hoverCellMesh.position.set(x, hoverY, z)
             hoverCellMesh.scale.set(this.world.cellSize, 1, this.world.cellSize)
             this.hoverInitialized = true
         }
