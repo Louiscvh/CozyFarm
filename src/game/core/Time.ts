@@ -7,30 +7,28 @@ export class Time {
   static elapsed = Time.cycleSeconds / 2 // commence à midi
   static timeScale = 1
 
-  // transition VISUELLE uniquement
-  private static visualFrom: number | null = null
-  private static visualTo: number | null = null
-  private static visualT = 0
-  private static visualDuration = 0
+  // transition de phase (appliquée au temps logique + visuel)
+  private static phaseShiftFrom: number | null = null
+  private static phaseShiftTo: number | null = null
+  private static phaseShiftT = 0
+  private static phaseShiftDuration = 0
 
   static update(dt: number) {
     const safeDt = Math.min(dt, 0.1)   // cap à 100ms max
     this.delta = safeDt * this.timeScale
     this.elapsed += this.delta
 
-    if (this.visualFrom !== null && this.visualTo !== null) {
+    if (this.phaseShiftFrom !== null && this.phaseShiftTo !== null) {
       // Delta constant, indépendant du timeScale
-      this.visualT += dt / this.visualDuration
+      this.phaseShiftT += dt / this.phaseShiftDuration
 
-      if (this.visualT >= 1) {
-        // ✅ Resynchroniser elapsed sur visualTo pour éviter le saut
-        // quand on repasse sur getLogicalDayT()
-        const cycles = Math.floor(this.elapsed / this.cycleSeconds)
-        this.elapsed = cycles * this.cycleSeconds + this.visualTo! * this.cycleSeconds
+      if (this.phaseShiftT >= 1) {
+        // Applique le décalage final à la timeline logique
+        this.elapsed += this.phaseShiftTo * this.cycleSeconds
 
-        this.visualFrom = null
-        this.visualTo = null
-        this.visualT = 0
+        this.phaseShiftFrom = null
+        this.phaseShiftTo = null
+        this.phaseShiftT = 0
       }
     }
   }
@@ -41,35 +39,34 @@ export class Time {
 
   /** temps LOGIQUE (UI, gameplay) */
   static getLogicalDayT() {
-    return (this.elapsed % this.cycleSeconds) / this.cycleSeconds
+    const base = this.getBaseDayT()
+
+    if (this.phaseShiftFrom === null || this.phaseShiftTo === null) {
+      return base
+    }
+
+    const t = this.easeInOut(this.phaseShiftT)
+    return (base + this.lerp(this.phaseShiftFrom, this.phaseShiftTo, t) + 1) % 1
   }
 
   /** temps VISUEL (soleil) */
   static getVisualDayT() {
-    const base = this.getLogicalDayT()
-
-    if (this.visualFrom === null || this.visualTo === null) {
-      return base
-    }
-
-    const t = this.easeInOut(this.visualT)
-    return this.lerpAngle(this.visualFrom, this.visualTo, t)
+    return this.getLogicalDayT()
   }
 
   /** Aller à une heure cible (0..1) */
   static jumpToDayT(targetT: number, transition = 2) {
-    // 1. Capturer l'état visuel ACTUEL avant tout changement
-    const currentVisualT = this.getVisualDayT()
+    const currentT = this.getLogicalDayT()
+    const shift = this.forwardPhaseDiff(currentT, targetT)
 
-    // 2. Recalage IMMÉDIAT du temps logique
-    const cycles = Math.floor(this.elapsed / this.cycleSeconds)
-    this.elapsed = cycles * this.cycleSeconds + targetT * this.cycleSeconds
+    this.phaseShiftFrom = 0
+    this.phaseShiftTo = shift
+    this.phaseShiftT = 0
+    this.phaseShiftDuration = Math.max(0.01, transition)
+  }
 
-    // 3. Lancer la transition visuelle depuis la position visuelle actuelle
-    this.visualFrom = currentVisualT
-    this.visualTo = targetT
-    this.visualT = 0
-    this.visualDuration = transition
+  private static getBaseDayT() {
+    return (this.elapsed % this.cycleSeconds) / this.cycleSeconds
   }
 
   // helpers
@@ -79,10 +76,11 @@ export class Time {
       : 1 - Math.pow(-2 * t + 2, 2) / 2
   }
 
-  private static lerpAngle(a: number, b: number, t: number) {
-    let d = b - a
-    if (d > 0.5) d -= 1
-    if (d < -0.5) d += 1
-    return (a + d * t + 1) % 1
+  private static lerp(a: number, b: number, t: number) {
+    return a + (b - a) * t
+  }
+
+  private static forwardPhaseDiff(from: number, to: number) {
+    return (to - from + 1) % 1
   }
 }
