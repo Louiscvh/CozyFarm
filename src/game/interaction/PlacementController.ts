@@ -38,7 +38,7 @@ highlightMesh.rotation.x = -Math.PI / 2
 highlightMesh.position.y = 0.055
 highlightMesh.visible = false
 
-const HOVER_BORDER_INSET = 0.06
+const HOVER_BORDER_INSET = 0.02
 const hoverBorderGeo = new LineGeometry()
 const hoverInnerHalf = 0.5 - HOVER_BORDER_INSET
 hoverBorderGeo.setPositions([
