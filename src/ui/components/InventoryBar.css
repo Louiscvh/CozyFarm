@@ -92,8 +92,7 @@
 #inventory-slots {
   display: flex;
   flex-direction: column;
-  width: var(--inv-hotbar-width);
-  box-sizing: border-box;
+  width: max-content;
   padding: 6px;
   border-radius: 12px;
   background: rgba(10, 10, 15, 0.72);
@@ -137,12 +136,12 @@
 .inventory-row {
   display: flex;
   gap: var(--inv-slot-gap);
-  width: 100%;
+  width: var(--inv-hotbar-width);
 }
 
 .extra-row {
   flex-wrap: wrap;
-  max-width: var(--inv-hotbar-width);
+  width: var(--inv-hotbar-width);
 }
 
 /* ── Slot wrapper (zone de drop) ── */
