@@ -1,6 +1,10 @@
 /* src/ui/components/InventoryBar.css */
 
 #inventory-bar {
+  --inv-slot-size: 60px;
+  --inv-slot-gap: 4px;
+  --inv-columns: 9;
+  --inv-hotbar-width: calc(var(--inv-columns) * var(--inv-slot-size) + (var(--inv-columns) - 1) * var(--inv-slot-gap));
   position: fixed;
   bottom: 24px;
   left: 50%;
@@ -11,7 +15,9 @@
   gap: 8px;
   z-index: 100;
   pointer-events: none;
+  contain: layout paint;
 }
+
 
 /* ── Hint bar ── */
 #placement-hint {
@@ -21,7 +27,6 @@
   padding: 5px 14px;
   border-radius: 8px;
   background: rgba(0, 0, 0, 0.55);
-  backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.08);
   font-family: "JetBrains Mono", "Fira Code", monospace;
   font-size: 11px;
@@ -66,7 +71,6 @@
   border-radius: 8px;
   border: 1.5px solid rgba(255, 255, 255, 0.15);
   background: rgba(10, 10, 15, 0.72);
-  backdrop-filter: blur(12px);
   color: rgba(255, 255, 255, 0.55);
   font-size: 11px;
   cursor: pointer;
@@ -88,16 +92,18 @@
 #inventory-slots {
   display: flex;
   flex-direction: column;
+  width: max-content;
   padding: 6px;
   border-radius: 12px;
   background: rgba(10, 10, 15, 0.72);
-  backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow:
     0 8px 32px rgba(0, 0, 0, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
   pointer-events: all;
+  contain: layout paint;
 }
+
 
 /* ── Extra rows ── */
 #inventory-extra-rows {
@@ -129,12 +135,13 @@
 /* ── Row ── */
 .inventory-row {
   display: flex;
-  gap: 4px;
+  gap: var(--inv-slot-gap);
+  width: var(--inv-hotbar-width);
 }
 
 .extra-row {
   flex-wrap: wrap;
-  max-width: calc(9 * (60px + 4px));
+  width: var(--inv-hotbar-width);
 }
 
 /* ── Slot wrapper (zone de drop) ── */
@@ -152,8 +159,8 @@
 /* ── Individual slot ── */
 .inv-slot {
   position: relative;
-  width: 60px;
-  height: 60px;
+  width: var(--inv-slot-size);
+  height: var(--inv-slot-size);
   border-radius: 8px;
   border: 1.5px solid rgba(255, 255, 255, 0.1);
   background: rgba(255, 255, 255, 0.04);
@@ -249,3 +256,12 @@
 }
 
 body.placing { cursor: crosshair; }
+
+@supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  #placement-hint,
+  #inventory-expand-btn,
+  #inventory-slots {
+    -webkit-backdrop-filter: blur(6px) saturate(1.05);
+    backdrop-filter: blur(6px) saturate(1.05);
+  }
+}

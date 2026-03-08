@@ -1,5 +1,5 @@
 // src/ui/components/InventoryBar.tsx
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { placementStore } from "../store/PlacementStore"
 import { inventoryStore } from "../store/InventoryStore"
 import type { ItemDef } from "../../game/entity/ItemDef"
@@ -131,11 +131,23 @@ export function InventoryBar() {
     const [expanded, setExpanded] = useState(false)
     const [hotbar, setHotbar] = useState<(string | null)[]>(INITIAL_HOTBAR)
 
-    const extraItems = ALL_ITEMS.filter(i => !hotbar.includes(i.id))
+    const extraItems = useMemo(
+        () => ALL_ITEMS.filter(i => !hotbar.includes(i.id)),
+        [hotbar]
+    )
+    const hasExtra = extraItems.length > 0
     const dragSrc = useRef<DragSource | null>(null)
     const [dragOver, setDragOver] = useState<
     { zone: "hotbar"; index: number } | { zone: "extra"; id: string } | null
         >(null)
+
+    const setDragOverHotbar = (index: number) => {
+        setDragOver(prev => prev?.zone === "hotbar" && prev.index === index ? prev : { zone: "hotbar", index })
+    }
+
+    const setDragOverExtra = (id: string) => {
+        setDragOver(prev => prev?.zone === "extra" && prev.id === id ? prev : { zone: "extra", id })
+    }
 
 
 
@@ -162,7 +174,21 @@ export function InventoryBar() {
         setRotation(placementStore.rotation)
     }), [])
 
-    useEffect(() => inventoryStore.subscribe(() => forceUpdate(n => n + 1)), [])
+    useEffect(() => {
+        let raf = 0
+        const unsubscribe = inventoryStore.subscribe(() => {
+            if (raf) return
+            raf = requestAnimationFrame(() => {
+                raf = 0
+                forceUpdate(n => n + 1)
+            })
+        })
+
+        return () => {
+            if (raf) cancelAnimationFrame(raf)
+            unsubscribe()
+        }
+    }, [])
 
     // ── Clavier ────────────────────────────────────────────────────────────────
     useEffect(() => {
@@ -182,7 +208,7 @@ export function InventoryBar() {
         }
         window.addEventListener("keydown", onKey)
         return () => window.removeEventListener("keydown", onKey)
-    }, [selectedId, hotbar])
+    }, [selectedId, hotbar, hasExtra])
 
     // ── Sélection ──────────────────────────────────────────────────────────────
 
@@ -264,7 +290,7 @@ export function InventoryBar() {
             <div
                 key={index}
                 className={["inv-slot-wrap", over ? "drag-over" : ""].filter(Boolean).join(" ")}
-                onDragOver={e => { e.preventDefault(); setDragOver({ zone: "hotbar", index }) }}
+                onDragOver={e => { e.preventDefault(); setDragOverHotbar(index) }}
                 onDragLeave={() => setDragOver(null)}
                 onDrop={() => onDropHotbar(index)}
             >
@@ -310,7 +336,7 @@ export function InventoryBar() {
             <div
                 key={item.id}
                 className={["inv-slot-wrap", over ? "drag-over" : ""].filter(Boolean).join(" ")}
-                onDragOver={e => { e.preventDefault(); setDragOver({ zone: "extra", id: item.id }) }}
+                onDragOver={e => { e.preventDefault(); setDragOverExtra(item.id) }}
                 onDragLeave={() => setDragOver(null)}
                 onDrop={onDropExtra}
             >
@@ -339,8 +365,6 @@ export function InventoryBar() {
         )
     }
 
-    const hasExtra = extraItems.length > 0
-
     return (
         <div id="inventory-bar">
             {renderHint()}
@@ -363,23 +387,26 @@ export function InventoryBar() {
                     </div>
 
                     {hasExtra && (
-                        <div
-                            id="inventory-extra-rows"
-                            className={expanded ? "open" : ""}
-                            onDragOver={e => { e.preventDefault(); setDragOver({ zone: "extra", id: "__zone__" }) }}
-                            onDragLeave={() => setDragOver(null)}
-                            onDrop={onDropExtra}
-                        >
-                            <div className="extra-drop-hint">Glisser déposer ici pour modifier</div>
-                            <div className="inventory-row extra-row">
-                                {extraItems.map(renderExtraItem)}
-                                {extraItems.length === 0 && (
-                                    <div className="inv-slot inv-slot-empty extra-empty-hint">
-                                        <span style={{ fontSize: 10, opacity: 0.4 }}>vide</span>
+                        <div id="inventory-extra-rows" className={expanded ? "open" : ""}>
+                            {expanded && (
+                                <>
+                                    <div className="extra-drop-hint">Glisser déposer ici pour modifier</div>
+                                    <div
+                                        className="inventory-row extra-row"
+                                        onDragOver={e => { e.preventDefault(); setDragOverExtra("__zone__") }}
+                                        onDragLeave={() => setDragOver(null)}
+                                        onDrop={onDropExtra}
+                                    >
+                                        {extraItems.map(renderExtraItem)}
+                                        {extraItems.length === 0 && (
+                                            <div className="inv-slot inv-slot-empty extra-empty-hint">
+                                                <span style={{ fontSize: 10, opacity: 0.4 }}>vide</span>
+                                            </div>
+                                        )}
                                     </div>
-                                )}
+                                </>
+                            )}
                             </div>
-                        </div>
                     )}
                 </div>
             </div>
