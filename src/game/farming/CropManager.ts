@@ -260,6 +260,19 @@ export class CropManager {
         })
     }
 
+
+    private makeMaterialsUnique(root: THREE.Object3D): void {
+        root.traverse(obj => {
+            const mesh = obj as THREE.Mesh
+            if (!mesh.isMesh || !mesh.material) return
+            if (Array.isArray(mesh.material)) {
+                mesh.material = mesh.material.map(mat => mat.clone())
+            } else {
+                mesh.material = mesh.material.clone()
+            }
+        })
+    }
+
     private spawnMesh(instance: CropInstance, transitionType: "spawn" | "phase"): void {
         const phase = instance.currentPhase
         const prevPhase = instance.previousPhase
@@ -302,6 +315,8 @@ export class CropManager {
                 const yFix = box.min.y < 0 ? -box.min.y : 0
                 model.position.set(pos.x, yFix + cropYOffset, pos.z)
                 model.rotation.set(jitter.tiltX, jitter.rotY, jitter.tiltZ)
+
+                this.makeMaterialsUnique(model)
 
                 model.frustumCulled = false
                 model.userData.isCrop = true
