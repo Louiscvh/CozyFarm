@@ -87,6 +87,7 @@ export class PlacementController {
     private hoverRaf = 0
     private hoverInitialized = false
     private currentHoverShape: HoverShape = "single"
+    private currentHoverFootprint = 1
 
     // ── Click state ───────────────────────────────────────────────────────────
     private mouseDownPos = { x: 0, y: 0 }
@@ -496,11 +497,11 @@ export class PlacementController {
         return "single"
     }
 
-    private updateHoverShapeGeometry(shape: HoverShape): void {
-        if (shape === this.currentHoverShape) return
+    private updateHoverShapeGeometry(shape: HoverShape, footprint: number): void {
+        if (shape === this.currentHoverShape && footprint === this.currentHoverFootprint) return
 
         const inner = 0.5 - HOVER_BORDER_INSET
-        const outer = 1.5 - HOVER_BORDER_INSET
+        const outer = footprint / 2 - HOVER_BORDER_INSET
 
         if (shape === "cross") {
             hoverBorderGeo.setPositions([
@@ -529,6 +530,7 @@ export class PlacementController {
         }
 
         this.currentHoverShape = shape
+        this.currentHoverFootprint = footprint
     }
 
     private getHoverFootprint(item: ItemDef | null): number {
@@ -542,13 +544,13 @@ export class PlacementController {
     }
 
     private updateHoverCursor(cellX: number, cellZ: number, footprint: number, shape: HoverShape): void {
-        this.updateHoverShapeGeometry(shape)
+        this.updateHoverShapeGeometry(shape, footprint)
 
         const half = Math.floor(footprint / 2)
         const { x, z } = this.cellToWorld(cellX - half, cellZ - half, footprint)
         const hoverY = this.getHoverCursorY(cellX, cellZ)
         this.hoverTargetPos.set(x, hoverY, z)
-        hoverCellMesh.scale.set(footprint * this.world.cellSize, 1, footprint * this.world.cellSize)
+        hoverCellMesh.scale.set(this.world.cellSize, 1, this.world.cellSize)
 
         if (!this.hoverInitialized) {
             this.hoverCurrentPos.copy(this.hoverTargetPos)
