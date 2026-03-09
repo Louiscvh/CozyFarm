@@ -23,7 +23,11 @@ export function EntityPopups() {
   const prevEntityRef = useRef<THREE.Object3D | null>(null)
   const popupRef    = useRef<HTMLDivElement | null>(null)
   const closeTimer  = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const openTimer   = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isOverPopup = useRef(false)
+  const pendingEntityIdRef = useRef<string | null>(null)
+
+  const HOVER_OPEN_DELAY_MS = 250
 
   const cancelClose = () => {
     if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null }
@@ -32,6 +36,29 @@ export function EntityPopups() {
   const scheduleClose = () => {
     cancelClose()
     closeTimer.current = setTimeout(() => setHoveredPopup(null), 300)
+  }
+
+  const cancelOpen = () => {
+    if (openTimer.current) { clearTimeout(openTimer.current); openTimer.current = null }
+    pendingEntityIdRef.current = null
+  }
+
+  const scheduleOpen = (popup: PopupInfo) => {
+    if (hoveredPopup?.id === popup.id) {
+      cancelOpen()
+      setHoveredPopup(popup)
+      return
+    }
+
+    if (pendingEntityIdRef.current === popup.id && openTimer.current) return
+
+    cancelOpen()
+    pendingEntityIdRef.current = popup.id
+    openTimer.current = setTimeout(() => {
+      setHoveredPopup(popup)
+      openTimer.current = null
+      pendingEntityIdRef.current = null
+    }, HOVER_OPEN_DELAY_MS)
   }
 
   useEffect(() => {
@@ -90,7 +117,7 @@ export function EntityPopups() {
     function onMouseMove(e: MouseEvent) {
       const w = World.current
       if (!w || !w.camera) return
-      if (placementStore.selectedItem) { cancelClose(); setHoveredPopup(null); return }
+      if (placementStore.selectedItem) { cancelClose(); cancelOpen(); setHoveredPopup(null); return }
       if (isOverPopup.current)         { cancelClose(); return }
 
       mouse.x =  (e.clientX / window.innerWidth)  * 2 - 1
@@ -102,7 +129,7 @@ export function EntityPopups() {
         .filter(Boolean) as THREE.Object3D[]
       const intersects = raycaster.intersectObjects(hitboxes, false)
 
-      if (intersects.length === 0) { scheduleClose(); return }
+      if (intersects.length === 0) { cancelOpen(); scheduleClose(); return }
 
       const entity = intersects[0].object.parent!
       const box    = new THREE.Box3().setFromObject(intersects[0].object)
@@ -111,7 +138,7 @@ export function EntityPopups() {
       ).project(w.camera)
 
       cancelClose()
-      setHoveredPopup({
+      scheduleOpen({
         entityObject: entity,
         id          : entity.uuid,
         screenPos   : {
@@ -122,13 +149,14 @@ export function EntityPopups() {
     }
 
     window.addEventListener("mousemove", onMouseMove)
-    return () => { window.removeEventListener("mousemove", onMouseMove); cancelClose() }
+    return () => { window.removeEventListener("mousemove", onMouseMove); cancelClose(); cancelOpen() }
   }, [])
 
   // ─── Delete ───────────────────────────────────────────────────────────────
 
   const handleDelete = (popup: PopupInfo) => {
     cancelClose()
+    cancelOpen()
     isOverPopup.current = false
     const w = World.current
     if (!w) return
@@ -145,6 +173,7 @@ export function EntityPopups() {
 
   const handleMove = (popup: PopupInfo) => {
     cancelClose()
+    cancelOpen()
     isOverPopup.current = false
     setHoveredPopup(null)
     const w = World.current
@@ -193,6 +222,7 @@ export function EntityPopups() {
 
   const handleRotate = (popup: PopupInfo) => {
     cancelClose()
+    cancelOpen()
     const e = popup.entityObject
     const w = World.current
     if (!w) return
