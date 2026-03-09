@@ -33,6 +33,7 @@ import { WateringCanItemDef } from "../../game/items/WateringCanItem"
 import { TulipEntity } from "../../game/entity/entities/Tulip"
 import { AxeItemDef } from "../../game/items/AxeItem"
 import { WoodItemDef } from "../../game/items/WoodItem"
+import { LootAnimationLayer } from "./LootAnimationLayer"
 
 // ─── Tous les items (construction + farming) ──────────────────────────────────
 
@@ -330,6 +331,7 @@ export function InventoryBar() {
                         onDragStart={() => onDragStartHotbar(index)}
                         onDragEnd={cancelDrag}
                     >
+                        <span className="inv-slot-hit" data-inv-item-id={item.id} />
                         <span className="inv-slot-key">{index + 1}</span>
                         <span className="inv-slot-icon">{item.icon}</span>
                         <span className="inv-slot-label">{item.label}</span>
@@ -375,6 +377,7 @@ export function InventoryBar() {
                     onDragStart={() => onDragStartExtra(item.id)}
                     onDragEnd={cancelDrag}
                 >
+                    <span className="inv-slot-hit" data-inv-item-id={item.id} />
                     <span className="inv-slot-icon">{item.icon}</span>
                     <span className="inv-slot-label">{item.label}</span>
                     {!isInfinite(item) && (
@@ -387,6 +390,7 @@ export function InventoryBar() {
 
     return (
         <div id="inventory-bar">
+            <LootAnimationLayer items={ALL_ITEMS} />
             {renderHint()}
 
             <div id="inventory-wrapper">
