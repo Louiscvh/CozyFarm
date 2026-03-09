@@ -711,8 +711,8 @@ export class PlacementController {
         if (!item || !this.isGhostItem(item)) return
         if (!placementStore.hoveredCell) return
 
-        // Les graines : le clic est géré par ItemActionController
-        if (this.isSeedGhostItem(item)) return
+        // Les graines et tuteurs : le clic est géré par ItemActionController
+        if (this.isSeedGhostItem(item) || this.isStakeGhostItem(item)) return
 
         if (!placementStore.canPlace) { soundManager.playError(); return }
 

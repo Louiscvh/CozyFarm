@@ -478,6 +478,10 @@ export class CropManager {
         const basePos = this.worldPos(instance.cellX, instance.cellZ)
         const cropYOffset = phase.yOffset ?? instance.def.yOffset ?? 0
         const jitter = this.cellJitter(instance.cellX, instance.cellZ)
+        const isFruitTree = instance.def.id === "orange_tree"
+        const rotY = isFruitTree ? 0 : jitter.rotY
+        const tiltX = isFruitTree ? 0 : jitter.tiltX
+        const tiltZ = isFruitTree ? 0 : jitter.tiltZ
 
         // Position finale avec jitter
         const pos = new THREE.Vector3(
@@ -513,7 +517,7 @@ export class CropManager {
                 const box = new THREE.Box3().setFromObject(model)
                 const yFix = box.min.y < 0 ? -box.min.y : 0
                 model.position.set(pos.x, yFix + cropYOffset, pos.z)
-                model.rotation.set(jitter.tiltX, jitter.rotY, jitter.tiltZ)
+                model.rotation.set(tiltX, rotY, tiltZ)
 
                 this.makeMaterialsUnique(model)
 
@@ -543,11 +547,11 @@ export class CropManager {
 
             }).catch(err => {
                 console.error(`[CropManager] Impossible de charger ${phase.modelPath}`, err)
-                this.spawnCube(instance, phase, pos, cropYOffset, jitter.rotY, jitter.tiltX, jitter.tiltZ, transitionType)
+                this.spawnCube(instance, phase, pos, cropYOffset, rotY, tiltX, tiltZ, transitionType)
             })
 
         } else {
-            this.spawnCube(instance, phase, pos, cropYOffset, jitter.rotY, jitter.tiltX, jitter.tiltZ, transitionType)
+            this.spawnCube(instance, phase, pos, cropYOffset, rotY, tiltX, tiltZ, transitionType)
         }
     }
 
