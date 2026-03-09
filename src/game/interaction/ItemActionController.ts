@@ -101,7 +101,7 @@ export class ItemActionController {
         const startScale = ghost.scale.x
         const startRotY = ghost.rotation.y
         const startTime = performance.now()
-        const duration = 160
+        const duration = 80
 
         const animate = () => {
             const t = Math.min(1, (performance.now() - startTime) / duration)

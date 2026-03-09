@@ -163,6 +163,15 @@ export class PlacementController {
             && !this.world.cropManager.hasCrop(cellX, cellZ)
     }
 
+    private hasCropInArea(cellX: number, cellZ: number, sizeInCells: number): boolean {
+        for (let dx = 0; dx < sizeInCells; dx++) {
+            for (let dz = 0; dz < sizeInCells; dz++) {
+                if (this.world.cropManager.hasCrop(cellX + dx, cellZ + dz)) return true
+            }
+        }
+        return false
+    }
+
     private getSeedHoverY(cellX: number, cellZ: number): number {
         const baseY = this.world.tilesFactory.isSoil(cellX, cellZ) ? SOIL_SURFACE_Y : GRID_Y
         return baseY + HOVER_SURFACE_OFFSET_Y
@@ -348,7 +357,7 @@ export class PlacementController {
             const { cellX, cellZ } = placementStore.hoveredCell
             const { placeCellX, placeCellZ } = this.getPlaceCells(cellX, cellZ, footprint)
             const { x, z } = this.cellToWorld(placeCellX, placeCellZ, footprint)
-            const canPlace = this.world.tilesFactory.canSpawn(placeCellX, placeCellZ, footprint)
+            const canPlace = this.world.tilesFactory.canSpawn(placeCellX, placeCellZ, footprint) && !this.hasCropInArea(placeCellX, placeCellZ, footprint)
 
             this.targetPos.set(x, this.yOffset, z)
             this.currentPos.copy(this.targetPos)
@@ -558,7 +567,7 @@ export class PlacementController {
             const pos = this.cellToWorld(placeCellX, placeCellZ, footprint)
             x = pos.x
             z = pos.z
-            canPlace = this.world.tilesFactory.canSpawn(placeCellX, placeCellZ, footprint)
+            canPlace = this.world.tilesFactory.canSpawn(placeCellX, placeCellZ, footprint) && !this.hasCropInArea(placeCellX, placeCellZ, footprint)
             highlightY = this.getSeedHoverY(cellX, cellZ)
             highlightMesh.scale.set(footprint * this.world.cellSize, footprint * this.world.cellSize, 1)
             revealGroup.position.set(x, GRID_Y + 0.0055, z)
@@ -658,6 +667,7 @@ export class PlacementController {
 
     private async handlePlace(item: ItemDef, placeCellX: number, placeCellZ: number, footprint: number): Promise<void> {
         const entity = getItemEntity(item)
+        if (this.hasCropInArea(placeCellX, placeCellZ, footprint)) { soundManager.playError(); return }
         const spawnedEntity = await this.world.spawnEntitySafe(entity, placeCellX, placeCellZ, footprint)
         if (!spawnedEntity) { soundManager.playError(); return }
 
