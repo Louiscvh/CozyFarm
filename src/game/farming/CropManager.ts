@@ -77,8 +77,10 @@ export class CropManager {
     private readonly crops = new Map<string, CropInstance>()
 
     private _harvestingInstances = new Set<CropInstance>()
-    private _fruitHarvesting = new Map<CropInstance, { root: THREE.Object3D; startY: number; startedAt: number; duration: number }>()
+    private _fruitHarvesting = new Map<CropInstance, { root: THREE.Object3D; startY: number; startedAt: number; duration: number; startScale: number }>()
     private _looseStakes = new Map<string, THREE.Object3D>()
+    private _stakePlacing = new Map<string, { mesh: THREE.Object3D; startY: number; endY: number; startedAt: number; duration: number }>()
+    private _stakeRemoving = new Map<string, { mesh: THREE.Object3D; startY: number; startedAt: number; duration: number }>()
 
     constructor(scene: THREE.Scene, world: World) {
         this.scene = scene
@@ -103,15 +105,13 @@ export class CropManager {
         const k = this.key(cellX, cellZ)
         const stake = this._looseStakes.get(k)
         if (!stake) return false
-        this.scene.remove(stake)
-        stake.traverse(obj => {
-            const mesh = obj as THREE.Mesh
-            if (!mesh.isMesh) return
-            mesh.geometry?.dispose()
-            const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
-            mats.forEach(m => m?.dispose())
-        })
         this._looseStakes.delete(k)
+        this._stakeRemoving.set(k, {
+            mesh: stake,
+            startY: stake.position.y,
+            startedAt: performance.now(),
+            duration: 260,
+        })
         return true
     }
 
@@ -187,6 +187,7 @@ export class CropManager {
         if (!instance) return null
         if (!instance.addStake()) return null
         this.updateStakeVisual(instance)
+        this.startStakePlacementAnimation(instance)
         return instance
     }
 
@@ -211,12 +212,47 @@ export class CropManager {
             const t = Math.min(1, (nowMs - anim.startedAt) / anim.duration)
             const ease = t * t * (3 - 2 * t)
             anim.root.position.y = anim.startY + this.world.cellSize * 0.12 * ease
-            anim.root.scale.setScalar(Math.max(0.01, 1 - ease))
+            anim.root.scale.setScalar(Math.max(0.01, anim.startScale * (1 - ease)))
             this.setOpacity(anim.root, 1 - ease)
             if (t >= 1) {
                 anim.root.parent?.remove(anim.root)
                 if (instance.fruitMesh === anim.root) instance.fruitMesh = null
                 this._fruitHarvesting.delete(instance)
+            }
+        }
+
+        for (const [key, anim] of this._stakePlacing) {
+            const t = Math.min(1, (nowMs - anim.startedAt) / anim.duration)
+            const ease = t * t * (3 - 2 * t)
+            anim.mesh.position.y = anim.startY + (anim.endY - anim.startY) * ease
+            anim.mesh.scale.setScalar(Math.max(0.4, ease))
+            this.setOpacity(anim.mesh, 0.4 + ease * 0.6)
+            if (t >= 1) {
+                anim.mesh.position.y = anim.endY
+                anim.mesh.scale.setScalar(1)
+                this.setOpacity(anim.mesh, 1)
+                this._stakePlacing.delete(key)
+            }
+        }
+
+        for (const [key, anim] of this._stakeRemoving) {
+            const t = Math.min(1, (nowMs - anim.startedAt) / anim.duration)
+            const ease = t * t * (3 - 2 * t)
+            anim.mesh.position.y = anim.startY + this.world.cellSize * 0.18 * ease
+            anim.mesh.rotation.z = ease * 0.5
+            anim.mesh.rotation.x = -ease * 0.4
+            anim.mesh.scale.setScalar(Math.max(0.01, 1 - ease * 0.9))
+            this.setOpacity(anim.mesh, 1 - ease)
+            if (t >= 1) {
+                this.scene.remove(anim.mesh)
+                anim.mesh.traverse(obj => {
+                    const mesh = obj as THREE.Mesh
+                    if (!mesh.isMesh) return
+                    mesh.geometry?.dispose()
+                    const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+                    mats.forEach(m => m?.dispose())
+                })
+                this._stakeRemoving.delete(key)
             }
         }
 
@@ -254,6 +290,8 @@ export class CropManager {
         this.crops.clear()
         for (const stake of this._looseStakes.values()) this.scene.remove(stake)
         this._looseStakes.clear()
+        this._stakePlacing.clear()
+        this._stakeRemoving.clear()
     }
 
     // ─── Helpers privés ────────────────────────────────────────────────────────
@@ -532,13 +570,51 @@ export class CropManager {
     }
 
     private startFruitHarvestAnimation(instance: CropInstance): void {
-        if (!instance.fruitMesh) return
-        const root = instance.fruitMesh as THREE.Object3D
+        const owner = instance.mesh as THREE.Object3D | null
+        if (!owner) return
+
+        let root = instance.fruitMesh as THREE.Object3D | null
+        if (!root) {
+            root = new THREE.Group()
+            const sphere = new THREE.SphereGeometry(this.world.cellSize * 0.09, 10, 10)
+            const mat = new THREE.MeshStandardMaterial({ color: instance.def.fruitVisualColor ?? 0xff8a00, roughness: 0.5, metalness: 0 })
+            for (let i = 0; i < 7; i++) {
+                const m = new THREE.Mesh(sphere, mat.clone())
+                const a = (i / 7) * Math.PI * 2
+                m.position.set(Math.cos(a) * this.world.cellSize * 0.18, this.world.cellSize * 0.04 * (i % 2), Math.sin(a) * this.world.cellSize * 0.18)
+                m.castShadow = true
+                root.add(m)
+            }
+            owner.add(root)
+            root.position.set(0, this.world.cellSize * 0.6, 0)
+            instance.fruitMesh = root
+        }
+
+        const startScale = root.scale.x > 0 ? root.scale.x : 1
         this._fruitHarvesting.set(instance, {
             root,
             startY: root.position.y,
+            startScale,
             startedAt: performance.now(),
-            duration: 260,
+            duration: 380,
+        })
+    }
+
+    private startStakePlacementAnimation(instance: CropInstance): void {
+        if (!instance.stakeMesh) return
+        const k = this.key(instance.cellX, instance.cellZ)
+        const mesh = instance.stakeMesh
+        const endY = mesh.position.y
+        const startY = endY + this.world.cellSize * 0.35
+        mesh.position.y = startY
+        mesh.scale.setScalar(0.4)
+        this.setOpacity(mesh, 0.4)
+        this._stakePlacing.set(k, {
+            mesh,
+            startY,
+            endY,
+            startedAt: performance.now(),
+            duration: 220,
         })
     }
 
