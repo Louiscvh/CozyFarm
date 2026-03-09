@@ -18,6 +18,7 @@ interface LootAnimationLayerProps {
 }
 
 const worldProjectVector = new THREE.Vector3()
+const LOOT_FLIGHT_DURATION_MS = 580
 
 function worldCellToScreen(cellX: number, cellZ: number) {
     const world = World.current
@@ -65,7 +66,7 @@ export function LootAnimationLayer({ items }: LootAnimationLayerProps) {
 
             setParticles(prev => [...prev, ...newParticles])
 
-            const bumpDelay = 440 + (clampedAmount - 1) * 65
+            const bumpDelay = LOOT_FLIGHT_DURATION_MS + (clampedAmount - 1) * 65
             window.setTimeout(() => {
                 if (!targetSlot) return
                 targetSlot.classList.remove("inv-slot-bump")

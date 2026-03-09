@@ -4,7 +4,6 @@ import { inventoryStore } from "../../ui/store/InventoryStore"
 import { ALL_CROPS } from "../../game/farming/CropDefinition"
 import { itemActionRegistry, type UseOnEntityContext } from "../../game/interaction/ItemActionRegistry"
 import { World } from "../../game/world/World"
-import { lootFeedbackStore } from "../store/LootFeedbackStore"
 
 export function useFarming() {
 
@@ -73,13 +72,7 @@ export function useFarming() {
                 if (!world) return false
                 const harvested = world.cropManager.harvest(ctx.cellX, ctx.cellZ)
                 if (!harvested) return false
-                inventoryStore.produce(harvested.def.harvestItemId, harvested.def.harvestQty)
-                lootFeedbackStore.emit({
-                    itemId: harvested.def.harvestItemId,
-                    amount: harvested.def.harvestQty,
-                    cellX: ctx.cellX,
-                    cellZ: ctx.cellZ,
-                })
+                inventoryStore.produce(harvested.def.harvestItemId, harvested.def.harvestQty, { cellX: ctx.cellX, cellZ: ctx.cellZ })
                 return true
             }
         )

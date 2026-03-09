@@ -7,7 +7,6 @@ import { placementStore } from "../store/PlacementStore"
 import { animateChop } from "../../game/entity/animations/ChopAnimation"
 import { World } from "../../game/world/World"
 import { TREE_ENTITY_IDS } from "../../game/items/AxeItem"
-import { lootFeedbackStore } from "../store/LootFeedbackStore"
 
 const WOOD_BY_TREE: Record<string, number> = {
     tree1: 2,
@@ -49,8 +48,7 @@ export function useWoodcutting() {
             world.tilesFactory.playTreeChopAnimation(cellX, cellZ)
 
             // ── Bois ──────────────────────────────────────────────────────────
-            inventoryStore.produce("wood", qty)
-            lootFeedbackStore.emit({ itemId: "wood", amount: qty, cellX, cellZ })
+            inventoryStore.produce("wood", qty, { cellX, cellZ })
 
             // ── Historique ────────────────────────────────────────────────────
             const occupiedCells: { x: number; z: number }[] = []
@@ -89,7 +87,7 @@ export function useWoodcutting() {
                 },
 
                 onRemove: (w) => {
-                    inventoryStore.produce("wood", qty)
+                    inventoryStore.produce("wood", qty, { cellX, cellZ })
                     animateChop(w, entity)
                     w.tilesFactory.playTreeChopAnimation(cellX, cellZ)
                 },
