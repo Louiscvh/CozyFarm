@@ -80,7 +80,7 @@ export const OrangeTreeCrop: CropDefinition = {
     fruitVisualColor: 0xff8a00,
     fruitVisualCount: 9,
     usePlacementGhost: true,
-    plantTileTypes: ["grass", "soil"],
+    plantTileTypes: ["grass"],
     ghostModelScale: 0.18,
     phases: [
         { durationSeconds: DEBUG ? 3 : 260, color: 0x7a5d3b, scaleXZ: 0.02, height: 0.08 },

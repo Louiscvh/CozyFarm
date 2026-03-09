@@ -465,7 +465,8 @@ export class CropManager {
 
         const visualHeight = (mesh as THREE.Object3D).userData.visualHeight as number | undefined
         const h = visualHeight ?? phase.height ?? 0.05
-        mesh.position.set(pos.x, h / 2 + cropYOffset, pos.z)
+        const isSingleMesh = (mesh as THREE.Mesh).isMesh
+        mesh.position.set(pos.x, isSingleMesh ? (h / 2 + cropYOffset) : cropYOffset, pos.z)
         mesh.rotation.set(tiltX, rotY, tiltZ)
         mesh.scale.setScalar(0)
 
@@ -490,11 +491,13 @@ export class CropManager {
     }
 
     private updateFruitVisual(instance: CropInstance, pos?: THREE.Vector3, cropYOffset: number = 0, baseScale: number = 1): void {
+        void pos
+        void cropYOffset
         if (!instance.def.fruitRegrowSeconds) return
 
         if (!instance.isReady || !instance.fruitsReady || !instance.mesh) {
             if (instance.fruitMesh) {
-                this.scene.remove(instance.fruitMesh)
+                instance.fruitMesh.parent?.remove(instance.fruitMesh)
                 instance.fruitMesh = null
             }
             return
@@ -512,14 +515,18 @@ export class CropManager {
                 group.add(m)
             }
             instance.fruitMesh = group
-            this.scene.add(group)
+            ; (instance.mesh as THREE.Object3D).add(group)
         }
 
-        const worldPos = pos ?? (instance.mesh as THREE.Object3D).position
-        const baseY = worldPos.y + this.world.cellSize * 0.6 + cropYOffset
-        const radius = this.world.cellSize * 0.24 * baseScale
+        const root = instance.mesh as THREE.Object3D
         const group = instance.fruitMesh as THREE.Group
-        group.position.set(worldPos.x, baseY, worldPos.z)
+        if (group.parent !== root) root.add(group)
+
+        const worldBox = new THREE.Box3().setFromObject(root)
+        const crownHeight = Math.max(this.world.cellSize * 0.45, worldBox.max.y - worldBox.min.y)
+        const radius = this.world.cellSize * 0.24 * baseScale
+
+        group.position.set(0, crownHeight * 0.72, 0)
         group.scale.setScalar(Math.max(0.6, baseScale))
 
         group.children.forEach((child, i) => {
@@ -566,7 +573,7 @@ export class CropManager {
 
     private disposeMesh(instance: CropInstance): void {
         if (instance.fruitMesh) {
-            this.scene.remove(instance.fruitMesh)
+            instance.fruitMesh.parent?.remove(instance.fruitMesh)
             instance.fruitMesh = null
         }
         if (instance.stakeMesh) {
