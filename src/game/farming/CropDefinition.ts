@@ -22,6 +22,11 @@ export interface CropDefinition {
     readonly phases: ReadonlyArray<GrowthPhase>
     readonly usePlacementGhost?: boolean   // défaut: true
     readonly showPlacementGrid?: boolean   // défaut: false
+    readonly fruitRegrowSeconds?: number
+    readonly fruitVisualColor?: number
+    readonly fruitVisualCount?: number
+    readonly supportsStake?: boolean
+    readonly stakeGrowthMultiplier?: number
 }
 
 const DEBUG = false
@@ -58,4 +63,25 @@ export const LettuceCrop: CropDefinition = {
     ],
 }
 
-export const ALL_CROPS: ReadonlyArray<CropDefinition> = [CarrotCrop, LettuceCrop]
+export const OrangeTreeCrop: CropDefinition = {
+    id: "orange_tree",
+    label: "Oranger",
+    seedItemId: "orange_sapling",
+    harvestItemId: "orange",
+    harvestQty: 3,
+    yOffset: 0,
+    supportsStake: true,
+    stakeGrowthMultiplier: 1.75,
+    fruitRegrowSeconds: DEBUG ? 8 : 420,
+    fruitVisualColor: 0xff8a00,
+    fruitVisualCount: 9,
+    usePlacementGhost: true,
+    phases: [
+        { durationSeconds: DEBUG ? 3 : 260, color: 0x7a5d3b, scaleXZ: 0.02, height: 0.06 },
+        { durationSeconds: DEBUG ? 3 : 360, color: 0x4b7a2f, scaleXZ: 0.08, height: 0.2 },
+        { durationSeconds: DEBUG ? 3 : 520, color: 0x4b8a35, scaleXZ: 0.13, height: 0.45 },
+        { durationSeconds: 0, modelPath: "/models/tree_orange.glb", modelScale: 0.45 },
+    ],
+}
+
+export const ALL_CROPS: ReadonlyArray<CropDefinition> = [CarrotCrop, LettuceCrop, OrangeTreeCrop]

@@ -54,6 +54,14 @@ export function useFarming() {
             return world.tilesFactory.untillCell(ctx.cellX, ctx.cellZ)
         })
 
+        itemActionRegistry.registerTileAction("farming:add_stake", (ctx) => {
+            const world = World.current
+            if (!world) return false
+            const crop = world.cropManager.getCrop(ctx.cellX, ctx.cellZ)
+            if (!crop?.def.supportsStake) return false
+            return !!world.cropManager.addStake(ctx.cellX, ctx.cellZ)
+        })
+
         itemActionRegistry.registerTileAction("farming:water", ({ cellX, cellZ }) => {
             const world = World.current
             if (!world) return false

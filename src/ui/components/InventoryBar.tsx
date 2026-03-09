@@ -33,6 +33,9 @@ import { WateringCanItemDef } from "../../game/items/WateringCanItem"
 import { TulipEntity } from "../../game/entity/entities/Tulip"
 import { AxeItemDef } from "../../game/items/AxeItem"
 import { WoodItemDef } from "../../game/items/WoodItem"
+import { OrangeSaplingItemDef } from "../../game/items/OrangeSaplingItem"
+import { OrangeItemDef } from "../../game/items/OrangeItem"
+import { StakeItemDef } from "../../game/items/StakeItem"
 
 // ─── Tous les items (construction + farming) ──────────────────────────────────
 
@@ -51,6 +54,8 @@ const ALL_ITEMS: ItemDef[] = [
     { id: "farm", label: "Ferme", icon: "🏚️", usage: { kind: "placeable", entity: FarmEntity } },
     CarrotSeedItemDef,
     LettuceSeedItemDef,
+    OrangeSaplingItemDef,
+    StakeItemDef,
     { id: "wheatField", label: "Blé", icon: "🌾", usage: { kind: "placeable", entity: WheatField } },
     { id: "cabana", label: "Cabane", icon: "🛖", usage: { kind: "placeable", entity: CabanaEntity } },
     { id: "wind_mill", label: "Moulin", icon: "💨", usage: { kind: "placeable", entity: WindMillEntity } },
@@ -63,7 +68,8 @@ const ALL_ITEMS: ItemDef[] = [
     { id: "dirt_soil", label: "Champ", icon: "🥔", usage: { kind: "placeable", entity: DirtSoilEntity } },
     { id: "flower1", label: "Fleur", icon: "🌸", usage: { kind: "placeable", entity: Flower1Entity } },
     CarrotItemDef,
-    LettuceItemDef
+    LettuceItemDef,
+    OrangeItemDef
 ]
 
 // ─── Pool defs (plaçables uniquement) ────────────────────────────────────────
@@ -87,6 +93,8 @@ inventoryStore.register([
     { id: "wheatField", maxQty: 16 },
     { id: "lettuce_seed", maxQty: 64, initialQty: 20 },      // ← farming
     { id: "carrot_seed", maxQty: 64, initialQty: 20 },      // ← farming
+    { id: "orange_sapling", maxQty: 32, initialQty: 5 },
+    { id: "stake", maxQty: 64, initialQty: 10 },
     { id: "cabana", maxQty: 8 },
     { id: "torch", maxQty: 32 },
     { id: "wood_plank", maxQty: 32 },
@@ -97,6 +105,7 @@ inventoryStore.register([
     { id: "dirt_soil", maxQty: 24 },
     { id: "carrot", maxQty: 99, initialQty: 0 },
     { id: "lettuce", maxQty: 99, initialQty: 0 },      // ← farming
+    { id: "orange", maxQty: 99, initialQty: 0 },
     { id: "shovel", maxQty: 1, infinite: true },
     { id: "watering_can", maxQty: 1, infinite: true },
     { id: "axe", maxQty: 1, infinite: true },

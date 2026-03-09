@@ -78,6 +78,12 @@ export class CropManager {
         const instance = this.crops.get(this.key(cellX, cellZ))
         if (!instance?.isReady) return null
 
+        if (instance.def.fruitRegrowSeconds) {
+            if (!instance.harvestFruits()) return null
+            this.updateFruitVisual(instance)
+            return instance
+        }
+
         this.crops.delete(this.key(cellX, cellZ))
         this._harvestingInstances.add(instance)
 
@@ -111,6 +117,14 @@ export class CropManager {
         return instance
     }
 
+    addStake(cellX: number, cellZ: number): CropInstance | null {
+        const instance = this.getCrop(cellX, cellZ)
+        if (!instance) return null
+        if (!instance.addStake()) return null
+        this.updateStakeVisual(instance)
+        return instance
+    }
+
     getMeshes(): THREE.Mesh[] {
         return Array.from(this.crops.values())
             .map(c => c.mesh)
@@ -140,8 +154,11 @@ export class CropManager {
             const isWatered = this.world.tilesFactory.isWatered(cx, cz)
             const effective = deltaTime * growthRate * (isWatered ? wateredMult : 1)
 
-            const phaseChanged = instance.advance(effective)
-            if (phaseChanged) this.spawnMesh(instance, "phase")
+            const stakeMult = instance.hasStake ? (instance.def.stakeGrowthMultiplier ?? 1) : 1
+            const phaseChanged = instance.advance(effective * stakeMult)
+            if (!phaseChanged) continue
+            if (!instance.isReady || !instance.def.fruitRegrowSeconds) this.spawnMesh(instance, "phase")
+            else this.updateFruitVisual(instance)
         }
     }
 
@@ -379,6 +396,7 @@ export class CropManager {
                 model.scale.setScalar(0)
                 instance.mesh = model as unknown as THREE.Mesh
                 this.scene.add(model)
+                this.syncAccessories(instance, pos, cropYOffset, targetScale)
 
                 instance.startTransition(transitionType, 0, targetScale)
 
@@ -421,8 +439,80 @@ export class CropManager {
 
         instance.mesh = mesh
         this.scene.add(mesh)
+        this.syncAccessories(instance, pos, cropYOffset, 1)
 
         instance.startTransition(transitionType, 0, 1)
+    }
+
+    private syncAccessories(instance: CropInstance, pos: THREE.Vector3, cropYOffset: number, baseScale: number): void {
+        this.updateFruitVisual(instance, pos, cropYOffset, baseScale)
+        this.updateStakeVisual(instance, pos, cropYOffset, baseScale)
+    }
+
+    private updateFruitVisual(instance: CropInstance, pos?: THREE.Vector3, cropYOffset: number = 0, baseScale: number = 1): void {
+        if (!instance.def.fruitRegrowSeconds) return
+
+        if (!instance.isReady || !instance.fruitsReady || !instance.mesh) {
+            if (instance.fruitMesh) {
+                this.scene.remove(instance.fruitMesh)
+                instance.fruitMesh = null
+            }
+            return
+        }
+
+        if (!instance.fruitMesh) {
+            const group = new THREE.Group()
+            const count = instance.def.fruitVisualCount ?? 8
+            const color = instance.def.fruitVisualColor ?? 0xff8a00
+            const sphere = new THREE.SphereGeometry(this.world.cellSize * 0.06, 10, 10)
+            const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.55, metalness: 0 })
+            for (let i = 0; i < count; i++) {
+                const m = new THREE.Mesh(sphere, mat.clone())
+                m.castShadow = true
+                group.add(m)
+            }
+            instance.fruitMesh = group
+            this.scene.add(group)
+        }
+
+        const worldPos = pos ?? (instance.mesh as THREE.Object3D).position
+        const baseY = worldPos.y + this.world.cellSize * 0.6 + cropYOffset
+        const radius = this.world.cellSize * 0.24 * baseScale
+        const group = instance.fruitMesh as THREE.Group
+        group.position.set(worldPos.x, baseY, worldPos.z)
+        group.scale.setScalar(Math.max(0.6, baseScale))
+
+        group.children.forEach((child, i) => {
+            const angle = (i / Math.max(1, group.children.length)) * Math.PI * 2
+            const ring = i % 2 === 0 ? 1 : 0.7
+            child.position.set(Math.cos(angle) * radius * ring, (i % 3) * this.world.cellSize * 0.05, Math.sin(angle) * radius * ring)
+        })
+    }
+
+    private updateStakeVisual(instance: CropInstance, pos?: THREE.Vector3, cropYOffset: number = 0, baseScale: number = 1): void {
+        if (!instance.def.supportsStake || !instance.hasStake) {
+            if (instance.stakeMesh) {
+                this.scene.remove(instance.stakeMesh)
+                instance.stakeMesh = null
+            }
+            return
+        }
+
+        if (!instance.stakeMesh) {
+            const geo = new THREE.CylinderGeometry(this.world.cellSize * 0.025, this.world.cellSize * 0.03, this.world.cellSize * 0.9, 8)
+            const mat = new THREE.MeshStandardMaterial({ color: 0x8b5a2b, roughness: 0.95, metalness: 0 })
+            const mesh = new THREE.Mesh(geo, mat)
+            mesh.castShadow = true
+            instance.stakeMesh = mesh
+            this.scene.add(mesh)
+        }
+
+        const worldPos = pos ?? this.worldPos(instance.cellX, instance.cellZ)
+        const mesh = instance.stakeMesh as THREE.Mesh
+        const xOffset = this.world.cellSize * 0.14
+        mesh.position.set(worldPos.x + xOffset, this.world.cellSize * 0.45 + cropYOffset, worldPos.z - xOffset * 0.35)
+        mesh.rotation.y = 0.35
+        mesh.scale.setScalar(Math.max(0.8, baseScale))
     }
 
     private setEmissive(root: THREE.Object3D, intensity: number): void {
@@ -435,6 +525,14 @@ export class CropManager {
     }
 
     private disposeMesh(instance: CropInstance): void {
+        if (instance.fruitMesh) {
+            this.scene.remove(instance.fruitMesh)
+            instance.fruitMesh = null
+        }
+        if (instance.stakeMesh) {
+            this.scene.remove(instance.stakeMesh)
+            instance.stakeMesh = null
+        }
         if (!instance.mesh) return
         this.scene.remove(instance.mesh as unknown as THREE.Object3D)
             ; (instance.mesh as unknown as THREE.Object3D).traverse(obj => {

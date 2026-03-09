@@ -15,6 +15,8 @@ export class CropInstance {
     private _phase = 0
     private _prevPhase = 0
     private _elapsed = 0
+    private _fruitsReady = false
+    private _fruitRegrowElapsed = 0
 
     // ── Transition ──────────────────────────────────────────────
     transitionType: TransitionType = "spawn"
@@ -25,6 +27,9 @@ export class CropInstance {
     onTransitionEnd: (() => void) | null = null
 
     mesh: THREE.Mesh | THREE.Object3D | null = null
+    fruitMesh: THREE.Object3D | null = null
+    stakeMesh: THREE.Object3D | null = null
+    hasStake = false
 
     constructor(def: CropDefinition, cellX: number, cellZ: number) {
         this.instanceId = `crop_${++_idCounter}`
@@ -38,6 +43,7 @@ export class CropInstance {
     get currentPhase(): GrowthPhase { return this.def.phases[this._phase] }
     get previousPhase(): GrowthPhase { return this.def.phases[this._prevPhase] }
     get isReady(): boolean { return this._phase >= this.phaseCount - 1 }
+    get fruitsReady(): boolean { return !this.def.fruitRegrowSeconds || this._fruitsReady }
 
     startTransition(
         type: TransitionType,
@@ -74,15 +80,44 @@ export class CropInstance {
         return this.transitionFrom + (this.transitionTo - this.transitionFrom) * this.smoothT
     }
 
+    addStake(): boolean {
+        if (!this.def.supportsStake || this.hasStake) return false
+        this.hasStake = true
+        return true
+    }
+
+    harvestFruits(): boolean {
+        if (!this.isReady || !this.def.fruitRegrowSeconds || !this._fruitsReady) return false
+        this._fruitsReady = false
+        this._fruitRegrowElapsed = 0
+        return true
+    }
+
     advance(deltaTime: number): boolean {
-        if (this.isReady) return false
-        this._elapsed += deltaTime
-        if (this._elapsed >= this.currentPhase.durationSeconds) {
-            this._elapsed -= this.currentPhase.durationSeconds
-            this._prevPhase = this._phase
-            this._phase++
+        if (!this.isReady) {
+            this._elapsed += deltaTime
+            if (this._elapsed >= this.currentPhase.durationSeconds) {
+                this._elapsed -= this.currentPhase.durationSeconds
+                this._prevPhase = this._phase
+                this._phase++
+                if (this.isReady && this.def.fruitRegrowSeconds) {
+                    this._fruitsReady = true
+                    this._fruitRegrowElapsed = 0
+                }
+                return true
+            }
+            return false
+        }
+
+        if (!this.def.fruitRegrowSeconds || this._fruitsReady) return false
+
+        this._fruitRegrowElapsed += deltaTime
+        if (this._fruitRegrowElapsed >= this.def.fruitRegrowSeconds) {
+            this._fruitsReady = true
+            this._fruitRegrowElapsed = 0
             return true
         }
+
         return false
     }
 }
