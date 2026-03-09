@@ -5,6 +5,7 @@ export const ShovelItemDef: ItemDef = {
     label: "Pelle",
     icon: "🛠️",
     showCursorItem: true,
+    usageHint: "Cliquer sur la terre pour retirer la culture ou le labour",
     usage: {
         kind: "use_on_tile",
         targetTileTypes: ["soil"],

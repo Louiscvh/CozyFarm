@@ -8,6 +8,7 @@ export const WateringCanItemDef: ItemDef = {
     label: "Arrosoir",
     icon: "💧",
     showCursorItem: true,
+    usageHint: "Cliquer sur la terre pour arroser",
     usage: {
         kind: 'use_on_tile',
         targetTileTypes: ["soil"],

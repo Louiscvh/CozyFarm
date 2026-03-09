@@ -31,7 +31,7 @@
   font-family: "JetBrains Mono", "Fira Code", monospace;
   font-size: 11px;
   color: rgba(255, 255, 255, 0.65);
-  pointer-events: none;
+  pointer-events: all;
   animation: fadeSlideUp 0.2s ease;
 }
 
@@ -49,6 +49,13 @@
   letter-spacing: 0.03em;
 }
 
+
+
+.hint-key-button {
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+}
 .hint-sep  { color: rgba(255, 255, 255, 0.25); }
 .hint-status { font-weight: 600; transition: color 0.15s; }
 .hint-status.ok  { color: #4dffaa; }

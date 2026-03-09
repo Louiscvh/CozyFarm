@@ -3,7 +3,7 @@ import { useState, useEffect, useMemo, useRef } from "react"
 import { placementStore } from "../store/PlacementStore"
 import { inventoryStore } from "../store/InventoryStore"
 import type { ItemDef } from "../../game/entity/ItemDef"
-import { isPlaceable, isResource, isUsableOnEntity, getItemEntity } from "../../game/entity/ItemDef"
+import { isPlaceable, isResource, isUsableOnEntity, isUsableOnTile, getItemEntity } from "../../game/entity/ItemDef"
 import { Tree1Entity } from "../../game/entity/entities/Tree1"
 import { Tree2Entity } from "../../game/entity/entities/Tree2"
 import { Rock1Entity } from "../../game/entity/entities/Rock1"
@@ -256,20 +256,40 @@ export function InventoryBar() {
         const item = placementStore.selectedItem
         if (!item) return null
 
+        const renderEscapeHint = () => (
+            <>
+                <button
+                    type="button"
+                    className="hint-key hint-key-button"
+                    onClick={() => placementStore.cancel()}
+                    aria-label="Annuler l'action en cours"
+                >
+                    Échap
+                </button>
+                Annuler
+            </>
+        )
+
         if (isPlaceable(item)) {
             return (
                 <div id="placement-hint">
                     <span className="hint-key">R</span> Rotation {rotation}°
                     <span className="hint-sep">·</span>
-                    <span className="hint-key">Échap</span> Annuler
+                    {renderEscapeHint()}
                 </div>
             )
         }
 
-        if (isUsableOnEntity(item)) {
+        if (isUsableOnEntity(item) || isUsableOnTile(item)) {
             return (
                 <div id="placement-hint">
-                    <span className="hint-key">Échap</span> Annuler
+                    {item.usageHint && (
+                        <>
+                            {item.usageHint}
+                            <span className="hint-sep">·</span>
+                        </>
+                    )}
+                    {renderEscapeHint()}
                 </div>
             )
         }
