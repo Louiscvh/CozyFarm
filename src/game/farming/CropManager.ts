@@ -24,34 +24,78 @@ async function loadModel(path: string): Promise<THREE.Object3D> {
 function buildYoungTreeMesh(phase: GrowthPhase, cellSize: number): THREE.Object3D {
     const g = new THREE.Group()
 
-    const trunkHeight = Math.max(phase.height ?? 0.08, 0.08)
-    const trunkRadius = Math.max((phase.scaleXZ ?? 0.02) * 0.32, 0.012)
-    const trunkGeo = new THREE.CylinderGeometry(trunkRadius * 0.75, trunkRadius, trunkHeight, 8)
-    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x7a5a34, roughness: 0.95, metalness: 0 })
-    const trunk = new THREE.Mesh(trunkGeo, trunkMat)
+    const phaseScale = Math.max(0.85, (phase.scaleXZ ?? 0.08) / 0.08)
+    const trunkHeight = Math.max((phase.height ?? 0.08) * 1.35, 0.12)
+    const trunkRadiusBottom = Math.max((phase.scaleXZ ?? 0.03) * 0.24, 0.018)
+    const trunkRadiusTop = trunkRadiusBottom * 0.62
+
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x6f4a2a, roughness: 0.96, metalness: 0 })
+    const barkDetailMat = new THREE.MeshStandardMaterial({ color: 0x7f5732, roughness: 0.98, metalness: 0 })
+
+    const trunk = new THREE.Mesh(
+        new THREE.CylinderGeometry(trunkRadiusTop, trunkRadiusBottom, trunkHeight, 10),
+        trunkMat,
+    )
     trunk.position.y = trunkHeight * 0.5
     trunk.castShadow = true
     g.add(trunk)
 
-    const canopyRadius = Math.max((phase.scaleXZ ?? 0.08) * 1.2, 0.045)
-    const canopyGeo = new THREE.SphereGeometry(canopyRadius, 10, 10)
-    const canopyMat = new THREE.MeshStandardMaterial({ color: phase.color ?? 0x4b8a35, roughness: 0.9, metalness: 0 })
-    const canopy = new THREE.Mesh(canopyGeo, canopyMat)
-    canopy.position.y = trunkHeight * 0.92 + canopyRadius * 0.8
-    canopy.castShadow = true
-    g.add(canopy)
+    const rootFlare = new THREE.Mesh(
+        new THREE.CylinderGeometry(trunkRadiusBottom * 1.08, trunkRadiusBottom * 1.32, trunkHeight * 0.22, 10),
+        barkDetailMat,
+    )
+    rootFlare.position.y = trunkHeight * 0.08
+    rootFlare.castShadow = true
+    g.add(rootFlare)
 
-    const leafGeo = new THREE.SphereGeometry(canopyRadius * 0.32, 8, 8)
-    const leafMat = new THREE.MeshStandardMaterial({ color: 0x5ea93e, roughness: 0.85, metalness: 0 })
-    for (let i = 0; i < 4; i++) {
-        const leaf = new THREE.Mesh(leafGeo, leafMat)
-        const ang = (i / 4) * Math.PI * 2 + 0.3
-        leaf.position.set(Math.cos(ang) * canopyRadius * 0.65, canopy.position.y - canopyRadius * 0.25, Math.sin(ang) * canopyRadius * 0.65)
-        leaf.castShadow = true
-        g.add(leaf)
+    const branchGeo = new THREE.CylinderGeometry(trunkRadiusBottom * 0.45, trunkRadiusBottom * 0.62, trunkHeight * 0.34, 8)
+    for (let i = 0; i < 3; i++) {
+        const branch = new THREE.Mesh(branchGeo, barkDetailMat)
+        const side = i - 1
+        branch.position.set(side * trunkRadiusBottom * 1.25, trunkHeight * (0.52 + i * 0.1), (i % 2 === 0 ? 1 : -1) * trunkRadiusBottom * 0.7)
+        branch.rotation.z = side * 0.55
+        branch.rotation.x = (i % 2 === 0 ? 1 : -1) * 0.28
+        branch.castShadow = true
+        g.add(branch)
     }
 
-    g.userData.visualHeight = trunkHeight + canopyRadius * 2 + cellSize * 0.03
+    const canopyMainColor = phase.color ?? 0x4b8a35
+    const canopyDarkColor = new THREE.Color(canopyMainColor).multiplyScalar(0.78)
+    const canopyLightColor = new THREE.Color(canopyMainColor).lerp(new THREE.Color(0x8dcf60), 0.35)
+
+    const canopyMainMat = new THREE.MeshStandardMaterial({ color: canopyMainColor, roughness: 0.88, metalness: 0 })
+    const canopyDarkMat = new THREE.MeshStandardMaterial({ color: canopyDarkColor, roughness: 0.92, metalness: 0 })
+    const canopyLightMat = new THREE.MeshStandardMaterial({ color: canopyLightColor, roughness: 0.84, metalness: 0 })
+
+    const baseCanopyRadius = Math.max((phase.scaleXZ ?? 0.08) * 1.15, 0.09) * phaseScale
+
+    const addCanopyBlob = (
+        radius: number,
+        x: number,
+        y: number,
+        z: number,
+        material: THREE.Material,
+        wScale = 1,
+        hScale = 1,
+    ): void => {
+        const blob = new THREE.Mesh(new THREE.SphereGeometry(radius, 12, 12), material)
+        blob.position.set(x, y, z)
+        blob.scale.set(wScale, hScale, wScale)
+        blob.castShadow = true
+        g.add(blob)
+    }
+
+    const canopyBaseY = trunkHeight * 0.78
+    addCanopyBlob(baseCanopyRadius * 1.05, 0, canopyBaseY + baseCanopyRadius * 0.52, 0, canopyMainMat, 1.05, 0.95)
+    addCanopyBlob(baseCanopyRadius * 0.86, -baseCanopyRadius * 0.66, canopyBaseY + baseCanopyRadius * 0.58, baseCanopyRadius * 0.12, canopyDarkMat)
+    addCanopyBlob(baseCanopyRadius * 0.84, baseCanopyRadius * 0.7, canopyBaseY + baseCanopyRadius * 0.6, -baseCanopyRadius * 0.1, canopyDarkMat)
+    addCanopyBlob(baseCanopyRadius * 0.8, baseCanopyRadius * 0.12, canopyBaseY + baseCanopyRadius * 1.22, 0, canopyLightMat, 1, 0.86)
+    addCanopyBlob(baseCanopyRadius * 0.62, -baseCanopyRadius * 0.24, canopyBaseY + baseCanopyRadius * 1.06, baseCanopyRadius * 0.48, canopyLightMat)
+    addCanopyBlob(baseCanopyRadius * 0.58, baseCanopyRadius * 0.4, canopyBaseY + baseCanopyRadius * 0.98, -baseCanopyRadius * 0.52, canopyMainMat)
+
+    const silhouetteHeight = trunkHeight + baseCanopyRadius * 2.9 + cellSize * 0.05
+    g.userData.visualHeight = silhouetteHeight
+
     return g
 }
 
