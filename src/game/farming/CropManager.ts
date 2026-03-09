@@ -666,6 +666,7 @@ export class CropManager {
     private updateFruitVisual(instance: CropInstance, pos?: THREE.Vector3, cropYOffset: number = 0, baseScale: number = 1): void {
         void pos
         void cropYOffset
+        void baseScale
         if (!instance.def.fruitRegrowSeconds) return
 
         if (!instance.isReady || !instance.fruitsReady || !instance.mesh) {
@@ -696,16 +697,24 @@ export class CropManager {
         if (group.parent !== root) root.add(group)
 
         const worldBox = new THREE.Box3().setFromObject(root)
-        const crownHeight = Math.max(this.world.cellSize * 0.45, worldBox.max.y - worldBox.min.y)
-        const radius = this.world.cellSize * 0.4 * baseScale
+        const worldSize = new THREE.Vector3()
+        worldBox.getSize(worldSize)
 
-        group.position.set(0, crownHeight * 0.75, 0)
-        group.scale.setScalar(Math.max(0.6, baseScale))
+        const crownHeight = Math.max(this.world.cellSize * 0.55, worldSize.y)
+        const canopyRadius = Math.max(this.world.cellSize * 0.24, Math.max(worldSize.x, worldSize.z) * 0.42)
+
+        group.position.set(0, crownHeight * 0.72, 0)
+        group.scale.setScalar(1)
 
         group.children.forEach((child, i) => {
             const angle = (i / Math.max(1, group.children.length)) * Math.PI * 2
-            const ring = i % 2 === 0 ? 1 : 0.82
-            child.position.set(Math.cos(angle) * radius * ring, (i % 3) * this.world.cellSize * 0.05, Math.sin(angle) * radius * ring)
+            const ring = i % 2 === 0 ? 1 : 0.78
+            const radial = canopyRadius * ring
+            child.position.set(
+                Math.cos(angle) * radial,
+                (i % 3) * this.world.cellSize * 0.065,
+                Math.sin(angle) * radial,
+            )
         })
     }
 
