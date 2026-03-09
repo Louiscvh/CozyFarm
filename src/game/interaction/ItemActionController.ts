@@ -101,7 +101,7 @@ export class ItemActionController {
         const startScale = ghost.scale.x
         const startRotY = ghost.rotation.y
         const startTime = performance.now()
-        const duration = 350
+        const duration = 160
 
         const animate = () => {
             const t = Math.min(1, (performance.now() - startTime) / duration)
@@ -200,6 +200,13 @@ export class ItemActionController {
 
         const { cellX, cellZ } = hoveredCell
         const effectiveTileType = this.getEffectiveTileType(cellX, cellZ)
+        if ((item as any).usage.actionId === "farming:add_stake") {
+            const crop = this.world.cropManager.getCrop(cellX, cellZ)
+            const canStake = !!crop?.def.supportsStake && !crop.hasStake
+            this.setCursor(canStake ? "pointer" : "not-allowed")
+            return
+        }
+
         const hasCrop = !!this.world.cropManager.getCrop(cellX, cellZ)
         const cropBlocks = hasCrop && !(item as any).usage.allowOnCrop
         const blocked = (this.world.tilesFactory.isOccupied(cellX, cellZ) && effectiveTileType !== "soil") || cropBlocks

@@ -77,6 +77,7 @@ export class CropManager {
     private readonly crops = new Map<string, CropInstance>()
 
     private _harvestingInstances = new Set<CropInstance>()
+    private _fruitHarvesting = new Map<CropInstance, { root: THREE.Object3D; startY: number; startedAt: number; duration: number }>()
 
     constructor(scene: THREE.Scene, world: World) {
         this.scene = scene
@@ -115,7 +116,7 @@ export class CropManager {
 
         if (instance.def.fruitRegrowSeconds) {
             if (!instance.harvestFruits()) return null
-            this.updateFruitVisual(instance)
+            this.startFruitHarvestAnimation(instance)
             return instance
         }
 
@@ -174,6 +175,20 @@ export class CropManager {
             this.applyScale(inst)
             if (inst.transitionType === "uproot") this.applyUprootEffect(inst)
             if (!inst.isTransition) this._harvestingInstances.delete(inst)
+        }
+
+        const nowMs = performance.now()
+        for (const [instance, anim] of this._fruitHarvesting) {
+            const t = Math.min(1, (nowMs - anim.startedAt) / anim.duration)
+            const ease = t * t * (3 - 2 * t)
+            anim.root.position.y = anim.startY + this.world.cellSize * 0.12 * ease
+            anim.root.scale.setScalar(Math.max(0.01, 1 - ease))
+            this.setOpacity(anim.root, 1 - ease)
+            if (t >= 1) {
+                anim.root.parent?.remove(anim.root)
+                if (instance.fruitMesh === anim.root) instance.fruitMesh = null
+                this._fruitHarvesting.delete(instance)
+            }
         }
 
         if (growthRate <= 0) return
@@ -485,6 +500,17 @@ export class CropManager {
         instance.startTransition(transitionType, 0, 1)
     }
 
+    private startFruitHarvestAnimation(instance: CropInstance): void {
+        if (!instance.fruitMesh) return
+        const root = instance.fruitMesh as THREE.Object3D
+        this._fruitHarvesting.set(instance, {
+            root,
+            startY: root.position.y,
+            startedAt: performance.now(),
+            duration: 260,
+        })
+    }
+
     private syncAccessories(instance: CropInstance, pos: THREE.Vector3, cropYOffset: number, baseScale: number): void {
         this.updateFruitVisual(instance, pos, cropYOffset, baseScale)
         this.updateStakeVisual(instance, pos, cropYOffset, baseScale)
@@ -496,7 +522,7 @@ export class CropManager {
         if (!instance.def.fruitRegrowSeconds) return
 
         if (!instance.isReady || !instance.fruitsReady || !instance.mesh) {
-            if (instance.fruitMesh) {
+            if (instance.fruitMesh && !this._fruitHarvesting.has(instance)) {
                 instance.fruitMesh.parent?.remove(instance.fruitMesh)
                 instance.fruitMesh = null
             }
@@ -572,6 +598,7 @@ export class CropManager {
     }
 
     private disposeMesh(instance: CropInstance): void {
+        this._fruitHarvesting.delete(instance)
         if (instance.fruitMesh) {
             instance.fruitMesh.parent?.remove(instance.fruitMesh)
             instance.fruitMesh = null
