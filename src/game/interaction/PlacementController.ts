@@ -40,6 +40,7 @@ highlightMesh.position.y = 0.055
 highlightMesh.visible = false
 
 const HOVER_BORDER_INSET = 0.02
+type HoverShape = "single" | "cross" | "square"
 const hoverBorderGeo = new LineGeometry()
 const hoverInnerHalf = 0.5 - HOVER_BORDER_INSET
 hoverBorderGeo.setPositions([
@@ -85,6 +86,7 @@ export class PlacementController {
     private hoverCurrentPos = new THREE.Vector3()
     private hoverRaf = 0
     private hoverInitialized = false
+    private currentHoverShape: HoverShape = "single"
 
     // ── Click state ───────────────────────────────────────────────────────────
     private mouseDownPos = { x: 0, y: 0 }
@@ -317,7 +319,7 @@ export class PlacementController {
         // Maintient le hover pendant le chargement async
         if (placementStore.hoveredCell) {
             const { cellX, cellZ } = placementStore.hoveredCell
-            this.updateHoverCursor(cellX, cellZ, this.getHoverFootprint(placementStore.selectedItem))
+            this.updateHoverCursor(cellX, cellZ, this.getHoverFootprint(placementStore.selectedItem), this.getHoverShape(placementStore.selectedItem))
         }
 
         const token = ++this._ghostToken
@@ -484,6 +486,51 @@ export class PlacementController {
 
     // ─── Mouse move ───────────────────────────────────────────────────────────
 
+    private getHoverShape(item: ItemDef | null): HoverShape {
+        if (!item || !isUsableOnTile(item)) return "single"
+        if (item.id !== "hoe" && item.id !== "watering_can" && item.id !== "shovel") return "single"
+
+        const level = toolLevelStore.getLevel(item.id)
+        if (level === 2) return "cross"
+        if (level >= 3) return "square"
+        return "single"
+    }
+
+    private updateHoverShapeGeometry(shape: HoverShape): void {
+        if (shape === this.currentHoverShape) return
+
+        const inner = 0.5 - HOVER_BORDER_INSET
+        const outer = 1.5 - HOVER_BORDER_INSET
+
+        if (shape === "cross") {
+            hoverBorderGeo.setPositions([
+                -inner, 0, outer,
+                inner, 0, outer,
+                inner, 0, inner,
+                outer, 0, inner,
+                outer, 0, -inner,
+                inner, 0, -inner,
+                inner, 0, -outer,
+                -inner, 0, -outer,
+                -inner, 0, -inner,
+                -outer, 0, -inner,
+                -outer, 0, inner,
+                -inner, 0, inner,
+                -inner, 0, outer,
+            ])
+        } else {
+            hoverBorderGeo.setPositions([
+                -inner, 0, inner,
+                inner, 0, inner,
+                inner, 0, -inner,
+                -inner, 0, -inner,
+                -inner, 0, inner,
+            ])
+        }
+
+        this.currentHoverShape = shape
+    }
+
     private getHoverFootprint(item: ItemDef | null): number {
         if (!item || !isUsableOnTile(item)) return 1
         if (item.id !== "hoe" && item.id !== "watering_can" && item.id !== "shovel") return 1
@@ -494,7 +541,9 @@ export class PlacementController {
         return maxRadius * 2 + 1
     }
 
-    private updateHoverCursor(cellX: number, cellZ: number, footprint: number): void {
+    private updateHoverCursor(cellX: number, cellZ: number, footprint: number, shape: HoverShape): void {
+        this.updateHoverShapeGeometry(shape)
+
         const half = Math.floor(footprint / 2)
         const { x, z } = this.cellToWorld(cellX - half, cellZ - half, footprint)
         const hoverY = this.getHoverCursorY(cellX, cellZ)
@@ -594,7 +643,7 @@ export class PlacementController {
 
         const selectedItem = placementStore.selectedItem
         if (!selectedItem || !this.isGhostItem(selectedItem)) {
-            this.updateHoverCursor(cellX, cellZ, this.getHoverFootprint(selectedItem))
+            this.updateHoverCursor(cellX, cellZ, this.getHoverFootprint(selectedItem), this.getHoverShape(selectedItem))
         } else {
             this.updatePlacementGhost(cellX, cellZ, selectedItem)
         }
@@ -760,6 +809,7 @@ export class PlacementController {
             hoveredCell.cellX,
             hoveredCell.cellZ,
             this.getHoverFootprint(selectedItem),
+            this.getHoverShape(selectedItem),
         )
     }
 
