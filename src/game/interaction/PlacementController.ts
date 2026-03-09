@@ -10,7 +10,7 @@ import { World } from "../world/World"
 import { getFootprint } from "../entity/Entity"
 import { isPlaceable, getItemEntity, isUsableOnTile } from "../entity/ItemDef"
 import type { ItemDef } from "../entity/ItemDef"
-import { getAreaOffsetsForLevel, toolLevelStore } from "../../ui/store/ToolLevelStore"
+import { toolLevelStore } from "../../ui/store/ToolLevelStore"
 import {
     staticGridGroup,
     buildStaticGrid,
@@ -40,7 +40,7 @@ highlightMesh.position.y = 0.055
 highlightMesh.visible = false
 
 const HOVER_BORDER_INSET = 0.02
-type HoverShape = "single" | "cross" | "square"
+type HoverShape = "single" | "square"
 const hoverBorderGeo = new LineGeometry()
 const hoverInnerHalf = 0.5 - HOVER_BORDER_INSET
 hoverBorderGeo.setPositions([
@@ -184,23 +184,15 @@ export class PlacementController {
         return baseY + HOVER_SURFACE_OFFSET_Y
     }
 
-    private getHoverCursorY(cellX: number, cellZ: number, shape: HoverShape, footprint: number): number {
+    private getHoverCursorY(cellX: number, cellZ: number, _shape: HoverShape, footprint: number): number {
         let maxBaseY = GRID_Y
-
-        if (shape === "cross") {
-            const offsets = [{ x: 0, z: 0 }, { x: 1, z: 0 }, { x: -1, z: 0 }, { x: 0, z: 1 }, { x: 0, z: -1 }]
-            for (const offset of offsets) {
-                const isSoil = this.world.tilesFactory.isSoil(cellX + offset.x, cellZ + offset.z)
-                const baseY = isSoil ? SOIL_SURFACE_Y : GRID_Y
-                if (baseY > maxBaseY) maxBaseY = baseY
-            }
-            return maxBaseY + 0.006
-        }
-
         const half = Math.floor(footprint / 2)
-        for (let dx = -half; dx <= half; dx++) {
-            for (let dz = -half; dz <= half; dz++) {
-                const isSoil = this.world.tilesFactory.isSoil(cellX + dx, cellZ + dz)
+        const startX = cellX - half
+        const startZ = cellZ - half
+
+        for (let dx = 0; dx < footprint; dx++) {
+            for (let dz = 0; dz < footprint; dz++) {
+                const isSoil = this.world.tilesFactory.isSoil(startX + dx, startZ + dz)
                 const baseY = isSoil ? SOIL_SURFACE_Y : GRID_Y
                 if (baseY > maxBaseY) maxBaseY = baseY
             }
@@ -513,8 +505,7 @@ export class PlacementController {
         if (item.id !== "hoe" && item.id !== "watering_can" && item.id !== "shovel") return "single"
 
         const level = toolLevelStore.getLevel(item.id)
-        if (level === 2) return "cross"
-        if (level >= 3) return "square"
+        if (level >= 2) return "square"
         return "single"
     }
 
@@ -524,23 +515,7 @@ export class PlacementController {
         const inner = 0.5 - HOVER_BORDER_INSET
         const outer = footprint / 2 - HOVER_BORDER_INSET
 
-        if (shape === "cross") {
-            hoverBorderGeo.setPositions([
-                -inner, 0, outer,
-                inner, 0, outer,
-                inner, 0, inner,
-                outer, 0, inner,
-                outer, 0, -inner,
-                inner, 0, -inner,
-                inner, 0, -outer,
-                -inner, 0, -outer,
-                -inner, 0, -inner,
-                -outer, 0, -inner,
-                -outer, 0, inner,
-                -inner, 0, inner,
-                -inner, 0, outer,
-            ])
-        } else if (shape === "square") {
+        if (shape === "square") {
             hoverBorderGeo.setPositions([
                 -outer, 0, outer,
                 outer, 0, outer,
@@ -567,9 +542,9 @@ export class PlacementController {
         if (item.id !== "hoe" && item.id !== "watering_can" && item.id !== "shovel") return 1
 
         const level = toolLevelStore.getLevel(item.id)
-        const offsets = getAreaOffsetsForLevel(level)
-        const maxRadius = offsets.reduce((max, offset) => Math.max(max, Math.abs(offset.x), Math.abs(offset.z)), 0)
-        return maxRadius * 2 + 1
+        if (level === 2) return 2
+        if (level >= 3) return 3
+        return 1
     }
 
     private updateHoverCursor(cellX: number, cellZ: number, footprint: number, shape: HoverShape): void {

@@ -48,10 +48,9 @@ export function getAreaOffsetsForLevel(level: number): Array<{ x: number; z: num
     if (level === 2) {
         return [
             { x: 0, z: 0 },
-            { x: 1, z: 0 },
             { x: -1, z: 0 },
-            { x: 0, z: 1 },
             { x: 0, z: -1 },
+            { x: -1, z: -1 },
         ]
     }
     const offsets: Array<{ x: number; z: number }> = []
