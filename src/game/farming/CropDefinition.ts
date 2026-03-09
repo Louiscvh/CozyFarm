@@ -22,6 +22,13 @@ export interface CropDefinition {
     readonly phases: ReadonlyArray<GrowthPhase>
     readonly usePlacementGhost?: boolean   // défaut: true
     readonly showPlacementGrid?: boolean   // défaut: false
+    readonly fruitRegrowSeconds?: number
+    readonly fruitVisualColor?: number
+    readonly fruitVisualCount?: number
+    readonly supportsStake?: boolean
+    readonly stakeGrowthMultiplier?: number
+    readonly plantTileTypes?: readonly string[]
+    readonly ghostModelScale?: number
 }
 
 const DEBUG = false
@@ -34,6 +41,7 @@ export const CarrotCrop: CropDefinition = {
     harvestQty: 2,
     yOffset: -0.04,
     usePlacementGhost: true,
+    plantTileTypes: ["soil"],
     phases: [
         { durationSeconds: DEBUG ? 3 : 300, color: 0x5c3317, scaleXZ: 0.01, height: 0.05 },
         { durationSeconds: DEBUG ? 3 : 300, modelPath: "/models/crops/carrot_stage1.glb", modelScale: 0.06, yOffset: -0.13 },
@@ -50,6 +58,7 @@ export const LettuceCrop: CropDefinition = {
     harvestQty: 4,
     yOffset: -0.08,
     usePlacementGhost: true,
+    plantTileTypes: ["soil"],
     phases: [
         { durationSeconds: DEBUG ? 3 : 300, color: 0x008000, scaleXZ: 0.01, height: 0.05, yOffset: -0.05 },
         { durationSeconds: DEBUG ? 3 : 300, modelPath: "/models/crops/lettuce_stage1.glb", modelScale: 0.01 },
@@ -58,4 +67,28 @@ export const LettuceCrop: CropDefinition = {
     ],
 }
 
-export const ALL_CROPS: ReadonlyArray<CropDefinition> = [CarrotCrop, LettuceCrop]
+export const OrangeTreeCrop: CropDefinition = {
+    id: "orange_tree",
+    label: "Oranger",
+    seedItemId: "orange_sapling",
+    harvestItemId: "orange",
+    harvestQty: 3,
+    yOffset: 0,
+    supportsStake: true,
+    stakeGrowthMultiplier: 1.75,
+    fruitRegrowSeconds: DEBUG ? 8 : 420,
+    fruitVisualColor: 0xff8a00,
+    fruitVisualCount: 14,
+    usePlacementGhost: true,
+    plantTileTypes: ["grass"],
+    ghostModelScale: 0.2,
+    phases: [
+        { durationSeconds: DEBUG ? 3 : 260, color: 0x7a5d3b, scaleXZ: 0.017, height: 0.065 },
+        { durationSeconds: DEBUG ? 3 : 360, color: 0x4b7a2f, scaleXZ: 0.068, height: 0.165 },
+        { durationSeconds: DEBUG ? 3 : 520, color: 0x4b8a35, scaleXZ: 0.136, height: 0.5 },
+        { durationSeconds: DEBUG ? 3 : 480, color: 0x4f8f38, scaleXZ: 0.162, height: 0.63 },
+        { durationSeconds: 0, modelPath: "/models/tree_orange.glb", modelScale: 0.162 },
+    ],
+}
+
+export const ALL_CROPS: ReadonlyArray<CropDefinition> = [CarrotCrop, LettuceCrop, OrangeTreeCrop]

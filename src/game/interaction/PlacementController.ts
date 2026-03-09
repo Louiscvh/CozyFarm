@@ -103,7 +103,6 @@ export class PlacementController {
     private readonly camera: THREE.Camera
     private readonly renderer: THREE.WebGLRenderer
     private readonly world: World
-    private _sunkCell: string = ""   // cellule où le ghost a été enfoncé
 
     constructor(camera: THREE.Camera, renderer: THREE.WebGLRenderer, world: World) {
         this.camera = camera
@@ -146,13 +145,30 @@ export class PlacementController {
         return !!cropDef?.usePlacementGhost
     }
 
+    private isStakeGhostItem(item: ItemDef): boolean {
+        return item.id === "stake"
+    }
+
     private isGhostItem(item: ItemDef): boolean {
-        return isPlaceable(item) || this.isSeedGhostItem(item)
+        return isPlaceable(item) || this.isSeedGhostItem(item) || this.isStakeGhostItem(item)
     }
 
     private canPlaceSeed(cellX: number, cellZ: number): boolean {
-        return this.world.tilesFactory.isSoil(cellX, cellZ)
+        const selectedItem = placementStore.selectedItem
+        const cropDef = selectedItem ? ALL_CROPS.find(c => c.seedItemId === selectedItem.id) : null
+        const allowedTiles = cropDef?.plantTileTypes ?? ["soil"]
+        const tileType = this.world.tilesFactory.getTileTypeAtCell(cellX, cellZ) ?? ""
+        return allowedTiles.includes(tileType)
             && !this.world.cropManager.hasCrop(cellX, cellZ)
+    }
+
+    private hasCropInArea(cellX: number, cellZ: number, sizeInCells: number): boolean {
+        for (let dx = 0; dx < sizeInCells; dx++) {
+            for (let dz = 0; dz < sizeInCells; dz++) {
+                if (this.world.cropManager.hasCrop(cellX + dx, cellZ + dz)) return true
+            }
+        }
+        return false
     }
 
     private getSeedHoverY(cellX: number, cellZ: number): number {
@@ -245,30 +261,15 @@ export class PlacementController {
             this.ghostRaf = requestAnimationFrame(animate)
 
             if (placementStore.ghostMesh === null && this.ghost !== null) {
-                // Mémorise la cellule plantée pour ne pas rebuilder dessus
-                if (placementStore.hoveredCell) {
-                    const { cellX, cellZ } = placementStore.hoveredCell
-                    this._sunkCell = `${cellX}|${cellZ}`
-                }
                 this.ghost = null
                 cancelAnimationFrame(this.ghostRaf)
                 this.ghostRaf = 0
+                const item = placementStore.selectedItem
+                if (item && (this.isSeedGhostItem(item) || this.isStakeGhostItem(item))) this.buildGhost(item)
                 return
             }
 
             if (!this.ghost) return
-
-            // ← ItemActionController a pris le ghost (sinkSeedGhost)
-            // placementStore.ghostMesh est null mais this.ghost ne l'est pas encore
-            if (placementStore.ghostMesh === null && this.ghost !== null) {
-                this.ghost = null
-                this.ghostRaf = 0
-                cancelAnimationFrame(this.ghostRaf)
-                // Rebuild immédiatement pour la prochaine cellule
-                const item = placementStore.selectedItem
-                if (item && this.isSeedGhostItem(item)) this.buildGhost(item)
-                return
-            }
 
             this.currentPos.lerp(this.targetPos, 0.35)
 
@@ -295,6 +296,7 @@ export class PlacementController {
         if (!item || !this.isGhostItem(item)) return this.removeGhost()
 
         if (this.isSeedGhostItem(item)) return this.buildSeedGhost(item)
+        if (this.isStakeGhostItem(item)) return this.buildStakeGhost()
 
         // ── Entité plaçable ───────────────────────────────────────────────────
         const entity = getItemEntity(item)
@@ -339,7 +341,7 @@ export class PlacementController {
             const { cellX, cellZ } = placementStore.hoveredCell
             const { placeCellX, placeCellZ } = this.getPlaceCells(cellX, cellZ, footprint)
             const { x, z } = this.cellToWorld(placeCellX, placeCellZ, footprint)
-            const canPlace = this.world.tilesFactory.canSpawn(placeCellX, placeCellZ, footprint)
+            const canPlace = this.world.tilesFactory.canSpawn(placeCellX, placeCellZ, footprint) && !this.hasCropInArea(placeCellX, placeCellZ, footprint)
 
             this.targetPos.set(x, this.yOffset, z)
             this.currentPos.copy(this.targetPos)
@@ -351,6 +353,47 @@ export class PlacementController {
             highlightMesh.visible = true
             revealGroup.position.set(x, GRID_Y + 0.0055, z)
             showGridForGhost()
+        }
+
+        root.position.copy(this.currentPos)
+        this.world.scene.add(root)
+        this.ghost = root
+        placementStore.ghostMesh = root
+
+        this.startGhostAnimation()
+    }
+
+    private buildStakeGhost(): void {
+        this.removeGhost()
+
+        const root = new THREE.Mesh(
+            new THREE.CylinderGeometry(this.world.cellSize * 0.025, this.world.cellSize * 0.03, this.world.cellSize * 0.9, 8),
+            ghostMat,
+        )
+        root.castShadow = true
+        root.userData.isStakeGhost = true
+
+        this.yOffset = this.world.cellSize * 0.45
+
+        revealGroup.visible = false
+        hideGridForGhost()
+
+        if (placementStore.hoveredCell) {
+            const { cellX, cellZ } = placementStore.hoveredCell
+            const { x, z } = this.cellToWorld(cellX, cellZ, 1)
+            this.targetPos.set(x, this.yOffset, z)
+            this.currentPos.copy(this.targetPos)
+
+            const crop = this.world.cropManager.getCrop(cellX, cellZ)
+            const canPlace = !!crop?.def.supportsStake && !crop.hasStake
+            placementStore.canPlace = canPlace
+            ghostMat.color.set(canPlace ? 0x00ff00 : 0xff2244)
+
+            const hoverY = this.getSeedHoverY(cellX, cellZ)
+            highlightMesh.scale.set(this.world.cellSize, this.world.cellSize, 1)
+            highlightMesh.position.set(x, hoverY, z)
+            highlightMesh.material = canPlace ? highlightMatOk : highlightMatBad
+            highlightMesh.visible = true
         }
 
         root.position.copy(this.currentPos)
@@ -389,7 +432,7 @@ export class PlacementController {
         } catch { return }
         if (this._ghostToken !== token) return
 
-        const scale = lastPhase.modelScale ?? 1
+        const scale = cropDef.ghostModelScale ?? lastPhase.modelScale ?? 1
         root.scale.setScalar(scale)
 
         const box = new THREE.Box3().setFromObject(root)
@@ -458,12 +501,8 @@ export class PlacementController {
         hoverCellMesh.visible = false
         this.stopHoverAnim()
 
-        if (!this.ghost && this.isSeedGhostItem(item)) {
-            const currentCell = `${cellX}|${cellZ}`
-            if (currentCell !== this._sunkCell) {
-                this._sunkCell = ""
-                this.buildSeedGhost(item)
-            }
+        if (!this.ghost && (this.isSeedGhostItem(item) || this.isStakeGhostItem(item))) {
+            this.buildGhost(item)
             return
         }
 
@@ -491,6 +530,16 @@ export class PlacementController {
                 revealGroup.visible = false
                 hideGridForGhost()
             }
+        } else if (this.isStakeGhostItem(item)) {
+            const pos = this.cellToWorld(cellX, cellZ, 1)
+            x = pos.x
+            z = pos.z
+            const crop = this.world.cropManager.getCrop(cellX, cellZ)
+            canPlace = !!crop?.def.supportsStake && !crop.hasStake
+            highlightY = this.getSeedHoverY(cellX, cellZ)
+            highlightMesh.scale.set(this.world.cellSize, this.world.cellSize, 1)
+            revealGroup.visible = false
+            hideGridForGhost()
         } else {
             const entity = getItemEntity(item)
             const footprint = getFootprint(entity)
@@ -498,7 +547,7 @@ export class PlacementController {
             const pos = this.cellToWorld(placeCellX, placeCellZ, footprint)
             x = pos.x
             z = pos.z
-            canPlace = this.world.tilesFactory.canSpawn(placeCellX, placeCellZ, footprint)
+            canPlace = this.world.tilesFactory.canSpawn(placeCellX, placeCellZ, footprint) && !this.hasCropInArea(placeCellX, placeCellZ, footprint)
             highlightY = this.getSeedHoverY(cellX, cellZ)
             highlightMesh.scale.set(footprint * this.world.cellSize, footprint * this.world.cellSize, 1)
             revealGroup.position.set(x, GRID_Y + 0.0055, z)
@@ -598,6 +647,7 @@ export class PlacementController {
 
     private async handlePlace(item: ItemDef, placeCellX: number, placeCellZ: number, footprint: number): Promise<void> {
         const entity = getItemEntity(item)
+        if (this.hasCropInArea(placeCellX, placeCellZ, footprint)) { soundManager.playError(); return }
         const spawnedEntity = await this.world.spawnEntitySafe(entity, placeCellX, placeCellZ, footprint)
         if (!spawnedEntity) { soundManager.playError(); return }
 
@@ -641,8 +691,8 @@ export class PlacementController {
         if (!item || !this.isGhostItem(item)) return
         if (!placementStore.hoveredCell) return
 
-        // Les graines : le clic est géré par ItemActionController
-        if (this.isSeedGhostItem(item)) return
+        // Les graines et tuteurs : le clic est géré par ItemActionController
+        if (this.isSeedGhostItem(item) || this.isStakeGhostItem(item)) return
 
         if (!placementStore.canPlace) { soundManager.playError(); return }
 

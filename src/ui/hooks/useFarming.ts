@@ -1,5 +1,6 @@
 ﻿// src/game/farming/useFarming.ts
 import { useEffect } from "react"
+import * as THREE from "three"
 import { inventoryStore } from "../../ui/store/InventoryStore"
 import { ALL_CROPS } from "../../game/farming/CropDefinition"
 import { itemActionRegistry, type UseOnEntityContext } from "../../game/interaction/ItemActionRegistry"
@@ -14,7 +15,8 @@ export function useFarming() {
                 (ctx) => {
                     const world = World.current
                     if (!world) return false
-                    if (!world.tilesFactory.isSoil(ctx.cellX, ctx.cellZ)) return false
+                    const allowedTiles = def.plantTileTypes ?? ["soil"]
+                    if (!allowedTiles.includes(ctx.tileType)) return false
                     if (world.cropManager.hasCrop(ctx.cellX, ctx.cellZ)) return false
 
                     const planted = world.cropManager.plant(def, ctx.cellX, ctx.cellZ)
@@ -48,10 +50,20 @@ export function useFarming() {
             const world = World.current
             if (!world) return false
 
-            const uprooted = world.cropManager.uproot(ctx.cellX, ctx.cellZ)
+            const uprooted = world.cropManager.uproot(ctx.cellX, ctx.cellZ, true)
             if (uprooted) return true
 
+            if (world.cropManager.removeLooseStake(ctx.cellX, ctx.cellZ)) return true
+
             return world.tilesFactory.untillCell(ctx.cellX, ctx.cellZ)
+        })
+
+        itemActionRegistry.registerTileAction("farming:add_stake", (ctx) => {
+            const world = World.current
+            if (!world) return false
+            const crop = world.cropManager.getCrop(ctx.cellX, ctx.cellZ)
+            if (!crop?.def.supportsStake) return false
+            return !!world.cropManager.addStake(ctx.cellX, ctx.cellZ)
         })
 
         itemActionRegistry.registerTileAction("farming:water", ({ cellX, cellZ }) => {
@@ -73,6 +85,16 @@ export function useFarming() {
                 const harvested = world.cropManager.harvest(ctx.cellX, ctx.cellZ)
                 if (!harvested) return false
                 inventoryStore.produce(harvested.def.harvestItemId, harvested.def.harvestQty)
+                if (harvested.def.fruitRegrowSeconds) {
+                    const mesh = harvested.mesh as THREE.Object3D | null
+                    if (mesh) {
+                        const box = new THREE.Box3().setFromObject(mesh)
+                        const foliageY = THREE.MathUtils.lerp(box.min.y, box.max.y, 0.6)
+                        world.tilesFactory.playPlantAnimation(ctx.cellX, ctx.cellZ, foliageY, 1.8)
+                    } else {
+                        world.tilesFactory.playPlantAnimation(ctx.cellX, ctx.cellZ)
+                    }
+                }
                 return true
             }
         )
