@@ -133,16 +133,19 @@ type DragSource =
     | { zone: "hotbar"; index: number }
     | { zone: "extra"; id: string }
 
-
-const TOOL_ICONS: Record<ToolId, string> = {
-    hoe: "◆",
-    watering_can: "◆",
-    axe: "◆",
-    shovel: "◆",
-}
-
 const isLevelableTool = (itemId: string | null): itemId is ToolId =>
     itemId === "hoe" || itemId === "watering_can" || itemId === "axe" || itemId === "shovel"
+
+function renderToolLevelBars(itemId: ToolId) {
+    const level = toolLevelStore.getLevel(itemId)
+    return (
+        <span className="inv-slot-level" title={`Niveau ${level}/3`}>
+            {[1, 2, 3].map(step => (
+                <span key={step} className={["inv-slot-level-bar", step <= level ? "active" : ""].filter(Boolean).join(" ")} />
+            ))}
+        </span>
+    )
+}
 
 // ─── Composant ────────────────────────────────────────────────────────────────
 
@@ -332,7 +335,7 @@ export function InventoryBar() {
                     )}
                     {showLevel && (
                         <>
-                            Niveau {level} {TOOL_ICONS[item.id].repeat(level)}
+                            Niveau {level}/3
                             <span className="hint-sep">·</span>
                             <span className="hint-key">↑</span>/<span className="hint-key">↓</span>
                             Ajuster
@@ -387,11 +390,7 @@ export function InventoryBar() {
                         {!isInfinite(item) && (
                             <span className="inv-slot-qty">{qty}</span>
                         )}
-                        {isLevelableTool(item.id) && (
-                            <span className="inv-slot-level" title={`Niveau ${toolLevelStore.getLevel(item.id)}`}>
-                                {TOOL_ICONS[item.id].repeat(toolLevelStore.getLevel(item.id))}
-                            </span>
-                        )}
+                        {isLevelableTool(item.id) && renderToolLevelBars(item.id)}
                     </UIButton>
                 ) : (
                     <div className="inv-slot inv-slot-empty">
@@ -437,11 +436,7 @@ export function InventoryBar() {
                     {!isInfinite(item) && (
                         <span className="inv-slot-qty">{qty}</span>
                     )}
-                    {isLevelableTool(item.id) && (
-                        <span className="inv-slot-level" title={`Niveau ${toolLevelStore.getLevel(item.id)}`}>
-                            {TOOL_ICONS[item.id].repeat(toolLevelStore.getLevel(item.id))}
-                        </span>
-                    )}
+                    {isLevelableTool(item.id) && renderToolLevelBars(item.id)}
                 </UIButton>
             </div>
         )

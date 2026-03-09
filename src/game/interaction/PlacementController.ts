@@ -93,6 +93,7 @@ export class PlacementController {
     // ── Store subscription ────────────────────────────────────────────────────
     private lastSelectedId: string | null = null
     private unsubscribeStore: (() => void) | null = null
+    private unsubscribeToolLevel: (() => void) | null = null
 
     // ── Bound listeners ───────────────────────────────────────────────────────
     private readonly _onMouseMove = this.onMouseMove.bind(this)
@@ -123,10 +124,12 @@ export class PlacementController {
         window.addEventListener("keydown", this._onKeyDown)
 
         this.unsubscribeStore = placementStore.subscribe(() => this.onStoreChange())
+        this.unsubscribeToolLevel = toolLevelStore.subscribe(() => this.onToolLevelChange())
     }
 
     dispose(): void {
         this.unsubscribeStore?.()
+        this.unsubscribeToolLevel?.()
         this.removeGhost()
         this.stopHoverAnim()
         hoverCellMesh.visible = false
@@ -744,6 +747,21 @@ export class PlacementController {
     }
 
     // ─── Store ────────────────────────────────────────────────────────────────
+
+
+    private onToolLevelChange(): void {
+        const hoveredCell = placementStore.hoveredCell
+        if (!hoveredCell) return
+
+        const selectedItem = placementStore.selectedItem
+        if (selectedItem && this.isGhostItem(selectedItem)) return
+
+        this.updateHoverCursor(
+            hoveredCell.cellX,
+            hoveredCell.cellZ,
+            this.getHoverFootprint(selectedItem),
+        )
+    }
 
     private onStoreChange(): void {
         const currentId = placementStore.selectedItem?.id ?? null

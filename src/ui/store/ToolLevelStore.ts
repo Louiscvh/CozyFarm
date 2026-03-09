@@ -2,7 +2,7 @@ export const TOOL_IDS = ["hoe", "watering_can", "axe", "shovel"] as const
 export type ToolId = typeof TOOL_IDS[number]
 
 const DEFAULT_TOOL_LEVEL = 1
-const MAX_TOOL_LEVEL = 4
+const MAX_TOOL_LEVEL = 3
 
 function isToolId(value: string): value is ToolId {
     return (TOOL_IDS as readonly string[]).includes(value)
@@ -54,14 +54,8 @@ export function getAreaOffsetsForLevel(level: number): Array<{ x: number; z: num
             { x: 0, z: -1 },
         ]
     }
-    if (level === 3) {
-        const offsets: Array<{ x: number; z: number }> = []
-        for (let x = -1; x <= 1; x++) for (let z = -1; z <= 1; z++) offsets.push({ x, z })
-        return offsets
-    }
-
     const offsets: Array<{ x: number; z: number }> = []
-    for (let x = -2; x <= 2; x++) for (let z = -2; z <= 2; z++) offsets.push({ x, z })
+    for (let x = -1; x <= 1; x++) for (let z = -1; z <= 1; z++) offsets.push({ x, z })
     return offsets
 }
 
