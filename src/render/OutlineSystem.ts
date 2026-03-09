@@ -1,7 +1,6 @@
 // src/render/OutlineSystem.ts
 import * as THREE from "three"
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
-import { RenderPass }     from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { OutlinePass }    from 'three/examples/jsm/postprocessing/OutlinePass.js';
 import { World } from "../game/world/World"
 
@@ -51,13 +50,11 @@ export class OutlineSystem {
     this.outlinePass.edgeGlow = 0
     this.outlinePass.pulsePeriod = 0
 
-    const renderPass = new RenderPass(this.outlineScene, camera)
-    renderPass.clear = false
     renderer.info.autoReset = false
 
     this.outlinePass.renderScene = this.outlineScene
     this.outlinePass.renderCamera = camera
-    this.composer.addPass(renderPass)
+    this.outlinePass.renderToScreen = true
     this.composer.addPass(this.outlinePass)
 
     this.ghostGroup = new THREE.Group()
