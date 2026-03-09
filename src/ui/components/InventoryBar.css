@@ -247,6 +247,18 @@
   color: rgba(255,255,255,0.6);
 }
 
+
+.inv-slot-level {
+  position: absolute;
+  right: 4px;
+  bottom: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  color: #ffd35a;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.85);
+  letter-spacing: 0.05em;
+}
+
 .inv-slot.selected {
   border-color: rgba(255, 255, 255, 0.5);
   background: rgba(255, 255, 255, 0.1);
