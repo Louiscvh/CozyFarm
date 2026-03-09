@@ -598,7 +598,7 @@ export class CropManager {
         let root = instance.fruitMesh as THREE.Object3D | null
         if (!root) {
             root = new THREE.Group()
-            const sphere = new THREE.SphereGeometry(this.world.cellSize * 0.09, 10, 10)
+            const sphere = new THREE.SphereGeometry(this.world.cellSize * 0.11, 10, 10)
             const mat = new THREE.MeshStandardMaterial({ color: instance.def.fruitVisualColor ?? 0xff8a00, roughness: 0.5, metalness: 0 })
             for (let i = 0; i < 7; i++) {
                 const m = new THREE.Mesh(sphere, mat.clone())
@@ -676,7 +676,7 @@ export class CropManager {
             const group = new THREE.Group()
             const count = instance.def.fruitVisualCount ?? 8
             const color = instance.def.fruitVisualColor ?? 0xff8a00
-            const sphere = new THREE.SphereGeometry(this.world.cellSize * 0.08, 10, 10)
+            const sphere = new THREE.SphereGeometry(this.world.cellSize * 0.105, 10, 10)
             const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.55, metalness: 0 })
             for (let i = 0; i < count; i++) {
                 const m = new THREE.Mesh(sphere, mat.clone())
@@ -693,7 +693,7 @@ export class CropManager {
 
         const worldBox = new THREE.Box3().setFromObject(root)
         const crownHeight = Math.max(this.world.cellSize * 0.45, worldBox.max.y - worldBox.min.y)
-        const radius = this.world.cellSize * 0.34 * baseScale
+        const radius = this.world.cellSize * 0.4 * baseScale
 
         group.position.set(0, crownHeight * 0.75, 0)
         group.scale.setScalar(Math.max(0.6, baseScale))
