@@ -24,7 +24,7 @@ async function loadModel(path: string): Promise<THREE.Object3D> {
 function buildYoungTreeMesh(phase: GrowthPhase, cellSize: number): THREE.Object3D {
     const g = new THREE.Group()
 
-    const phaseScale = Math.max(0.85, (phase.scaleXZ ?? 0.08) / 0.08)
+    const phaseScale = Math.max(0.82, (phase.scaleXZ ?? 0.08) / 0.08)
     const trunkHeight = Math.max((phase.height ?? 0.08) * 1.35, 0.12)
     const trunkRadiusBottom = Math.max((phase.scaleXZ ?? 0.03) * 0.24, 0.018)
     const trunkRadiusTop = trunkRadiusBottom * 0.62
@@ -67,7 +67,7 @@ function buildYoungTreeMesh(phase: GrowthPhase, cellSize: number): THREE.Object3
     const canopyDarkMat = new THREE.MeshStandardMaterial({ color: canopyDarkColor, roughness: 0.92, metalness: 0 })
     const canopyLightMat = new THREE.MeshStandardMaterial({ color: canopyLightColor, roughness: 0.84, metalness: 0 })
 
-    const baseCanopyRadius = Math.max((phase.scaleXZ ?? 0.08) * 1.15, 0.09) * phaseScale
+    const baseCanopyRadius = Math.max((phase.scaleXZ ?? 0.08) * 1.02, 0.085) * phaseScale
 
     const addCanopyBlob = (
         radius: number,
@@ -86,10 +86,10 @@ function buildYoungTreeMesh(phase: GrowthPhase, cellSize: number): THREE.Object3
     }
 
     const canopyBaseY = trunkHeight * 0.78
-    addCanopyBlob(baseCanopyRadius * 1.05, 0, canopyBaseY + baseCanopyRadius * 0.52, 0, canopyMainMat, 1.05, 0.95)
-    addCanopyBlob(baseCanopyRadius * 0.86, -baseCanopyRadius * 0.66, canopyBaseY + baseCanopyRadius * 0.58, baseCanopyRadius * 0.12, canopyDarkMat)
-    addCanopyBlob(baseCanopyRadius * 0.84, baseCanopyRadius * 0.7, canopyBaseY + baseCanopyRadius * 0.6, -baseCanopyRadius * 0.1, canopyDarkMat)
-    addCanopyBlob(baseCanopyRadius * 0.8, baseCanopyRadius * 0.12, canopyBaseY + baseCanopyRadius * 1.22, 0, canopyLightMat, 1, 0.86)
+    addCanopyBlob(baseCanopyRadius * 0.96, 0, canopyBaseY + baseCanopyRadius * 0.52, 0, canopyMainMat, 1.02, 0.94)
+    addCanopyBlob(baseCanopyRadius * 0.78, -baseCanopyRadius * 0.64, canopyBaseY + baseCanopyRadius * 0.58, baseCanopyRadius * 0.12, canopyDarkMat)
+    addCanopyBlob(baseCanopyRadius * 0.76, baseCanopyRadius * 0.68, canopyBaseY + baseCanopyRadius * 0.6, -baseCanopyRadius * 0.1, canopyDarkMat)
+    addCanopyBlob(baseCanopyRadius * 0.72, baseCanopyRadius * 0.12, canopyBaseY + baseCanopyRadius * 1.16, 0, canopyLightMat, 1, 0.86)
     addCanopyBlob(baseCanopyRadius * 0.62, -baseCanopyRadius * 0.24, canopyBaseY + baseCanopyRadius * 1.06, baseCanopyRadius * 0.48, canopyLightMat)
     addCanopyBlob(baseCanopyRadius * 0.58, baseCanopyRadius * 0.4, canopyBaseY + baseCanopyRadius * 0.98, -baseCanopyRadius * 0.52, canopyMainMat)
 
@@ -121,7 +121,18 @@ export class CropManager {
     private readonly crops = new Map<string, CropInstance>()
 
     private _harvestingInstances = new Set<CropInstance>()
-    private _fruitHarvesting = new Map<CropInstance, { root: THREE.Object3D; startY: number; startX: number; startZ: number; startedAt: number; duration: number; startScale: number }>()
+    private _fruitHarvesting = new Map<CropInstance, {
+        fruits: Array<{
+            mesh: THREE.Object3D
+            startX: number
+            startY: number
+            startZ: number
+            driftX: number
+            driftZ: number
+        }>
+        startedAt: number
+        duration: number
+    }>()
     private _looseStakes = new Map<string, THREE.Object3D>()
     private _stakePlacing = new Map<string, { mesh: THREE.Object3D; startY: number; endY: number; startedAt: number; duration: number }>()
     private _stakeRemoving = new Map<string, { mesh: THREE.Object3D; startY: number; startedAt: number; duration: number }>()
@@ -269,14 +280,18 @@ export class CropManager {
             const t = Math.min(1, (nowMs - anim.startedAt) / anim.duration)
             const bump = this.world.cellSize * 0.18 * t
             const drop = this.world.cellSize * 0.26 * t * t
-            anim.root.position.set(anim.startX, anim.startY + bump - drop, anim.startZ)
-            anim.root.rotation.x += 0.04
-            anim.root.rotation.z += 0.06
-            anim.root.scale.setScalar(Math.max(0.01, anim.startScale * (1 - t * 0.45)))
-            this.setOpacity(anim.root, 1 - t)
+            for (const fruit of anim.fruits) {
+                fruit.mesh.position.set(
+                    fruit.startX + fruit.driftX * t,
+                    fruit.startY + bump - drop,
+                    fruit.startZ + fruit.driftZ * t,
+                )
+                this.setOpacity(fruit.mesh, 1 - t)
+            }
             if (t >= 1) {
-                anim.root.parent?.remove(anim.root)
-                if (instance.fruitMesh === anim.root) instance.fruitMesh = null
+                for (const fruit of anim.fruits) {
+                    fruit.mesh.parent?.remove(fruit.mesh)
+                }
                 this._fruitHarvesting.delete(instance)
             }
         }
@@ -660,25 +675,41 @@ export class CropManager {
             instance.fruitMesh = root
         }
 
-        const worldPos = new THREE.Vector3()
-        const worldQuat = new THREE.Quaternion()
-        const worldScale = new THREE.Vector3()
-        root.matrixWorld.decompose(worldPos, worldQuat, worldScale)
+        const fruits: Array<{
+            mesh: THREE.Object3D
+            startX: number
+            startY: number
+            startZ: number
+            driftX: number
+            driftZ: number
+        }> = []
+
+        root.updateMatrixWorld(true)
+        const detached = [...root.children]
+        detached.forEach((child, i) => {
+            const worldPos = new THREE.Vector3()
+            child.getWorldPosition(worldPos)
+            root.remove(child)
+            child.position.copy(worldPos)
+            child.rotation.set(0, 0, 0)
+            child.scale.setScalar(1)
+            this.scene.add(child)
+            const driftAngle = (i / Math.max(1, detached.length)) * Math.PI * 2
+            fruits.push({
+                mesh: child,
+                startX: worldPos.x,
+                startY: worldPos.y,
+                startZ: worldPos.z,
+                driftX: Math.cos(driftAngle) * this.world.cellSize * 0.06,
+                driftZ: Math.sin(driftAngle) * this.world.cellSize * 0.06,
+            })
+        })
 
         root.parent?.remove(root)
-        root.position.copy(worldPos)
-        root.quaternion.copy(worldQuat)
-        root.scale.copy(worldScale)
-        this.scene.add(root)
         instance.fruitMesh = null
 
-        const startScale = root.scale.x > 0 ? root.scale.x : 1
         this._fruitHarvesting.set(instance, {
-            root,
-            startX: root.position.x,
-            startY: root.position.y,
-            startZ: root.position.z,
-            startScale,
+            fruits,
             startedAt: performance.now(),
             duration: 420,
         })
@@ -740,7 +771,9 @@ export class CropManager {
         const group = instance.fruitMesh as THREE.Group
         if (group.parent !== root) root.add(group)
 
+        group.visible = false
         const worldBox = new THREE.Box3().setFromObject(root)
+        group.visible = true
         const worldSize = new THREE.Vector3()
         worldBox.getSize(worldSize)
 
