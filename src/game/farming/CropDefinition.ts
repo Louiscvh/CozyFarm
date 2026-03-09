@@ -81,13 +81,13 @@ export const OrangeTreeCrop: CropDefinition = {
     fruitVisualCount: 14,
     usePlacementGhost: true,
     plantTileTypes: ["grass"],
-    ghostModelScale: 0.3,
+    ghostModelScale: 0.24,
     phases: [
-        { durationSeconds: DEBUG ? 3 : 260, color: 0x7a5d3b, scaleXZ: 0.025, height: 0.09 },
-        { durationSeconds: DEBUG ? 3 : 360, color: 0x4b7a2f, scaleXZ: 0.1, height: 0.24 },
-        { durationSeconds: DEBUG ? 3 : 520, color: 0x4b8a35, scaleXZ: 0.2, height: 0.75 },
-        { durationSeconds: DEBUG ? 3 : 480, color: 0x4f8f38, scaleXZ: 0.24, height: 0.95 },
-        { durationSeconds: 0, modelPath: "/models/tree_orange.glb", modelScale: 0.24 },
+        { durationSeconds: DEBUG ? 3 : 260, color: 0x7a5d3b, scaleXZ: 0.02, height: 0.075 },
+        { durationSeconds: DEBUG ? 3 : 360, color: 0x4b7a2f, scaleXZ: 0.08, height: 0.2 },
+        { durationSeconds: DEBUG ? 3 : 520, color: 0x4b8a35, scaleXZ: 0.16, height: 0.6 },
+        { durationSeconds: DEBUG ? 3 : 480, color: 0x4f8f38, scaleXZ: 0.19, height: 0.76 },
+        { durationSeconds: 0, modelPath: "/models/tree_orange.glb", modelScale: 0.19 },
     ],
 }
 
