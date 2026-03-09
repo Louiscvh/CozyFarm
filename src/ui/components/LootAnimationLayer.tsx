@@ -1,5 +1,5 @@
 import * as THREE from "three"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import type { ItemDef } from "../../game/entity/ItemDef"
 import { World } from "../../game/world/World"
@@ -37,6 +37,15 @@ function worldCellToScreen(cellX: number, cellZ: number) {
     }
 }
 
+
+function getMouseStartPosition(
+    mousePos: { x: number; y: number } | null,
+    cellX: number,
+    cellZ: number,
+) {
+    return mousePos ?? worldCellToScreen(cellX, cellZ)
+}
+
 function centerOf(el: HTMLElement) {
     const rect = el.getBoundingClientRect()
     return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
@@ -52,16 +61,24 @@ function bump(el: HTMLElement | null, className: string, durationMs = 220) {
 
 export function LootAnimationLayer({ items }: LootAnimationLayerProps) {
     const [particles, setParticles] = useState<LootParticle[]>([])
+    const mousePosRef = useRef<{ x: number; y: number } | null>(null)
     const itemById = useMemo(() => new Map(items.map(i => [i.id, i])), [items])
 
     useEffect(() => {
+        const updateMouse = (e: PointerEvent | MouseEvent) => {
+            mousePosRef.current = { x: e.clientX, y: e.clientY }
+        }
+
+        window.addEventListener("pointermove", updateMouse)
+        window.addEventListener("mousemove", updateMouse)
+
         let idSeed = 1
 
-        return lootFeedbackStore.subscribe((event) => {
+        const unsubscribe = lootFeedbackStore.subscribe((event) => {
             const item = itemById.get(event.itemId)
             if (!item) return
 
-            const from = worldCellToScreen(event.cellX, event.cellZ)
+            const from = getMouseStartPosition(mousePosRef.current, event.cellX, event.cellZ)
             const targetAnchor = document.querySelector<HTMLElement>(`[data-inv-item-id="${event.itemId}"]`)
             const targetSlot = targetAnchor?.closest<HTMLElement>(".inv-slot") ?? null
             const inventoryShell = document.querySelector<HTMLElement>("#inventory-slots")
@@ -95,6 +112,12 @@ export function LootAnimationLayer({ items }: LootAnimationLayerProps) {
                 bump(inventoryExpandBtn, "inventory-receive-bump")
             }, bumpDelay)
         })
+
+        return () => {
+            unsubscribe()
+            window.removeEventListener("pointermove", updateMouse)
+            window.removeEventListener("mousemove", updateMouse)
+        }
     }, [itemById])
 
     return createPortal(
