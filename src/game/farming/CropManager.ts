@@ -771,7 +771,6 @@ export class CropManager {
                 color,
                 transparent: true,
                 opacity: 0.95,
-                depthTest: true,
                 depthWrite: false,
             })
             for (let i = 0; i < count; i++) {

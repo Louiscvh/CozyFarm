@@ -77,7 +77,7 @@ export const OrangeTreeCrop: CropDefinition = {
     supportsStake: true,
     stakeGrowthMultiplier: 1.75,
     fruitRegrowSeconds: DEBUG ? 8 : 420,
-    fruitVisualColor: 0xd9a35f,
+    fruitVisualColor: 0xff8a00,
     fruitVisualCount: 14,
     usePlacementGhost: true,
     plantTileTypes: ["grass"],
