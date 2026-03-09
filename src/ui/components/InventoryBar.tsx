@@ -33,6 +33,7 @@ import { WateringCanItemDef } from "../../game/items/WateringCanItem"
 import { TulipEntity } from "../../game/entity/entities/Tulip"
 import { AxeItemDef } from "../../game/items/AxeItem"
 import { WoodItemDef } from "../../game/items/WoodItem"
+import { LootAnimationLayer } from "./LootAnimationLayer"
 import { OrangeSaplingItemDef } from "../../game/items/OrangeSaplingItem"
 import { OrangeItemDef } from "../../game/items/OrangeItem"
 import { StakeItemDef } from "../../game/items/StakeItem"
@@ -248,12 +249,18 @@ export function InventoryBar() {
         setDragOver(null); dragSrc.current = null
     }
 
-    function onDropExtra() {
+    function onDropExtra(targetId?: string) {
         const src = dragSrc.current
         if (!src) return
+
         if (src.zone === "hotbar") {
-            setHotbar(prev => { const next = [...prev]; next[src.index] = null; return next })
+            setHotbar(prev => {
+                const next = [...prev]
+                next[src.index] = targetId ?? null
+                return next
+            })
         }
+
         setDragOver(null); dragSrc.current = null
     }
 
@@ -339,6 +346,7 @@ export function InventoryBar() {
                         onDragStart={() => onDragStartHotbar(index)}
                         onDragEnd={cancelDrag}
                     >
+                        <span className="inv-slot-hit" data-inv-item-id={item.id} />
                         <span className="inv-slot-key">{index + 1}</span>
                         <span className="inv-slot-icon">{item.icon}</span>
                         <span className="inv-slot-label">{item.label}</span>
@@ -367,7 +375,7 @@ export function InventoryBar() {
                 className={["inv-slot-wrap", over ? "drag-over" : ""].filter(Boolean).join(" ")}
                 onDragOver={e => { e.preventDefault(); setDragOverExtra(item.id) }}
                 onDragLeave={() => setDragOver(null)}
-                onDrop={onDropExtra}
+                onDrop={() => onDropExtra(item.id)}
             >
                 <UIButton
                     className={[
@@ -384,6 +392,7 @@ export function InventoryBar() {
                     onDragStart={() => onDragStartExtra(item.id)}
                     onDragEnd={cancelDrag}
                 >
+                    <span className="inv-slot-hit" data-inv-item-id={item.id} />
                     <span className="inv-slot-icon">{item.icon}</span>
                     <span className="inv-slot-label">{item.label}</span>
                     {!isInfinite(item) && (
@@ -396,6 +405,7 @@ export function InventoryBar() {
 
     return (
         <div id="inventory-bar">
+            <LootAnimationLayer items={ALL_ITEMS} />
             {renderHint()}
 
             <div id="inventory-wrapper">
@@ -424,7 +434,7 @@ export function InventoryBar() {
                                         className="inventory-row extra-row"
                                         onDragOver={e => { e.preventDefault(); setDragOverExtra("__zone__") }}
                                         onDragLeave={() => setDragOver(null)}
-                                        onDrop={onDropExtra}
+                                        onDrop={() => onDropExtra()}
                                     >
                                         {extraItems.map(renderExtraItem)}
                                         {extraItems.length === 0 && (

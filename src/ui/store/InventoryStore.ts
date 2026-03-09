@@ -1,6 +1,7 @@
 // src/ui/store/InventoryStore.ts
 import { historyStore } from "./HistoryStore"
 import { placementStore } from "./PlacementStore"
+import { lootFeedbackStore } from "./LootFeedbackStore"
 
 
 export interface InventoryEntry {
@@ -88,15 +89,25 @@ class InventoryStore {
      * Produit `amount` unités d'un item farming (ex: carotte récoltée).
      * Plafonnée au maxQty.
      */
-    produce(id: string, amount = 1): void {
+    produce(id: string, amount = 1, source?: { cellX: number; cellZ: number }): void {
         if (!this.farmingItems.has(id)) {
             console.warn(`[InventoryStore] produce("${id}") : cet item n'est pas un item farming.`)
             return
         }
         const max = this.farmingMax.get(id) ?? Infinity
         const current = this.farmingQty.get(id) ?? 0
+        const produced = Math.max(0, Math.min(max, current + amount) - current)
         this.farmingQty.set(id, Math.min(max, current + amount))
         this.notify()
+
+        if (produced > 0 && source) {
+            lootFeedbackStore.emit({
+                itemId: id,
+                amount: produced,
+                cellX: source.cellX,
+                cellZ: source.cellZ,
+            })
+        }
     }
 
     getEntry(id: string): InventoryEntry | undefined {

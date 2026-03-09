@@ -84,6 +84,7 @@ export function useFarming() {
                 if (!world) return false
                 const harvested = world.cropManager.harvest(ctx.cellX, ctx.cellZ)
                 if (!harvested) return false
+                inventoryStore.produce(harvested.def.harvestItemId, harvested.def.harvestQty, { cellX: ctx.cellX, cellZ: ctx.cellZ })
                 inventoryStore.produce(harvested.def.harvestItemId, harvested.def.harvestQty)
                 if (harvested.def.fruitRegrowSeconds) {
                     const mesh = harvested.mesh as THREE.Object3D | null
