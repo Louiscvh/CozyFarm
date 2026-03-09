@@ -49,8 +49,10 @@ export function useFarming() {
             const world = World.current
             if (!world) return false
 
-            const uprooted = world.cropManager.uproot(ctx.cellX, ctx.cellZ)
+            const uprooted = world.cropManager.uproot(ctx.cellX, ctx.cellZ, true)
             if (uprooted) return true
+
+            if (world.cropManager.removeLooseStake(ctx.cellX, ctx.cellZ)) return true
 
             return world.tilesFactory.untillCell(ctx.cellX, ctx.cellZ)
         })

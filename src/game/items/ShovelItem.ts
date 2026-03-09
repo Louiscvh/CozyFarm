@@ -7,7 +7,7 @@ export const ShovelItemDef: ItemDef = {
     showCursorItem: true,
     usage: {
         kind: "use_on_tile",
-        targetTileTypes: ["soil"],
+        targetTileTypes: ["soil", "grass"],
         actionId: "farming:uproot_or_untill",
         consumeOnUse: false,
         allowOnCrop: true,

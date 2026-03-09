@@ -207,6 +207,14 @@ export class ItemActionController {
             return
         }
 
+        if ((item as any).usage.actionId === "farming:uproot_or_untill") {
+            const crop = this.world.cropManager.getCrop(cellX, cellZ)
+            const hasLooseStake = this.world.cropManager.hasLooseStake(cellX, cellZ)
+            const canUntill = effectiveTileType === "soil"
+            this.setCursor((!!crop || hasLooseStake || canUntill) ? "pointer" : "not-allowed")
+            return
+        }
+
         const hasCrop = !!this.world.cropManager.getCrop(cellX, cellZ)
         const cropBlocks = hasCrop && !(item as any).usage.allowOnCrop
         const blocked = (this.world.tilesFactory.isOccupied(cellX, cellZ) && effectiveTileType !== "soil") || cropBlocks

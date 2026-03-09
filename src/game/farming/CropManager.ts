@@ -78,6 +78,7 @@ export class CropManager {
 
     private _harvestingInstances = new Set<CropInstance>()
     private _fruitHarvesting = new Map<CropInstance, { root: THREE.Object3D; startY: number; startedAt: number; duration: number }>()
+    private _looseStakes = new Map<string, THREE.Object3D>()
 
     constructor(scene: THREE.Scene, world: World) {
         this.scene = scene
@@ -92,6 +93,26 @@ export class CropManager {
 
     getCrop(cellX: number, cellZ: number): CropInstance | undefined {
         return this.crops.get(this.key(cellX, cellZ))
+    }
+
+    hasLooseStake(cellX: number, cellZ: number): boolean {
+        return this._looseStakes.has(this.key(cellX, cellZ))
+    }
+
+    removeLooseStake(cellX: number, cellZ: number): boolean {
+        const k = this.key(cellX, cellZ)
+        const stake = this._looseStakes.get(k)
+        if (!stake) return false
+        this.scene.remove(stake)
+        stake.traverse(obj => {
+            const mesh = obj as THREE.Mesh
+            if (!mesh.isMesh) return
+            mesh.geometry?.dispose()
+            const mats = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+            mats.forEach(m => m?.dispose())
+        })
+        this._looseStakes.delete(k)
+        return true
     }
 
     plant(def: CropDefinition, cellX: number, cellZ: number): CropInstance | null {
@@ -136,12 +157,20 @@ export class CropManager {
      * Déplante un crop, qu'il soit en pousse ou mature,
      * puis joue une animation de projection vers le haut + fade out.
      */
-    uproot(cellX: number, cellZ: number): CropInstance | null {
+    uproot(cellX: number, cellZ: number, keepStakeOnGround: boolean = false): CropInstance | null {
         const instance = this.crops.get(this.key(cellX, cellZ))
         if (!instance) return null
 
         this.crops.delete(this.key(cellX, cellZ))
         this._harvestingInstances.add(instance)
+
+        if (keepStakeOnGround && instance.hasStake && instance.stakeMesh) {
+            const detachedStake = instance.stakeMesh
+            instance.stakeMesh = null
+            this._looseStakes.set(this.key(cellX, cellZ), detachedStake)
+            detachedStake.scale.setScalar(1)
+            detachedStake.position.set(detachedStake.position.x, this.world.cellSize * 0.38, detachedStake.position.z)
+        }
 
         const currentScale = instance.currentScale > 0 ? instance.currentScale : (instance.currentPhase.modelScale ?? 1)
         // Sur un déracinage: on garde l'échelle constante, le fade se fait uniquement en opacité.
@@ -223,6 +252,8 @@ export class CropManager {
     dispose(): void {
         for (const instance of this.crops.values()) this.disposeMesh(instance)
         this.crops.clear()
+        for (const stake of this._looseStakes.values()) this.scene.remove(stake)
+        this._looseStakes.clear()
     }
 
     // ─── Helpers privés ────────────────────────────────────────────────────────
