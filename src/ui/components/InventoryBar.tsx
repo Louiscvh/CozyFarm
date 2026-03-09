@@ -240,12 +240,18 @@ export function InventoryBar() {
         setDragOver(null); dragSrc.current = null
     }
 
-    function onDropExtra() {
+    function onDropExtra(targetId?: string) {
         const src = dragSrc.current
         if (!src) return
+
         if (src.zone === "hotbar") {
-            setHotbar(prev => { const next = [...prev]; next[src.index] = null; return next })
+            setHotbar(prev => {
+                const next = [...prev]
+                next[src.index] = targetId ?? null
+                return next
+            })
         }
+
         setDragOver(null); dragSrc.current = null
     }
 
@@ -360,7 +366,7 @@ export function InventoryBar() {
                 className={["inv-slot-wrap", over ? "drag-over" : ""].filter(Boolean).join(" ")}
                 onDragOver={e => { e.preventDefault(); setDragOverExtra(item.id) }}
                 onDragLeave={() => setDragOver(null)}
-                onDrop={onDropExtra}
+                onDrop={() => onDropExtra(item.id)}
             >
                 <UIButton
                     className={[
@@ -419,7 +425,7 @@ export function InventoryBar() {
                                         className="inventory-row extra-row"
                                         onDragOver={e => { e.preventDefault(); setDragOverExtra("__zone__") }}
                                         onDragLeave={() => setDragOver(null)}
-                                        onDrop={onDropExtra}
+                                        onDrop={() => onDropExtra()}
                                     >
                                         {extraItems.map(renderExtraItem)}
                                         {extraItems.length === 0 && (
