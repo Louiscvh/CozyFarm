@@ -256,12 +256,26 @@ export function InventoryBar() {
         const item = placementStore.selectedItem
         if (!item) return null
 
+        const renderEscapeHint = () => (
+            <>
+                <button
+                    type="button"
+                    className="hint-key hint-key-button"
+                    onClick={() => placementStore.cancel()}
+                    aria-label="Annuler l'action en cours"
+                >
+                    Échap
+                </button>
+                Annuler
+            </>
+        )
+
         if (isPlaceable(item)) {
             return (
                 <div id="placement-hint">
                     <span className="hint-key">R</span> Rotation {rotation}°
                     <span className="hint-sep">·</span>
-                    <span className="hint-key">Échap</span> Annuler
+                    {renderEscapeHint()}
                 </div>
             )
         }
@@ -269,13 +283,13 @@ export function InventoryBar() {
         if (isUsableOnEntity(item) || isUsableOnTile(item)) {
             return (
                 <div id="placement-hint">
-                    <span className="hint-key">Échap</span> Annuler
                     {item.usageHint && (
                         <>
-                            <span className="hint-sep">·</span>
                             {item.usageHint}
+                            <span className="hint-sep">·</span>
                         </>
                     )}
+                    {renderEscapeHint()}
                 </div>
             )
         }
