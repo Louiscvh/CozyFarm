@@ -184,11 +184,29 @@ export class PlacementController {
         return baseY + HOVER_SURFACE_OFFSET_Y
     }
 
-    private getHoverCursorY(cellX: number, cellZ: number): number {
-        const baseY = this.world.tilesFactory.isSoil(cellX, cellZ) ? SOIL_SURFACE_Y : GRID_Y
-        // Toujours au-dessus du plan le plus haut pour éviter qu'une partie du contour
-        // (notamment la croix niveau 2) soit masquée quand la zone chevauche soil/grass.
-        return Math.max(baseY, GRID_Y) + 0.006
+    private getHoverCursorY(cellX: number, cellZ: number, shape: HoverShape, footprint: number): number {
+        let maxBaseY = GRID_Y
+
+        if (shape === "cross") {
+            const offsets = [{ x: 0, z: 0 }, { x: 1, z: 0 }, { x: -1, z: 0 }, { x: 0, z: 1 }, { x: 0, z: -1 }]
+            for (const offset of offsets) {
+                const isSoil = this.world.tilesFactory.isSoil(cellX + offset.x, cellZ + offset.z)
+                const baseY = isSoil ? SOIL_SURFACE_Y : GRID_Y
+                if (baseY > maxBaseY) maxBaseY = baseY
+            }
+            return maxBaseY + 0.006
+        }
+
+        const half = Math.floor(footprint / 2)
+        for (let dx = -half; dx <= half; dx++) {
+            for (let dz = -half; dz <= half; dz++) {
+                const isSoil = this.world.tilesFactory.isSoil(cellX + dx, cellZ + dz)
+                const baseY = isSoil ? SOIL_SURFACE_Y : GRID_Y
+                if (baseY > maxBaseY) maxBaseY = baseY
+            }
+        }
+
+        return maxBaseY + 0.006
     }
 
     // ─── Helpers de coordonnées ───────────────────────────────────────────────
@@ -559,7 +577,7 @@ export class PlacementController {
 
         const half = Math.floor(footprint / 2)
         const { x, z } = this.cellToWorld(cellX - half, cellZ - half, footprint)
-        const hoverY = this.getHoverCursorY(cellX, cellZ)
+        const hoverY = this.getHoverCursorY(cellX, cellZ, shape, footprint)
         this.hoverTargetPos.set(x, hoverY, z)
         hoverCellMesh.scale.set(this.world.cellSize, 1, this.world.cellSize)
 
