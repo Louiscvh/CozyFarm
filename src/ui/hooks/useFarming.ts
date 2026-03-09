@@ -84,6 +84,9 @@ export function useFarming() {
                 const harvested = world.cropManager.harvest(ctx.cellX, ctx.cellZ)
                 if (!harvested) return false
                 inventoryStore.produce(harvested.def.harvestItemId, harvested.def.harvestQty)
+                if (harvested.def.fruitRegrowSeconds) {
+                    world.tilesFactory.playPlantAnimation(ctx.cellX, ctx.cellZ)
+                }
                 return true
             }
         )

@@ -206,7 +206,11 @@ export class CropManager {
 
         if (instance.def.fruitRegrowSeconds) {
             if (!instance.harvestFruits()) return null
-            this.startFruitHarvestAnimation(instance)
+            this._fruitHarvesting.delete(instance)
+            if (instance.fruitMesh) {
+                instance.fruitMesh.parent?.remove(instance.fruitMesh)
+                instance.fruitMesh = null
+            }
             return instance
         }
 
@@ -668,67 +672,6 @@ export class CropManager {
         this.syncAccessories(instance, pos, cropYOffset, 1)
 
         instance.startTransition(transitionType, 0, 1)
-    }
-
-    private startFruitHarvestAnimation(instance: CropInstance): void {
-        const owner = instance.mesh as THREE.Object3D | null
-        if (!owner) return
-
-        let root = instance.fruitMesh as THREE.Object3D | null
-        if (!root) {
-            root = new THREE.Group()
-            const sphere = new THREE.SphereGeometry(this.world.cellSize * 0.11, 10, 10)
-            const mat = new THREE.MeshStandardMaterial({ color: instance.def.fruitVisualColor ?? 0xff8a00, roughness: 0.5, metalness: 0 })
-            for (let i = 0; i < 7; i++) {
-                const m = new THREE.Mesh(sphere, mat.clone())
-                const a = (i / 7) * Math.PI * 2
-                m.position.set(Math.cos(a) * this.world.cellSize * 0.18, this.world.cellSize * 0.04 * (i % 2), Math.sin(a) * this.world.cellSize * 0.18)
-                m.castShadow = true
-                root.add(m)
-            }
-            owner.add(root)
-            root.position.set(0, this.world.cellSize * 0.6, 0)
-            instance.fruitMesh = root
-        }
-
-        const fruits: Array<{
-            mesh: THREE.Object3D
-            startX: number
-            startY: number
-            startZ: number
-            driftX: number
-            driftZ: number
-        }> = []
-
-        root.updateMatrixWorld(true)
-        const detached = [...root.children]
-        detached.forEach((child, i) => {
-            const worldPos = new THREE.Vector3()
-            child.getWorldPosition(worldPos)
-            root.remove(child)
-            child.position.copy(worldPos)
-            child.rotation.set(0, 0, 0)
-            child.scale.setScalar(1)
-            this.scene.add(child)
-            const driftAngle = (i / Math.max(1, detached.length)) * Math.PI * 2
-            fruits.push({
-                mesh: child,
-                startX: worldPos.x,
-                startY: worldPos.y,
-                startZ: worldPos.z,
-                driftX: Math.cos(driftAngle) * this.world.cellSize * 0.06,
-                driftZ: Math.sin(driftAngle) * this.world.cellSize * 0.06,
-            })
-        })
-
-        root.parent?.remove(root)
-        instance.fruitMesh = null
-
-        this._fruitHarvesting.set(instance, {
-            fruits,
-            startedAt: performance.now(),
-            duration: 980,
-        })
     }
 
     private startStakePlacementAnimation(instance: CropInstance): void {
