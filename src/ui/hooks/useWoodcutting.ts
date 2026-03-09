@@ -45,6 +45,7 @@ export function useWoodcutting() {
 
             // ── Animation chute (cache le slot instancié elle-même) ───────────
             animateChop(world, entity)
+            world.tilesFactory.playTreeChopAnimation(cellX, cellZ)
 
             // ── Bois ──────────────────────────────────────────────────────────
             inventoryStore.produce("wood", qty)
@@ -88,6 +89,7 @@ export function useWoodcutting() {
                 onRemove: (w) => {
                     inventoryStore.produce("wood", qty)
                     animateChop(w, entity)
+                    w.tilesFactory.playTreeChopAnimation(cellX, cellZ)
                 },
             })
 

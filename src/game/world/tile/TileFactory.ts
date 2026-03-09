@@ -22,6 +22,7 @@ import { GrassEntity } from "../../entity/entities/Grass"
 import { WaterSplashParticles } from "../../system/WaterSplashParticles"
 import { TillParticles } from "../../system/TillParticles"
 import { FoliageParticles } from "../../system/FoliageParticles"
+import { WoodChipParticles } from "../../system/WoodChipParticles"
 
 export interface DecorCategory { types: Entity[]; density: number }
 export interface FixedEntityDef { def: Entity; tileX: number; tileZ: number; size: number }
@@ -105,6 +106,7 @@ export class TileFactory {
     private readonly waterSplashParticles: WaterSplashParticles
     private readonly tillParticles: TillParticles
     private readonly foliageParticles: FoliageParticles
+    private readonly woodChipParticles: WoodChipParticles
 
     constructor(scene: THREE.Scene, worldSize: number, tileSize: number) {
         this.scene = scene
@@ -117,6 +119,7 @@ export class TileFactory {
         this.waterSplashParticles = new WaterSplashParticles(this.scene, this.cellSize, this.worldSizeInCells)
         this.tillParticles = new TillParticles(this.scene, this.cellSize, this.worldSizeInCells)
         this.foliageParticles = new FoliageParticles(this.scene, this.cellSize, this.worldSizeInCells)
+        this.woodChipParticles = new WoodChipParticles(this.scene, this.cellSize, this.worldSizeInCells)
     }
 
     waterCell(cellX: number, cellZ: number): boolean {
@@ -137,6 +140,10 @@ export class TileFactory {
 
     playPlantAnimation(cellX: number, cellZ: number): void {
         this.foliageParticles.spawnAtCell(cellX, cellZ)
+    }
+
+    playTreeChopAnimation(cellX: number, cellZ: number): void {
+        this.woodChipParticles.spawnAtCell(cellX, cellZ)
     }
 
     unwaterCell(cellX: number, cellZ: number): void {
@@ -387,6 +394,7 @@ export class TileFactory {
         this.waterSplashParticles.update(deltaTime)
         this.tillParticles.update(deltaTime)
         this.foliageParticles.update(deltaTime)
+        this.woodChipParticles.update(deltaTime)
         this.updateSoilWaterColorTransitions(deltaTime)
 
         if (this.transitions.size === 0) return
