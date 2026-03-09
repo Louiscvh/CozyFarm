@@ -781,14 +781,14 @@ export class CropManager {
         const localCenter = root.worldToLocal(worldCenter.clone())
 
         const crownHeight = Math.max(this.world.cellSize * 0.55, worldSize.y)
-        const canopyRadius = Math.max(this.world.cellSize * 0.2, Math.max(worldSize.x, worldSize.z) * 0.3)
+        const canopyRadius = Math.max(this.world.cellSize * 0.22, Math.max(worldSize.x, worldSize.z) * 0.34)
 
-        group.position.set(localCenter.x, localCenter.y + crownHeight * 0.08, localCenter.z)
+        group.position.set(localCenter.x, localCenter.y + crownHeight * 0.2, localCenter.z)
         group.scale.setScalar(1)
 
         group.children.forEach((child, i) => {
             const angle = (i / Math.max(1, group.children.length)) * Math.PI * 2
-            const ring = i % 2 === 0 ? 0.9 : 0.72
+            const ring = i % 2 === 0 ? 0.95 : 0.78
             const radial = canopyRadius * ring
             child.position.set(
                 Math.cos(angle) * radial,
