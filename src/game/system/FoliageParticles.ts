@@ -21,8 +21,8 @@ export class FoliageParticles {
         this.scene = scene
         this.cellSize = cellSize
         this.worldSizeInCells = worldSizeInCells
-        this.leafGeometry = new THREE.PlaneGeometry(0.05, 0.032)
-        this.puffGeometry = new THREE.SphereGeometry(0.02, 6, 6)
+        this.leafGeometry = new THREE.PlaneGeometry(0.064, 0.04)
+        this.puffGeometry = new THREE.SphereGeometry(0.024, 6, 6)
     }
 
     spawnAtCell(cellX: number, cellZ: number): void {
@@ -38,7 +38,7 @@ export class FoliageParticles {
     update(deltaTime: number): void {
         if (this.particles.length === 0) return
 
-        const gravity = 2.15
+        const gravity = 2.05
         for (let i = this.particles.length - 1; i >= 0; i--) {
             const particle = this.particles[i]
             particle.age += deltaTime
@@ -59,7 +59,7 @@ export class FoliageParticles {
     }
 
     private spawnLeafBurst(baseX: number, baseY: number, baseZ: number): void {
-        for (let i = 0; i < 11; i++) {
+        for (let i = 0; i < 18; i++) {
             const material = new THREE.MeshBasicMaterial({
                 color: Math.random() > 0.45 ? 0x5fbf4a : 0x74cf52,
                 transparent: true,
@@ -69,34 +69,34 @@ export class FoliageParticles {
             })
             const mesh = new THREE.Mesh(this.leafGeometry, material)
             mesh.position.set(
-                baseX + (Math.random() - 0.5) * 0.2,
-                baseY + 0.02 + Math.random() * 0.04,
-                baseZ + (Math.random() - 0.5) * 0.2,
+                baseX + (Math.random() - 0.5) * 0.24,
+                baseY + 0.02 + Math.random() * 0.05,
+                baseZ + (Math.random() - 0.5) * 0.24,
             )
             mesh.rotation.set(
                 (Math.random() - 0.5) * 0.6,
                 Math.random() * Math.PI,
                 (Math.random() - 0.5) * 0.6,
             )
-            mesh.scale.setScalar(0.65 + Math.random() * 0.55)
+            mesh.scale.setScalar(0.9 + Math.random() * 0.65)
             this.scene.add(mesh)
 
             this.particles.push({
                 mesh,
                 velocity: new THREE.Vector3(
-                    (Math.random() - 0.5) * 0.9,
-                    0.42 + Math.random() * 0.26,
-                    (Math.random() - 0.5) * 0.9,
+                    (Math.random() - 0.5) * 1.25,
+                    0.5 + Math.random() * 0.34,
+                    (Math.random() - 0.5) * 1.25,
                 ),
-                spin: (Math.random() - 0.5) * 8.5,
+                spin: (Math.random() - 0.5) * 10,
                 age: 0,
-                lifetime: 0.22 + Math.random() * 0.2,
+                lifetime: 0.28 + Math.random() * 0.24,
             })
         }
     }
 
     private spawnGreenPuff(baseX: number, baseY: number, baseZ: number): void {
-        for (let i = 0; i < 5; i++) {
+        for (let i = 0; i < 9; i++) {
             const material = new THREE.MeshBasicMaterial({
                 color: 0x9dcf6a,
                 transparent: true,
@@ -105,23 +105,23 @@ export class FoliageParticles {
             })
             const mesh = new THREE.Mesh(this.puffGeometry, material)
             mesh.position.set(
-                baseX + (Math.random() - 0.5) * 0.16,
-                baseY + 0.01 + Math.random() * 0.03,
-                baseZ + (Math.random() - 0.5) * 0.16,
+                baseX + (Math.random() - 0.5) * 0.2,
+                baseY + 0.01 + Math.random() * 0.04,
+                baseZ + (Math.random() - 0.5) * 0.2,
             )
-            mesh.scale.setScalar(0.8 + Math.random() * 0.55)
+            mesh.scale.setScalar(1 + Math.random() * 0.7)
             this.scene.add(mesh)
 
             this.particles.push({
                 mesh,
                 velocity: new THREE.Vector3(
-                    (Math.random() - 0.5) * 0.22,
-                    0.17 + Math.random() * 0.14,
-                    (Math.random() - 0.5) * 0.22,
+                    (Math.random() - 0.5) * 0.32,
+                    0.21 + Math.random() * 0.18,
+                    (Math.random() - 0.5) * 0.32,
                 ),
                 spin: (Math.random() - 0.5) * 2.2,
                 age: 0,
-                lifetime: 0.3 + Math.random() * 0.22,
+                lifetime: 0.36 + Math.random() * 0.24,
             })
         }
     }
