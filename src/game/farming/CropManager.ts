@@ -287,16 +287,22 @@ export class CropManager {
         const nowMs = performance.now()
         for (const [instance, anim] of this._fruitHarvesting) {
             const t = Math.min(1, (nowMs - anim.startedAt) / anim.duration)
-            const ease = t * t * (3 - 2 * t)
-            const bump = this.world.cellSize * 0.18 * t
-            const drop = this.world.cellSize * 0.26 * t * t
+            const kickT = Math.min(1, t / 0.24)
+            const fallT = Math.max(0, (t - 0.1) / 0.9)
+            const bumpY = this.world.cellSize * 0.06 * Math.sin(kickT * Math.PI)
+            const dropY = this.world.cellSize * 0.38 * fallT * fallT
+            const fade = 1 - Math.pow(fallT, 1.15)
             for (const fruit of anim.fruits) {
+                const bumpX = fruit.driftX * 0.18 * kickT
+                const bumpZ = fruit.driftZ * 0.18 * kickT
+                const fallX = fruit.driftX * 0.58 * fallT
+                const fallZ = fruit.driftZ * 0.58 * fallT
                 fruit.mesh.position.set(
-                    fruit.startX + fruit.driftX * t,
-                    fruit.startY + bump - drop,
-                    fruit.startZ + fruit.driftZ * t,
+                    fruit.startX + bumpX + fallX,
+                    fruit.startY + bumpY - dropY,
+                    fruit.startZ + bumpZ + fallZ,
                 )
-                this.setOpacity(fruit.mesh, 1 - ease)
+                this.setOpacity(fruit.mesh, Math.max(0, fade))
             }
             if (t >= 1) {
                 for (const fruit of anim.fruits) {
@@ -721,7 +727,7 @@ export class CropManager {
         this._fruitHarvesting.set(instance, {
             fruits,
             startedAt: performance.now(),
-            duration: 720,
+            duration: 980,
         })
     }
 
