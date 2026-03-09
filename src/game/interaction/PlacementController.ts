@@ -103,7 +103,6 @@ export class PlacementController {
     private readonly camera: THREE.Camera
     private readonly renderer: THREE.WebGLRenderer
     private readonly world: World
-    private _sunkCell: string = ""   // cellule où le ghost a été enfoncé
 
     constructor(camera: THREE.Camera, renderer: THREE.WebGLRenderer, world: World) {
         this.camera = camera
@@ -262,11 +261,6 @@ export class PlacementController {
             this.ghostRaf = requestAnimationFrame(animate)
 
             if (placementStore.ghostMesh === null && this.ghost !== null) {
-                // Mémorise la cellule plantée pour ne pas rebuilder dessus
-                if (placementStore.hoveredCell) {
-                    const { cellX, cellZ } = placementStore.hoveredCell
-                    this._sunkCell = `${cellX}|${cellZ}`
-                }
                 this.ghost = null
                 cancelAnimationFrame(this.ghostRaf)
                 this.ghostRaf = 0
@@ -518,11 +512,7 @@ export class PlacementController {
         this.stopHoverAnim()
 
         if (!this.ghost && (this.isSeedGhostItem(item) || this.isStakeGhostItem(item))) {
-            const currentCell = `${cellX}|${cellZ}`
-            if (currentCell !== this._sunkCell) {
-                this._sunkCell = ""
-                this.buildGhost(item)
-            }
+            this.buildGhost(item)
             return
         }
 
