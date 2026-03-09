@@ -6,7 +6,7 @@ export const StakeItemDef: ItemDef = {
     icon: "🪵",
     usage: {
         kind: "use_on_tile",
-        targetTileTypes: ["soil"],
+        targetTileTypes: ["grass"],
         actionId: "farming:add_stake",
         allowOnCrop: true,
     },
