@@ -314,3 +314,15 @@ body.placing { cursor: crosshair; }
   40% { transform: scale(1.1); }
   100% { transform: scale(1); }
 }
+
+
+#inventory-slots.inventory-receive-bump,
+#inventory-expand-btn.inventory-receive-bump {
+  animation: inventoryReceiveBump 220ms cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+@keyframes inventoryReceiveBump {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.045); }
+  100% { transform: scale(1); }
+}

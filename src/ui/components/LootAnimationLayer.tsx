@@ -37,23 +37,41 @@ function worldCellToScreen(cellX: number, cellZ: number) {
     }
 }
 
+function centerOf(el: HTMLElement) {
+    const rect = el.getBoundingClientRect()
+    return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
+}
+
+function bump(el: HTMLElement | null, className: string, durationMs = 220) {
+    if (!el) return
+    el.classList.remove(className)
+    void el.offsetWidth
+    el.classList.add(className)
+    window.setTimeout(() => el.classList.remove(className), durationMs)
+}
+
 export function LootAnimationLayer({ items }: LootAnimationLayerProps) {
     const [particles, setParticles] = useState<LootParticle[]>([])
     const itemById = useMemo(() => new Map(items.map(i => [i.id, i])), [items])
 
     useEffect(() => {
         let idSeed = 1
+
         return lootFeedbackStore.subscribe((event) => {
             const item = itemById.get(event.itemId)
             if (!item) return
 
             const from = worldCellToScreen(event.cellX, event.cellZ)
             const targetAnchor = document.querySelector<HTMLElement>(`[data-inv-item-id="${event.itemId}"]`)
-            if (!targetAnchor) return
+            const targetSlot = targetAnchor?.closest<HTMLElement>(".inv-slot") ?? null
+            const inventoryShell = document.querySelector<HTMLElement>("#inventory-slots")
+            const inventoryExpandBtn = document.querySelector<HTMLElement>("#inventory-expand-btn")
 
-            const targetSlot = targetAnchor.closest<HTMLElement>(".inv-slot")
-            const targetRect = (targetSlot ?? targetAnchor).getBoundingClientRect()
-            const to = { x: targetRect.left + targetRect.width / 2, y: targetRect.top + targetRect.height / 2 }
+            const to = targetSlot
+                ? centerOf(targetSlot)
+                : inventoryShell
+                    ? centerOf(inventoryShell)
+                    : { x: window.innerWidth / 2, y: window.innerHeight / 2 }
 
             const clampedAmount = Math.max(1, Math.min(event.amount, 5))
             const newParticles: LootParticle[] = Array.from({ length: clampedAmount }).map((_, i) => ({
@@ -68,11 +86,13 @@ export function LootAnimationLayer({ items }: LootAnimationLayerProps) {
 
             const bumpDelay = LOOT_FLIGHT_DURATION_MS + (clampedAmount - 1) * 65
             window.setTimeout(() => {
-                if (!targetSlot) return
-                targetSlot.classList.remove("inv-slot-bump")
-                void targetSlot.offsetWidth
-                targetSlot.classList.add("inv-slot-bump")
-                window.setTimeout(() => targetSlot.classList.remove("inv-slot-bump"), 220)
+                if (targetSlot) {
+                    bump(targetSlot, "inv-slot-bump")
+                    return
+                }
+
+                bump(inventoryShell, "inventory-receive-bump")
+                bump(inventoryExpandBtn, "inventory-receive-bump")
             }, bumpDelay)
         })
     }, [itemById])
