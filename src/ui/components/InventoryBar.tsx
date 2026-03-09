@@ -140,8 +140,8 @@ function renderToolLevelBars(itemId: ToolId) {
     const level = toolLevelStore.getLevel(itemId)
     return (
         <span className="inv-slot-level" title={`Niveau ${level}/3`}>
-            {[1, 2, 3].map(step => (
-                <span key={step} className={["inv-slot-level-bar", step <= level ? "active" : ""].filter(Boolean).join(" ")} />
+            {[3, 2, 1].map(step => (
+                <span key={step} className={["inv-slot-level-bar", level >= step ? "active" : ""].filter(Boolean).join(" ")} />
             ))}
         </span>
     )

@@ -261,13 +261,11 @@
 .inv-slot-level-bar {
   height: 2px;
   border-radius: 2px;
-  background: rgba(0, 0, 0, 0.55);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: #494949fa;
 }
 
 .inv-slot-level-bar.active {
   background: rgba(255, 255, 255, 0.9);
-  border-color: rgba(255, 255, 255, 0.95);
 }
 
 .inv-slot.selected {
