@@ -77,7 +77,7 @@ export class CropManager {
     private readonly crops = new Map<string, CropInstance>()
 
     private _harvestingInstances = new Set<CropInstance>()
-    private _fruitHarvesting = new Map<CropInstance, { root: THREE.Object3D; startY: number; startedAt: number; duration: number; startScale: number }>()
+    private _fruitHarvesting = new Map<CropInstance, { root: THREE.Object3D; startY: number; startX: number; startZ: number; startedAt: number; duration: number; startScale: number }>()
     private _looseStakes = new Map<string, THREE.Object3D>()
     private _stakePlacing = new Map<string, { mesh: THREE.Object3D; startY: number; endY: number; startedAt: number; duration: number }>()
     private _stakeRemoving = new Map<string, { mesh: THREE.Object3D; startY: number; startedAt: number; duration: number }>()
@@ -120,6 +120,11 @@ export class CropManager {
         const instance = new CropInstance(def, cellX, cellZ)
         this.crops.set(this.key(cellX, cellZ), instance)
 
+        if (!this.world.tilesFactory.isSoil(cellX, cellZ)) {
+            this.world.tilesFactory.markOccupied(cellX, cellZ, 1)
+            instance.occupiesDebugCell = true
+        }
+
         // ← délai pour laisser l'animation du ghost se terminer
         setTimeout(() => this.spawnMesh(instance, "spawn"), 300)
 
@@ -143,6 +148,10 @@ export class CropManager {
 
         this.crops.delete(this.key(cellX, cellZ))
         this._harvestingInstances.add(instance)
+        if (instance.occupiesDebugCell) {
+            this.world.tilesFactory.markFree(cellX, cellZ, 1)
+            instance.occupiesDebugCell = false
+        }
 
         const currentScale = instance.currentPhase.modelScale ?? 1
         instance.startTransition("harvest", currentScale, 0, () => {
@@ -163,6 +172,10 @@ export class CropManager {
 
         this.crops.delete(this.key(cellX, cellZ))
         this._harvestingInstances.add(instance)
+        if (instance.occupiesDebugCell) {
+            this.world.tilesFactory.markFree(cellX, cellZ, 1)
+            instance.occupiesDebugCell = false
+        }
 
         if (keepStakeOnGround && instance.hasStake && instance.stakeMesh) {
             const detachedStake = instance.stakeMesh
@@ -210,10 +223,13 @@ export class CropManager {
         const nowMs = performance.now()
         for (const [instance, anim] of this._fruitHarvesting) {
             const t = Math.min(1, (nowMs - anim.startedAt) / anim.duration)
-            const ease = t * t * (3 - 2 * t)
-            anim.root.position.y = anim.startY + this.world.cellSize * 0.12 * ease
-            anim.root.scale.setScalar(Math.max(0.01, anim.startScale * (1 - ease)))
-            this.setOpacity(anim.root, 1 - ease)
+            const bump = this.world.cellSize * 0.18 * t
+            const drop = this.world.cellSize * 0.26 * t * t
+            anim.root.position.set(anim.startX, anim.startY + bump - drop, anim.startZ)
+            anim.root.rotation.x += 0.04
+            anim.root.rotation.z += 0.06
+            anim.root.scale.setScalar(Math.max(0.01, anim.startScale * (1 - t * 0.45)))
+            this.setOpacity(anim.root, 1 - t)
             if (t >= 1) {
                 anim.root.parent?.remove(anim.root)
                 if (instance.fruitMesh === anim.root) instance.fruitMesh = null
@@ -286,7 +302,13 @@ export class CropManager {
     }
 
     dispose(): void {
-        for (const instance of this.crops.values()) this.disposeMesh(instance)
+        for (const instance of this.crops.values()) {
+            if (instance.occupiesDebugCell) {
+                this.world.tilesFactory.markFree(instance.cellX, instance.cellZ, 1)
+                instance.occupiesDebugCell = false
+            }
+            this.disposeMesh(instance)
+        }
         this.crops.clear()
         for (const stake of this._looseStakes.values()) this.scene.remove(stake)
         this._looseStakes.clear()
@@ -590,13 +612,27 @@ export class CropManager {
             instance.fruitMesh = root
         }
 
+        const worldPos = new THREE.Vector3()
+        const worldQuat = new THREE.Quaternion()
+        const worldScale = new THREE.Vector3()
+        root.matrixWorld.decompose(worldPos, worldQuat, worldScale)
+
+        root.parent?.remove(root)
+        root.position.copy(worldPos)
+        root.quaternion.copy(worldQuat)
+        root.scale.copy(worldScale)
+        this.scene.add(root)
+        instance.fruitMesh = null
+
         const startScale = root.scale.x > 0 ? root.scale.x : 1
         this._fruitHarvesting.set(instance, {
             root,
+            startX: root.position.x,
             startY: root.position.y,
+            startZ: root.position.z,
             startScale,
             startedAt: performance.now(),
-            duration: 380,
+            duration: 420,
         })
     }
 

@@ -30,6 +30,7 @@ export class CropInstance {
     fruitMesh: THREE.Object3D | null = null
     stakeMesh: THREE.Object3D | null = null
     hasStake = false
+    occupiesDebugCell = false
 
     constructor(def: CropDefinition, cellX: number, cellZ: number) {
         this.instanceId = `crop_${++_idCounter}`
