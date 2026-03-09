@@ -3,8 +3,6 @@ import * as THREE from "three"
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { RenderPass }     from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { OutlinePass }    from 'three/examples/jsm/postprocessing/OutlinePass.js';
-import { ShaderPass }     from 'three/examples/jsm/postprocessing/ShaderPass.js';
-import { GammaCorrectionShader } from 'three/examples/jsm/shaders/GammaCorrectionShader.js';
 import { World } from "../game/world/World"
 
 const dummyMat = new THREE.MeshBasicMaterial({
@@ -57,12 +55,10 @@ export class OutlineSystem {
     renderPass.clear = false
     renderer.info.autoReset = false
 
-    const gammaPass = new ShaderPass(GammaCorrectionShader)
     this.outlinePass.renderScene = this.outlineScene
     this.outlinePass.renderCamera = camera
     this.composer.addPass(renderPass)
     this.composer.addPass(this.outlinePass)
-    this.composer.addPass(gammaPass)
 
     this.ghostGroup = new THREE.Group()
     this.ghostGroup.visible = false
