@@ -185,7 +185,9 @@ export class PlacementController {
 
     private getHoverCursorY(cellX: number, cellZ: number): number {
         const baseY = this.world.tilesFactory.isSoil(cellX, cellZ) ? SOIL_SURFACE_Y : GRID_Y
-        return baseY + 0.002
+        // Toujours au-dessus du plan le plus haut pour éviter qu'une partie du contour
+        // (notamment la croix niveau 2) soit masquée quand la zone chevauche soil/grass.
+        return Math.max(baseY, GRID_Y) + 0.006
     }
 
     // ─── Helpers de coordonnées ───────────────────────────────────────────────
