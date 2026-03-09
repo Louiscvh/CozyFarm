@@ -8,8 +8,9 @@ import { placementStore } from "../../ui/store/PlacementStore"
 import { historyStore } from "../../ui/store/HistoryStore"
 import { World } from "../world/World"
 import { getFootprint } from "../entity/Entity"
-import { isPlaceable, getItemEntity } from "../entity/ItemDef"
+import { isPlaceable, getItemEntity, isUsableOnTile } from "../entity/ItemDef"
 import type { ItemDef } from "../entity/ItemDef"
+import { getAreaOffsetsForLevel, toolLevelStore } from "../../ui/store/ToolLevelStore"
 import {
     staticGridGroup,
     buildStaticGrid,
@@ -313,7 +314,7 @@ export class PlacementController {
         // Maintient le hover pendant le chargement async
         if (placementStore.hoveredCell) {
             const { cellX, cellZ } = placementStore.hoveredCell
-            this.updateHoverCursor(cellX, cellZ)
+            this.updateHoverCursor(cellX, cellZ, this.getHoverFootprint(placementStore.selectedItem))
         }
 
         const token = ++this._ghostToken
@@ -480,15 +481,26 @@ export class PlacementController {
 
     // ─── Mouse move ───────────────────────────────────────────────────────────
 
-    private updateHoverCursor(cellX: number, cellZ: number): void {
-        const { x, z } = this.cellToWorld(cellX, cellZ, 1)
+    private getHoverFootprint(item: ItemDef | null): number {
+        if (!item || !isUsableOnTile(item)) return 1
+        if (item.id !== "hoe" && item.id !== "watering_can" && item.id !== "shovel") return 1
+
+        const level = toolLevelStore.getLevel(item.id)
+        const offsets = getAreaOffsetsForLevel(level)
+        const maxRadius = offsets.reduce((max, offset) => Math.max(max, Math.abs(offset.x), Math.abs(offset.z)), 0)
+        return maxRadius * 2 + 1
+    }
+
+    private updateHoverCursor(cellX: number, cellZ: number, footprint: number): void {
+        const half = Math.floor(footprint / 2)
+        const { x, z } = this.cellToWorld(cellX - half, cellZ - half, footprint)
         const hoverY = this.getHoverCursorY(cellX, cellZ)
         this.hoverTargetPos.set(x, hoverY, z)
+        hoverCellMesh.scale.set(footprint * this.world.cellSize, 1, footprint * this.world.cellSize)
 
         if (!this.hoverInitialized) {
             this.hoverCurrentPos.copy(this.hoverTargetPos)
             hoverCellMesh.position.set(x, hoverY, z)
-            hoverCellMesh.scale.set(this.world.cellSize, 1, this.world.cellSize)
             this.hoverInitialized = true
         }
 
@@ -579,7 +591,7 @@ export class PlacementController {
 
         const selectedItem = placementStore.selectedItem
         if (!selectedItem || !this.isGhostItem(selectedItem)) {
-            this.updateHoverCursor(cellX, cellZ)
+            this.updateHoverCursor(cellX, cellZ, this.getHoverFootprint(selectedItem))
         } else {
             this.updatePlacementGhost(cellX, cellZ, selectedItem)
         }
