@@ -57,6 +57,7 @@ const hoverBorderMat = new LineMaterial({
 const hoverCellMesh = new Line2(hoverBorderGeo, hoverBorderMat)
 hoverCellMesh.position.y = GRID_Y + 0.002
 hoverCellMesh.visible = false
+hoverCellMesh.frustumCulled = false
 
 const SOIL_SURFACE_Y = -0.05
 const HOVER_SURFACE_OFFSET_Y = 0.005
@@ -520,6 +521,14 @@ export class PlacementController {
                 -outer, 0, inner,
                 -inner, 0, inner,
                 -inner, 0, outer,
+            ])
+        } else if (shape === "square") {
+            hoverBorderGeo.setPositions([
+                -outer, 0, outer,
+                outer, 0, outer,
+                outer, 0, -outer,
+                -outer, 0, -outer,
+                -outer, 0, outer,
             ])
         } else {
             hoverBorderGeo.setPositions([
