@@ -9,6 +9,7 @@ export const AxeItemDef: ItemDef = {
     label: "Hache",
     icon: "🪓",
     showCursorItem: true,
+    usageHint: "Cliquer sur un arbre pour le couper.",
     usage: {
         kind: "use_on_entity",
         targetEntityIds: [...TREE_ENTITY_IDS],
