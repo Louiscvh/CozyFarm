@@ -765,12 +765,13 @@ export class CropManager {
             const group = new THREE.Group()
             const count = instance.def.fruitVisualCount ?? 8
             const color = instance.def.fruitVisualColor ?? 0xff8a00
-            const sphere = new THREE.SphereGeometry(this.world.cellSize * 0.16, 10, 10)
+            const fruitRadius = this.world.cellSize * 0.15
+            const sphere = new THREE.SphereGeometry(fruitRadius, 10, 10)
             const mat = new THREE.MeshBasicMaterial({
                 color,
                 transparent: true,
                 opacity: 0.95,
-                depthTest: false,
+                depthTest: true,
                 depthWrite: false,
             })
             for (let i = 0; i < count; i++) {
@@ -791,16 +792,22 @@ export class CropManager {
         if (canopySockets.length > 0) {
             group.position.set(0, 0, 0)
             group.scale.setScalar(1)
+            const fruitRadius = this.world.cellSize * 0.15
 
             group.children.forEach((child, i) => {
                 const socket = canopySockets[i % canopySockets.length]
                 const slot = Math.floor(i / canopySockets.length)
                 const angle = slot * 2.399963229728653 // golden angle
-                const orbit = socket.radius * 0.62
+                const dir = new THREE.Vector3(
+                    Math.cos(angle),
+                    Math.sin(angle * 0.7) * 0.35,
+                    Math.sin(angle),
+                ).normalize()
+                const contactDistance = Math.max(socket.radius, fruitRadius * 1.2)
                 child.position.set(
-                    socket.x + Math.cos(angle) * orbit,
-                    socket.y + Math.sin(angle * 0.7) * orbit * 0.5,
-                    socket.z + Math.sin(angle) * orbit,
+                    socket.x + dir.x * contactDistance,
+                    socket.y + dir.y * contactDistance,
+                    socket.z + dir.z * contactDistance,
                 )
             })
             return

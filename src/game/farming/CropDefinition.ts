@@ -83,11 +83,11 @@ export const OrangeTreeCrop: CropDefinition = {
     plantTileTypes: ["grass"],
     ghostModelScale: 0.3,
     phases: [
-        { durationSeconds: DEBUG ? 3 : 260, color: 0x7a5d3b, scaleXZ: 0.03, height: 0.11 },
-        { durationSeconds: DEBUG ? 3 : 360, color: 0x4b7a2f, scaleXZ: 0.12, height: 0.3 },
-        { durationSeconds: DEBUG ? 3 : 520, color: 0x4b8a35, scaleXZ: 0.24, height: 0.95 },
-        { durationSeconds: DEBUG ? 3 : 480, color: 0x4f8f38, scaleXZ: 0.3, height: 1.25 },
-        { durationSeconds: 0, modelPath: "/models/tree_orange.glb", modelScale: 0.3 },
+        { durationSeconds: DEBUG ? 3 : 260, color: 0x7a5d3b, scaleXZ: 0.025, height: 0.09 },
+        { durationSeconds: DEBUG ? 3 : 360, color: 0x4b7a2f, scaleXZ: 0.1, height: 0.24 },
+        { durationSeconds: DEBUG ? 3 : 520, color: 0x4b8a35, scaleXZ: 0.2, height: 0.75 },
+        { durationSeconds: DEBUG ? 3 : 480, color: 0x4f8f38, scaleXZ: 0.24, height: 0.95 },
+        { durationSeconds: 0, modelPath: "/models/tree_orange.glb", modelScale: 0.24 },
     ],
 }
 
