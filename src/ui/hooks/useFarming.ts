@@ -5,6 +5,7 @@ import { inventoryStore } from "../../ui/store/InventoryStore"
 import { ALL_CROPS } from "../../game/farming/CropDefinition"
 import { itemActionRegistry, type UseOnEntityContext } from "../../game/interaction/ItemActionRegistry"
 import { World } from "../../game/world/World"
+import { getAreaOffsetsForLevel, toolLevelStore } from "../store/ToolLevelStore"
 
 export function useFarming() {
 
@@ -35,7 +36,12 @@ export function useFarming() {
         itemActionRegistry.registerTileAction("farming:till", (ctx) => {
             const world = World.current
             if (!world) return false
-            return world.tilesFactory.tillCell(ctx.cellX, ctx.cellZ)
+            const level = toolLevelStore.getLevel("hoe")
+            let changed = false
+            for (const offset of getAreaOffsetsForLevel(level)) {
+                changed = world.tilesFactory.tillCell(ctx.cellX + offset.x, ctx.cellZ + offset.z) || changed
+            }
+            return changed
         })
 
         itemActionRegistry.registerTileAction("farming:untill", (ctx) => {
@@ -49,13 +55,21 @@ export function useFarming() {
         itemActionRegistry.registerTileAction("farming:uproot_or_untill", (ctx) => {
             const world = World.current
             if (!world) return false
+            const level = toolLevelStore.getLevel("shovel")
+            let changed = false
 
-            const uprooted = world.cropManager.uproot(ctx.cellX, ctx.cellZ, true)
-            if (uprooted) return true
+            for (const offset of getAreaOffsetsForLevel(level)) {
+                const cellX = ctx.cellX + offset.x
+                const cellZ = ctx.cellZ + offset.z
+                const uprooted = world.cropManager.uproot(cellX, cellZ, true)
+                if (uprooted) { changed = true; continue }
 
-            if (world.cropManager.removeLooseStake(ctx.cellX, ctx.cellZ)) return true
+                if (world.cropManager.removeLooseStake(cellX, cellZ)) { changed = true; continue }
 
-            return world.tilesFactory.untillCell(ctx.cellX, ctx.cellZ)
+                changed = world.tilesFactory.untillCell(cellX, cellZ) || changed
+            }
+
+            return changed
         })
 
         itemActionRegistry.registerTileAction("farming:add_stake", (ctx) => {
@@ -69,9 +83,15 @@ export function useFarming() {
         itemActionRegistry.registerTileAction("farming:water", ({ cellX, cellZ }) => {
             const world = World.current
             if (!world) return false
+            const level = toolLevelStore.getLevel("watering_can")
+            let changed = false
+
+            for (const offset of getAreaOffsetsForLevel(level)) {
+                changed = world.tilesFactory.waterCell(cellX + offset.x, cellZ + offset.z) || changed
+            }
 
             // waterCell retourne false si déjà arrosé → on refuse l'action
-            return world.tilesFactory.waterCell(cellX, cellZ)
+            return changed
         })
 
         registerPlantActions()

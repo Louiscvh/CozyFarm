@@ -37,6 +37,7 @@ import { LootAnimationLayer } from "./LootAnimationLayer"
 import { OrangeSaplingItemDef } from "../../game/items/OrangeSaplingItem"
 import { OrangeItemDef } from "../../game/items/OrangeItem"
 import { StakeItemDef } from "../../game/items/StakeItem"
+import { toolLevelStore, type ToolId } from "../store/ToolLevelStore"
 
 // ─── Tous les items (construction + farming) ──────────────────────────────────
 
@@ -132,6 +133,20 @@ type DragSource =
     | { zone: "hotbar"; index: number }
     | { zone: "extra"; id: string }
 
+const isLevelableTool = (itemId: string | null): itemId is ToolId =>
+    itemId === "hoe" || itemId === "watering_can" || itemId === "axe" || itemId === "shovel"
+
+function renderToolLevelBars(itemId: ToolId) {
+    const level = toolLevelStore.getLevel(itemId)
+    return (
+        <span className="inv-slot-level" title={`Niveau ${level}/3`}>
+            {[3, 2, 1].map(step => (
+                <span key={step} className={["inv-slot-level-bar", level >= step ? "active" : ""].filter(Boolean).join(" ")} />
+            ))}
+        </span>
+    )
+}
+
 // ─── Composant ────────────────────────────────────────────────────────────────
 
 export function InventoryBar() {
@@ -186,17 +201,21 @@ export function InventoryBar() {
 
     useEffect(() => {
         let raf = 0
-        const unsubscribe = inventoryStore.subscribe(() => {
+        const bump = () => {
             if (raf) return
             raf = requestAnimationFrame(() => {
                 raf = 0
                 forceUpdate(n => n + 1)
             })
-        })
+        }
+
+        const unsubscribeInventory = inventoryStore.subscribe(bump)
+        const unsubscribeToolLevel = toolLevelStore.subscribe(bump)
 
         return () => {
             if (raf) cancelAnimationFrame(raf)
-            unsubscribe()
+            unsubscribeInventory()
+            unsubscribeToolLevel()
         }
     }, [])
 
@@ -206,6 +225,13 @@ export function InventoryBar() {
             if (e.ctrlKey || e.metaKey || e.altKey) return
             if (e.key === "Escape") { placementStore.cancel(); return }
             if (e.key === "e" || e.key === "E") { if (hasExtra) setExpanded(v => !v); return }
+
+            if ((e.key === "ArrowUp" || e.key === "ArrowDown") && isLevelableTool(selectedId)) {
+                e.preventDefault()
+                if (e.key === "ArrowUp") toolLevelStore.increase(selectedId)
+                else toolLevelStore.decrease(selectedId)
+                return
+            }
 
             const index = parseInt(e.code.replace("Digit", "")) - 1
             if (isNaN(index) || index < 0 || index >= HOTBAR_SIZE) return
@@ -297,11 +323,22 @@ export function InventoryBar() {
         }
 
         if (isUsableOnEntity(item) || isUsableOnTile(item)) {
+            const showLevel = isLevelableTool(item.id)
+            const level = showLevel ? toolLevelStore.getLevel(item.id) : 1
             return (
                 <div id="placement-hint">
                     {item.usageHint && (
                         <>
                             {item.usageHint}
+                            <span className="hint-sep">·</span>
+                        </>
+                    )}
+                    {showLevel && (
+                        <>
+                            Niveau {level}/3
+                            <span className="hint-sep">·</span>
+                            <span className="hint-key">↑</span>/<span className="hint-key">↓</span>
+                            Ajuster
                             <span className="hint-sep">·</span>
                         </>
                     )}
@@ -353,6 +390,7 @@ export function InventoryBar() {
                         {!isInfinite(item) && (
                             <span className="inv-slot-qty">{qty}</span>
                         )}
+                        {isLevelableTool(item.id) && renderToolLevelBars(item.id)}
                     </UIButton>
                 ) : (
                     <div className="inv-slot inv-slot-empty">
@@ -398,6 +436,7 @@ export function InventoryBar() {
                     {!isInfinite(item) && (
                         <span className="inv-slot-qty">{qty}</span>
                     )}
+                    {isLevelableTool(item.id) && renderToolLevelBars(item.id)}
                 </UIButton>
             </div>
         )

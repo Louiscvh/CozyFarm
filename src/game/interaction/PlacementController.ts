@@ -8,8 +8,9 @@ import { placementStore } from "../../ui/store/PlacementStore"
 import { historyStore } from "../../ui/store/HistoryStore"
 import { World } from "../world/World"
 import { getFootprint } from "../entity/Entity"
-import { isPlaceable, getItemEntity } from "../entity/ItemDef"
+import { isPlaceable, getItemEntity, isUsableOnTile } from "../entity/ItemDef"
 import type { ItemDef } from "../entity/ItemDef"
+import { toolLevelStore } from "../../ui/store/ToolLevelStore"
 import {
     staticGridGroup,
     buildStaticGrid,
@@ -39,6 +40,7 @@ highlightMesh.position.y = 0.055
 highlightMesh.visible = false
 
 const HOVER_BORDER_INSET = 0.02
+type HoverShape = "single" | "square"
 const hoverBorderGeo = new LineGeometry()
 const hoverInnerHalf = 0.5 - HOVER_BORDER_INSET
 hoverBorderGeo.setPositions([
@@ -55,6 +57,7 @@ const hoverBorderMat = new LineMaterial({
 const hoverCellMesh = new Line2(hoverBorderGeo, hoverBorderMat)
 hoverCellMesh.position.y = GRID_Y + 0.002
 hoverCellMesh.visible = false
+hoverCellMesh.frustumCulled = false
 
 const SOIL_SURFACE_Y = -0.05
 const HOVER_SURFACE_OFFSET_Y = 0.005
@@ -84,6 +87,8 @@ export class PlacementController {
     private hoverCurrentPos = new THREE.Vector3()
     private hoverRaf = 0
     private hoverInitialized = false
+    private currentHoverShape: HoverShape = "single"
+    private currentHoverFootprint = 1
 
     // ── Click state ───────────────────────────────────────────────────────────
     private mouseDownPos = { x: 0, y: 0 }
@@ -92,6 +97,7 @@ export class PlacementController {
     // ── Store subscription ────────────────────────────────────────────────────
     private lastSelectedId: string | null = null
     private unsubscribeStore: (() => void) | null = null
+    private unsubscribeToolLevel: (() => void) | null = null
 
     // ── Bound listeners ───────────────────────────────────────────────────────
     private readonly _onMouseMove = this.onMouseMove.bind(this)
@@ -122,10 +128,12 @@ export class PlacementController {
         window.addEventListener("keydown", this._onKeyDown)
 
         this.unsubscribeStore = placementStore.subscribe(() => this.onStoreChange())
+        this.unsubscribeToolLevel = toolLevelStore.subscribe(() => this.onToolLevelChange())
     }
 
     dispose(): void {
         this.unsubscribeStore?.()
+        this.unsubscribeToolLevel?.()
         this.removeGhost()
         this.stopHoverAnim()
         hoverCellMesh.visible = false
@@ -176,9 +184,21 @@ export class PlacementController {
         return baseY + HOVER_SURFACE_OFFSET_Y
     }
 
-    private getHoverCursorY(cellX: number, cellZ: number): number {
-        const baseY = this.world.tilesFactory.isSoil(cellX, cellZ) ? SOIL_SURFACE_Y : GRID_Y
-        return baseY + 0.002
+    private getHoverCursorY(cellX: number, cellZ: number, _shape: HoverShape, footprint: number): number {
+        let maxBaseY = GRID_Y
+        const half = Math.floor(footprint / 2)
+        const startX = cellX - half
+        const startZ = cellZ - half
+
+        for (let dx = 0; dx < footprint; dx++) {
+            for (let dz = 0; dz < footprint; dz++) {
+                const isSoil = this.world.tilesFactory.isSoil(startX + dx, startZ + dz)
+                const baseY = isSoil ? SOIL_SURFACE_Y : GRID_Y
+                if (baseY > maxBaseY) maxBaseY = baseY
+            }
+        }
+
+        return maxBaseY + 0.006
     }
 
     // ─── Helpers de coordonnées ───────────────────────────────────────────────
@@ -313,7 +333,7 @@ export class PlacementController {
         // Maintient le hover pendant le chargement async
         if (placementStore.hoveredCell) {
             const { cellX, cellZ } = placementStore.hoveredCell
-            this.updateHoverCursor(cellX, cellZ)
+            this.updateHoverCursor(cellX, cellZ, this.getHoverFootprint(placementStore.selectedItem), this.getHoverShape(placementStore.selectedItem))
         }
 
         const token = ++this._ghostToken
@@ -480,15 +500,65 @@ export class PlacementController {
 
     // ─── Mouse move ───────────────────────────────────────────────────────────
 
-    private updateHoverCursor(cellX: number, cellZ: number): void {
-        const { x, z } = this.cellToWorld(cellX, cellZ, 1)
-        const hoverY = this.getHoverCursorY(cellX, cellZ)
+    private getHoverShape(item: ItemDef | null): HoverShape {
+        if (!item || !isUsableOnTile(item)) return "single"
+        if (item.id !== "hoe" && item.id !== "watering_can" && item.id !== "shovel") return "single"
+
+        const level = toolLevelStore.getLevel(item.id)
+        if (level >= 2) return "square"
+        return "single"
+    }
+
+    private updateHoverShapeGeometry(shape: HoverShape, footprint: number): void {
+        if (shape === this.currentHoverShape && footprint === this.currentHoverFootprint) return
+
+        const inner = 0.5 - HOVER_BORDER_INSET
+        const outer = footprint / 2 - HOVER_BORDER_INSET
+
+        if (shape === "square") {
+            hoverBorderGeo.setPositions([
+                -outer, 0, outer,
+                outer, 0, outer,
+                outer, 0, -outer,
+                -outer, 0, -outer,
+                -outer, 0, outer,
+            ])
+        } else {
+            hoverBorderGeo.setPositions([
+                -inner, 0, inner,
+                inner, 0, inner,
+                inner, 0, -inner,
+                -inner, 0, -inner,
+                -inner, 0, inner,
+            ])
+        }
+
+        this.currentHoverShape = shape
+        this.currentHoverFootprint = footprint
+    }
+
+    private getHoverFootprint(item: ItemDef | null): number {
+        if (!item || !isUsableOnTile(item)) return 1
+        if (item.id !== "hoe" && item.id !== "watering_can" && item.id !== "shovel") return 1
+
+        const level = toolLevelStore.getLevel(item.id)
+        if (level === 2) return 2
+        if (level >= 3) return 3
+        return 1
+    }
+
+    private updateHoverCursor(cellX: number, cellZ: number, footprint: number, shape: HoverShape): void {
+        this.updateHoverShapeGeometry(shape, footprint)
+
+        const half = Math.floor(footprint / 2)
+        const { x, z } = this.cellToWorld(cellX - half, cellZ - half, footprint)
+        const hoverY = this.getHoverCursorY(cellX, cellZ, shape, footprint)
         this.hoverTargetPos.set(x, hoverY, z)
+        hoverCellMesh.scale.set(this.world.cellSize, 1, this.world.cellSize)
 
         if (!this.hoverInitialized) {
             this.hoverCurrentPos.copy(this.hoverTargetPos)
             hoverCellMesh.position.set(x, hoverY, z)
-            hoverCellMesh.scale.set(this.world.cellSize, 1, this.world.cellSize)
             this.hoverInitialized = true
         }
 
@@ -579,7 +649,7 @@ export class PlacementController {
 
         const selectedItem = placementStore.selectedItem
         if (!selectedItem || !this.isGhostItem(selectedItem)) {
-            this.updateHoverCursor(cellX, cellZ)
+            this.updateHoverCursor(cellX, cellZ, this.getHoverFootprint(selectedItem), this.getHoverShape(selectedItem))
         } else {
             this.updatePlacementGhost(cellX, cellZ, selectedItem)
         }
@@ -732,6 +802,22 @@ export class PlacementController {
     }
 
     // ─── Store ────────────────────────────────────────────────────────────────
+
+
+    private onToolLevelChange(): void {
+        const hoveredCell = placementStore.hoveredCell
+        if (!hoveredCell) return
+
+        const selectedItem = placementStore.selectedItem
+        if (selectedItem && this.isGhostItem(selectedItem)) return
+
+        this.updateHoverCursor(
+            hoveredCell.cellX,
+            hoveredCell.cellZ,
+            this.getHoverFootprint(selectedItem),
+            this.getHoverShape(selectedItem),
+        )
+    }
 
     private onStoreChange(): void {
         const currentId = placementStore.selectedItem?.id ?? null

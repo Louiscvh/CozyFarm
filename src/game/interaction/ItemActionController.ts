@@ -8,6 +8,7 @@ import { World } from "../world/World"
 import { soundManager } from "../system/SoundManager"
 import { ghostMat } from "../shared/GhostMaterial"
 import { ALL_CROPS } from "../farming/CropDefinition"
+import { getAreaOffsetsForLevel, toolLevelStore } from "../../ui/store/ToolLevelStore"
 
 export class ItemActionController {
 
@@ -82,6 +83,37 @@ export class ItemActionController {
     private isSeedItem(item: ItemDef | null): boolean {
         return !!item && !!ALL_CROPS.find(def => def.seedItemId === item.id)
     }
+
+
+    private getToolOffsets(item: ItemDef): Array<{ x: number; z: number }> {
+        if (!isUsableOnTile(item)) return [{ x: 0, z: 0 }]
+        if (item.id !== "hoe" && item.id !== "watering_can" && item.id !== "shovel") return [{ x: 0, z: 0 }]
+        return getAreaOffsetsForLevel(toolLevelStore.getLevel(item.id))
+    }
+
+    private canUseOnTileCell(item: ItemDef & { usage: { targetTileTypes: readonly string[]; allowOnCrop?: boolean; actionId: string } }, cellX: number, cellZ: number): boolean {
+        const effectiveTileType = this.getEffectiveTileType(cellX, cellZ)
+        if (!effectiveTileType) return false
+
+        if (item.usage.actionId === "farming:add_stake") {
+            const crop = this.world.cropManager.getCrop(cellX, cellZ)
+            return !!crop?.def.supportsStake && !crop.hasStake
+        }
+
+        if (item.usage.actionId === "farming:uproot_or_untill") {
+            const crop = this.world.cropManager.getCrop(cellX, cellZ)
+            const hasLooseStake = this.world.cropManager.hasLooseStake(cellX, cellZ)
+            const canUntill = effectiveTileType === "soil"
+            return !!crop || hasLooseStake || canUntill
+        }
+
+        const hasCrop = !!this.world.cropManager.getCrop(cellX, cellZ)
+        const cropBlocks = hasCrop && !item.usage.allowOnCrop
+        const blocked = (this.world.tilesFactory.isOccupied(cellX, cellZ) && effectiveTileType !== "soil") || cropBlocks
+        const isValid = item.usage.targetTileTypes.includes(effectiveTileType)
+        return isValid && !blocked
+    }
+
 
     // ─── Sink ghost (animation de plantation) ────────────────────────────────
     /**
@@ -195,32 +227,16 @@ export class ItemActionController {
     }
 
     private updateCursorForTileHover(item: ItemDef): void {
+        if (!isUsableOnTile(item)) { this.setCursor("default"); return }
+
         const { hoveredCell } = placementStore
         if (!hoveredCell) { this.setCursor("default"); return }
 
-        const { cellX, cellZ } = hoveredCell
-        const effectiveTileType = this.getEffectiveTileType(cellX, cellZ)
-        if ((item as any).usage.actionId === "farming:add_stake") {
-            const crop = this.world.cropManager.getCrop(cellX, cellZ)
-            const canStake = !!crop?.def.supportsStake && !crop.hasStake
-            this.setCursor(canStake ? "pointer" : "not-allowed")
-            return
-        }
+        const canUse = this.getToolOffsets(item).some(offset =>
+            this.canUseOnTileCell(item, hoveredCell.cellX + offset.x, hoveredCell.cellZ + offset.z)
+        )
 
-        if ((item as any).usage.actionId === "farming:uproot_or_untill") {
-            const crop = this.world.cropManager.getCrop(cellX, cellZ)
-            const hasLooseStake = this.world.cropManager.hasLooseStake(cellX, cellZ)
-            const canUntill = effectiveTileType === "soil"
-            this.setCursor((!!crop || hasLooseStake || canUntill) ? "pointer" : "not-allowed")
-            return
-        }
-
-        const hasCrop = !!this.world.cropManager.getCrop(cellX, cellZ)
-        const cropBlocks = hasCrop && !(item as any).usage.allowOnCrop
-        const blocked = (this.world.tilesFactory.isOccupied(cellX, cellZ) && effectiveTileType !== "soil") || cropBlocks
-        const isValid = !!effectiveTileType && (item as any).usage.targetTileTypes.includes(effectiveTileType)
-
-        this.setCursor(isValid && !blocked ? "pointer" : "not-allowed")
+        this.setCursor(canUse ? "pointer" : "not-allowed")
     }
 
     // ─── Mouse events ─────────────────────────────────────────────────────────
@@ -339,14 +355,15 @@ export class ItemActionController {
         if (!placementStore.hoveredCell) return
 
         const { cellX, cellZ } = placementStore.hoveredCell
-        const effectiveTileType = this.getEffectiveTileType(cellX, cellZ)
-        const hasCrop = !!this.world.cropManager.getCrop(cellX, cellZ)
-        const cropBlocks = hasCrop && !item.usage.allowOnCrop
+        const canUse = this.getToolOffsets(item).some(offset =>
+            this.canUseOnTileCell(item, cellX + offset.x, cellZ + offset.z)
+        )
 
-        if (!effectiveTileType || !item.usage.targetTileTypes.includes(effectiveTileType) || cropBlocks) {
+        if (!canUse) {
             soundManager.playError()
             return
         }
+        const effectiveTileType = this.getEffectiveTileType(cellX, cellZ) ?? item.usage.targetTileTypes[0]
 
         if (inventoryStore.getQty(item.id) <= 0) { soundManager.playError(); return }
 

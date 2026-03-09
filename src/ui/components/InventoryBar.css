@@ -247,6 +247,27 @@
   color: rgba(255,255,255,0.6);
 }
 
+
+.inv-slot-level {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.inv-slot-level-bar {
+  height: 2px;
+  border-radius: 2px;
+  background: #494949fa;
+}
+
+.inv-slot-level-bar.active {
+  background: rgba(255, 255, 255, 0.9);
+}
+
 .inv-slot.selected {
   border-color: rgba(255, 255, 255, 0.5);
   background: rgba(255, 255, 255, 0.1);

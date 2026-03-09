@@ -7,6 +7,7 @@ import { placementStore } from "../store/PlacementStore"
 import { animateChop } from "../../game/entity/animations/ChopAnimation"
 import { World } from "../../game/world/World"
 import { TREE_ENTITY_IDS } from "../../game/items/AxeItem"
+import { toolLevelStore } from "../store/ToolLevelStore"
 
 const WOOD_BY_TREE: Record<string, number> = {
     tree1: 2,
@@ -14,6 +15,15 @@ const WOOD_BY_TREE: Record<string, number> = {
     tree3: 2,
     tree_orange: 1,
 }
+
+const TREE_MIN_LEVEL: Record<string, number> = {
+    tree_orange: 1,
+    tree1: 1,
+    tree3: 2,
+    tree2: 3,
+}
+
+const AXE_LEVEL_WOOD_BONUS = [0, 0, 1, 2, 4]
 
 export function useWoodcutting() {
     useEffect(() => {
@@ -24,6 +34,9 @@ export function useWoodcutting() {
             const world = World.current
             if (!world) return false
 
+            const axeLevel = toolLevelStore.getLevel("axe")
+            if (axeLevel < (TREE_MIN_LEVEL[targetEntityId] ?? 1)) return false
+
             const entity = world.entities.find(e =>
                 e.userData.id === targetEntityId &&
                 e.userData.cellX === cellX &&
@@ -32,7 +45,8 @@ export function useWoodcutting() {
             if (!entity) return false
 
             const footprint = (entity.userData.sizeInCells as number) ?? 1
-            const qty = WOOD_BY_TREE[targetEntityId] ?? 1
+            const baseQty = WOOD_BY_TREE[targetEntityId] ?? 1
+            const qty = baseQty + (AXE_LEVEL_WOOD_BONUS[axeLevel] ?? 0)
             const originalY = entity.position.y
             const originalScale = entity.scale.clone()
             const originalRotation = entity.rotation.clone()
