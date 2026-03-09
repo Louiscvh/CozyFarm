@@ -765,18 +765,18 @@ export class CropManager {
             const group = new THREE.Group()
             const count = instance.def.fruitVisualCount ?? 8
             const color = instance.def.fruitVisualColor ?? 0xff8a00
-            const sphere = new THREE.SphereGeometry(this.world.cellSize * 0.125, 10, 10)
-            const mat = new THREE.MeshStandardMaterial({
+            const sphere = new THREE.SphereGeometry(this.world.cellSize * 0.16, 10, 10)
+            const mat = new THREE.MeshBasicMaterial({
                 color,
-                roughness: 0.4,
-                metalness: 0,
-                emissive: new THREE.Color(color),
-                emissiveIntensity: 0.28,
+                transparent: true,
+                opacity: 0.95,
+                depthTest: false,
                 depthWrite: false,
             })
             for (let i = 0; i < count; i++) {
                 const m = new THREE.Mesh(sphere, mat.clone())
                 m.castShadow = true
+                m.renderOrder = 8
                 group.add(m)
             }
             instance.fruitMesh = group
@@ -818,8 +818,8 @@ export class CropManager {
         const localBottom = root.worldToLocal(new THREE.Vector3(worldCenter.x, worldBox.min.y, worldCenter.z)).y
 
         const crownHeight = Math.max(this.world.cellSize * 0.55, worldSize.y)
-        const canopyRadius = Math.max(this.world.cellSize * 0.34, Math.max(worldSize.x, worldSize.z) * 0.56)
-        const canopyY = THREE.MathUtils.lerp(localBottom, localTop, 0.7)
+        const canopyRadius = Math.max(this.world.cellSize * 0.42, Math.max(worldSize.x, worldSize.z) * 0.66)
+        const canopyY = THREE.MathUtils.lerp(localBottom, localTop, 0.74)
 
         group.position.set(localCenter.x, canopyY, localCenter.z)
         group.scale.setScalar(1)
