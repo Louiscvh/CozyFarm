@@ -1,5 +1,6 @@
 import * as THREE from "three"
 import { useEffect, useMemo, useState } from "react"
+import { createPortal } from "react-dom"
 import type { ItemDef } from "../../game/entity/ItemDef"
 import { World } from "../../game/world/World"
 import { lootFeedbackStore } from "../store/LootFeedbackStore"
@@ -37,8 +38,6 @@ function worldCellToScreen(cellX: number, cellZ: number) {
 
 export function LootAnimationLayer({ items }: LootAnimationLayerProps) {
     const [particles, setParticles] = useState<LootParticle[]>([])
-    const [bumpToken, setBumpToken] = useState(0)
-
     const itemById = useMemo(() => new Map(items.map(i => [i.id, i])), [items])
 
     useEffect(() => {
@@ -48,10 +47,12 @@ export function LootAnimationLayer({ items }: LootAnimationLayerProps) {
             if (!item) return
 
             const from = worldCellToScreen(event.cellX, event.cellZ)
-            const targetEl = document.querySelector<HTMLElement>(`[data-inv-item-id="${event.itemId}"]`)
-            if (!targetEl) return
-            const rect = targetEl.getBoundingClientRect()
-            const to = { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
+            const targetAnchor = document.querySelector<HTMLElement>(`[data-inv-item-id="${event.itemId}"]`)
+            if (!targetAnchor) return
+
+            const targetSlot = targetAnchor.closest<HTMLElement>(".inv-slot")
+            const targetRect = (targetSlot ?? targetAnchor).getBoundingClientRect()
+            const to = { x: targetRect.left + targetRect.width / 2, y: targetRect.top + targetRect.height / 2 }
 
             const clampedAmount = Math.max(1, Math.min(event.amount, 5))
             const newParticles: LootParticle[] = Array.from({ length: clampedAmount }).map((_, i) => ({
@@ -66,23 +67,16 @@ export function LootAnimationLayer({ items }: LootAnimationLayerProps) {
 
             const bumpDelay = 440 + (clampedAmount - 1) * 65
             window.setTimeout(() => {
-                targetEl.classList.remove("inv-slot-bump")
-                void targetEl.offsetWidth
-                targetEl.classList.add("inv-slot-bump")
-                setBumpToken(t => t + 1)
+                if (!targetSlot) return
+                targetSlot.classList.remove("inv-slot-bump")
+                void targetSlot.offsetWidth
+                targetSlot.classList.add("inv-slot-bump")
+                window.setTimeout(() => targetSlot.classList.remove("inv-slot-bump"), 220)
             }, bumpDelay)
         })
     }, [itemById])
 
-    useEffect(() => {
-        if (!bumpToken) return
-        const tid = window.setTimeout(() => {
-            document.querySelectorAll(".inv-slot-bump").forEach(el => el.classList.remove("inv-slot-bump"))
-        }, 220)
-        return () => window.clearTimeout(tid)
-    }, [bumpToken])
-
-    return (
+    return createPortal(
         <>
             {particles.map((particle) => (
                 <div
@@ -102,6 +96,7 @@ export function LootAnimationLayer({ items }: LootAnimationLayerProps) {
                     {particle.icon}
                 </div>
             ))}
-        </>
+        </>,
+        document.body,
     )
 }
