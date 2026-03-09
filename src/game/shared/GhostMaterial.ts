@@ -2,8 +2,8 @@
 import * as THREE from "three"
 
 /**
- * Matériau ghost partagé entre PlacementController et ItemActionController.
- * Une seule instance pour tout le projet.
+    color: 0xffffff,
+    opacity: 0.62,
  */
 export const ghostMat = new THREE.MeshBasicMaterial({
     color: 0x00ff00,
