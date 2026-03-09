@@ -284,9 +284,9 @@ export class PlacementController {
             this.currentRotY += (this.targetRotY - this.currentRotY) * 0.3
             this.ghost.rotation.y = this.currentRotY
 
-            if (highlightMesh.visible) {
-                highlightMesh.position.set(this.currentPos.x, highlightMesh.position.y, this.currentPos.z)
-            }
+            // Le highlight est déjà positionné sur la cellule cible dans updatePlacementGhost().
+            // Le recoller ici à currentPos (interpolée) provoque un aller-retour visuel
+            // à chaque changement de cellule ("vibration").
         }
         animate()
     }
