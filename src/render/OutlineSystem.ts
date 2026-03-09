@@ -16,12 +16,14 @@ const dummyMat = new THREE.MeshBasicMaterial({
 export class OutlineSystem {
   static instance: OutlineSystem | null = null
 
+  private renderer: THREE.WebGLRenderer
   private composer: EffectComposer
   private outlinePass: OutlinePass
   private scene: THREE.Scene
 
   private ghostGroup: THREE.Group
   private currentEntity: THREE.Object3D | null = null
+  private activeGhost: THREE.Group | null = null
 
 
   // 🔥 Cache des ghost meshes par def
@@ -32,6 +34,7 @@ export class OutlineSystem {
     scene: THREE.Scene,
     camera: THREE.Camera,
   ) {
+    this.renderer = renderer
     this.scene = scene
 
     const w = renderer.domElement.clientWidth
@@ -70,17 +73,21 @@ export class OutlineSystem {
   // ==========================
 
   setHovered(entity: THREE.Object3D | null) {
+    if (entity === this.currentEntity) return
+
     this.currentEntity = entity
 
     if (!entity) {
       this.outlinePass.selectedObjects = []
       this.ghostGroup.visible = false
+      this.activeGhost = null
       return
     }
 
     if (!entity.userData.isInstanced) {
       this.outlinePass.selectedObjects = [entity]
       this.ghostGroup.visible = false
+      this.activeGhost = null
       return
     }
 
@@ -115,12 +122,11 @@ export class OutlineSystem {
       this.ghostCache.set(def, cached)
     }
 
-    // 🔥 Nettoie ancien ghost
-    this.ghostGroup.clear()
-
-    // 🔥 Clone léger (structure seulement, pas géométrie)
-    const clone = cached.clone(true)
-    this.ghostGroup.add(clone)
+    if (this.activeGhost !== cached) {
+      this.ghostGroup.clear()
+      this.ghostGroup.add(cached)
+      this.activeGhost = cached
+    }
 
     this.ghostGroup.visible = true
     this.outlinePass.selectedObjects = [this.ghostGroup]
@@ -139,9 +145,12 @@ export class OutlineSystem {
         0
       )
     }
-    const camera = World.current?.camera
-    if (camera) {
-      camera.layers.enableAll()
+    const camera = (World.current?.camera ?? this.outlinePass.renderCamera) as THREE.Camera
+    camera.layers.enableAll()
+
+    if (this.outlinePass.selectedObjects.length === 0) {
+      this.renderer.render(this.scene, camera)
+      return
     }
 
     this.composer.render()
