@@ -767,16 +767,14 @@ export class CropManager {
             const color = instance.def.fruitVisualColor ?? 0xff8a00
             const fruitRadius = this.world.cellSize * 0.15
             const sphere = new THREE.SphereGeometry(fruitRadius, 10, 10)
-            const mat = new THREE.MeshBasicMaterial({
+            const mat = new THREE.MeshStandardMaterial({
                 color,
-                transparent: true,
-                opacity: 0.95,
-                depthWrite: false,
+                roughness: 0.7,
+                metalness: 0,
             })
             for (let i = 0; i < count; i++) {
                 const m = new THREE.Mesh(sphere, mat.clone())
                 m.castShadow = true
-                m.renderOrder = 8
                 group.add(m)
             }
             instance.fruitMesh = group
