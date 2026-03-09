@@ -765,8 +765,8 @@ export class CropManager {
             const group = new THREE.Group()
             const count = instance.def.fruitVisualCount ?? 8
             const color = instance.def.fruitVisualColor ?? 0xff8a00
-            const sphere = new THREE.SphereGeometry(this.world.cellSize * 0.105, 10, 10)
-            const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.55, metalness: 0 })
+            const sphere = new THREE.SphereGeometry(this.world.cellSize * 0.125, 10, 10)
+            const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.45, metalness: 0, emissive: new THREE.Color(color), emissiveIntensity: 0.18 })
             for (let i = 0; i < count; i++) {
                 const m = new THREE.Mesh(sphere, mat.clone())
                 m.castShadow = true
@@ -789,7 +789,7 @@ export class CropManager {
                 const socket = canopySockets[i % canopySockets.length]
                 const slot = Math.floor(i / canopySockets.length)
                 const angle = slot * 2.399963229728653 // golden angle
-                const orbit = socket.radius * 0.35
+                const orbit = socket.radius * 0.62
                 child.position.set(
                     socket.x + Math.cos(angle) * orbit,
                     socket.y + Math.sin(angle * 0.7) * orbit * 0.5,
@@ -809,14 +809,14 @@ export class CropManager {
         const localCenter = root.worldToLocal(worldCenter.clone())
 
         const crownHeight = Math.max(this.world.cellSize * 0.55, worldSize.y)
-        const canopyRadius = Math.max(this.world.cellSize * 0.24, Math.max(worldSize.x, worldSize.z) * 0.38)
+        const canopyRadius = Math.max(this.world.cellSize * 0.28, Math.max(worldSize.x, worldSize.z) * 0.46)
 
         group.position.set(localCenter.x, localCenter.y + crownHeight * 0.2, localCenter.z)
         group.scale.setScalar(1)
 
         group.children.forEach((child, i) => {
             const angle = (i / Math.max(1, group.children.length)) * Math.PI * 2
-            const ring = i % 2 === 0 ? 1 : 0.86
+            const ring = i % 2 === 0 ? 1.02 : 0.9
             const radial = canopyRadius * ring
             child.position.set(
                 Math.cos(angle) * radial,
