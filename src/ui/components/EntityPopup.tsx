@@ -20,7 +20,6 @@ export function EntityPopups() {
   const [hoveredPopup, setHoveredPopup] = useState<PopupInfo | null>(null)
   const targetRotY  = useRef<number>(0)
   const rotRafRef   = useRef<number>(0)
-  const prevEntityRef = useRef<THREE.Object3D | null>(null)
   const popupRef    = useRef<HTMLDivElement | null>(null)
   const closeTimer  = useRef<ReturnType<typeof setTimeout> | null>(null)
   const openTimer   = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -61,19 +60,6 @@ export function EntityPopups() {
     }, HOVER_OPEN_DELAY_MS)
   }
 
-  useEffect(() => {
-    if (prevEntityRef.current && prevEntityRef.current !== hoveredPopup?.entityObject) {
-      OutlineSystem.instance?.setHovered(null)
-    }
-  
-    if (hoveredPopup) {
-      OutlineSystem.instance?.setHovered(hoveredPopup.entityObject)
-      prevEntityRef.current = hoveredPopup.entityObject
-    } else {
-      OutlineSystem.instance?.setHovered(null)
-      prevEntityRef.current = null
-    }
-  }, [hoveredPopup])
 
   useEffect(() => {
     const r = Renderer.instance
@@ -117,7 +103,7 @@ export function EntityPopups() {
     function onMouseMove(e: MouseEvent) {
       const w = World.current
       if (!w || !w.camera) return
-      if (placementStore.selectedItem) { cancelClose(); cancelOpen(); setHoveredPopup(null); return }
+      if (placementStore.selectedItem) { cancelClose(); cancelOpen(); OutlineSystem.instance?.setHovered(null); setHoveredPopup(null); return }
       if (isOverPopup.current)         { cancelClose(); return }
 
       mouse.x =  (e.clientX / window.innerWidth)  * 2 - 1
@@ -129,9 +115,13 @@ export function EntityPopups() {
         .filter(Boolean) as THREE.Object3D[]
       const intersects = raycaster.intersectObjects(hitboxes, false)
 
-      if (intersects.length === 0) { cancelOpen(); scheduleClose(); return }
+      if (intersects.length === 0) {
+        OutlineSystem.instance?.setHovered(null)
+        cancelOpen(); scheduleClose(); return
+      }
 
       const entity = intersects[0].object.parent!
+      OutlineSystem.instance?.setHovered(entity)
       const box    = new THREE.Box3().setFromObject(intersects[0].object)
       const topCenter = new THREE.Vector3(
         (box.min.x + box.max.x) / 2, box.max.y + 0.3, (box.min.z + box.max.z) / 2
@@ -149,7 +139,7 @@ export function EntityPopups() {
     }
 
     window.addEventListener("mousemove", onMouseMove)
-    return () => { window.removeEventListener("mousemove", onMouseMove); cancelClose(); cancelOpen() }
+    return () => { window.removeEventListener("mousemove", onMouseMove); cancelClose(); cancelOpen(); OutlineSystem.instance?.setHovered(null) }
   }, [])
 
   // ─── Delete ───────────────────────────────────────────────────────────────
@@ -165,6 +155,7 @@ export function EntityPopups() {
     placementStore.hoveredCell = null
     placementStore.canPlace    = true
     setHoveredPopup(null)
+    OutlineSystem.instance?.setHovered(null)
 
     pushDeleteAction(w, popup.entityObject, savedHoveredCell)
   }
@@ -176,6 +167,7 @@ export function EntityPopups() {
     cancelOpen()
     isOverPopup.current = false
     setHoveredPopup(null)
+    OutlineSystem.instance?.setHovered(null)
     const w = World.current
     if (!w) return
     const e           = popup.entityObject
@@ -223,6 +215,7 @@ export function EntityPopups() {
   const handleRotate = (popup: PopupInfo) => {
     cancelClose()
     cancelOpen()
+    OutlineSystem.instance?.setHovered(null)
     const e = popup.entityObject
     const w = World.current
     if (!w) return
