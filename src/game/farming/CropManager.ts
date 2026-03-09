@@ -23,6 +23,7 @@ async function loadModel(path: string): Promise<THREE.Object3D> {
 
 function buildYoungTreeMesh(phase: GrowthPhase, cellSize: number): THREE.Object3D {
     const g = new THREE.Group()
+    const canopySockets: Array<{ x: number; y: number; z: number; radius: number }> = []
 
     const phaseScale = Math.max(0.82, (phase.scaleXZ ?? 0.08) / 0.08)
     const trunkHeight = Math.max((phase.height ?? 0.08) * 1.35, 0.12)
@@ -83,6 +84,13 @@ function buildYoungTreeMesh(phase: GrowthPhase, cellSize: number): THREE.Object3
         blob.scale.set(wScale, hScale, wScale)
         blob.castShadow = true
         g.add(blob)
+
+        canopySockets.push({
+            x,
+            y,
+            z,
+            radius: radius * ((wScale + hScale) * 0.5),
+        })
     }
 
     const canopyBaseY = trunkHeight * 0.78
@@ -95,6 +103,7 @@ function buildYoungTreeMesh(phase: GrowthPhase, cellSize: number): THREE.Object3
 
     const silhouetteHeight = trunkHeight + baseCanopyRadius * 2.9 + cellSize * 0.05
     g.userData.visualHeight = silhouetteHeight
+    g.userData.canopySockets = canopySockets
 
     return g
 }
@@ -770,6 +779,25 @@ export class CropManager {
         const root = instance.mesh as THREE.Object3D
         const group = instance.fruitMesh as THREE.Group
         if (group.parent !== root) root.add(group)
+
+        const canopySockets = (root.userData.canopySockets as Array<{ x: number; y: number; z: number; radius: number }> | undefined) ?? []
+        if (canopySockets.length > 0) {
+            group.position.set(0, 0, 0)
+            group.scale.setScalar(1)
+
+            group.children.forEach((child, i) => {
+                const socket = canopySockets[i % canopySockets.length]
+                const slot = Math.floor(i / canopySockets.length)
+                const angle = slot * 2.399963229728653 // golden angle
+                const orbit = socket.radius * 0.35
+                child.position.set(
+                    socket.x + Math.cos(angle) * orbit,
+                    socket.y + Math.sin(angle * 0.7) * orbit * 0.5,
+                    socket.z + Math.sin(angle) * orbit,
+                )
+            })
+            return
+        }
 
         group.visible = false
         const worldBox = new THREE.Box3().setFromObject(root)

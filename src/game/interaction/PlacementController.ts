@@ -264,22 +264,12 @@ export class PlacementController {
                 this.ghost = null
                 cancelAnimationFrame(this.ghostRaf)
                 this.ghostRaf = 0
+                const item = placementStore.selectedItem
+                if (item && (this.isSeedGhostItem(item) || this.isStakeGhostItem(item))) this.buildGhost(item)
                 return
             }
 
             if (!this.ghost) return
-
-            // ← ItemActionController a pris le ghost (sinkSeedGhost)
-            // placementStore.ghostMesh est null mais this.ghost ne l'est pas encore
-            if (placementStore.ghostMesh === null && this.ghost !== null) {
-                this.ghost = null
-                this.ghostRaf = 0
-                cancelAnimationFrame(this.ghostRaf)
-                // Rebuild immédiatement pour la prochaine cellule
-                const item = placementStore.selectedItem
-                if (item && this.isSeedGhostItem(item)) this.buildGhost(item)
-                return
-            }
 
             this.currentPos.lerp(this.targetPos, 0.35)
 
