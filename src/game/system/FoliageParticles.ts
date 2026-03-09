@@ -25,14 +25,14 @@ export class FoliageParticles {
         this.puffGeometry = new THREE.SphereGeometry(0.024, 6, 6)
     }
 
-    spawnAtCell(cellX: number, cellZ: number, baseYOverride?: number): void {
+    spawnAtCell(cellX: number, cellZ: number, baseYOverride?: number, scaleMul: number = 1): void {
         const halfCells = this.worldSizeInCells / 2
         const baseX = (cellX - halfCells + 0.5) * this.cellSize
         const baseZ = (cellZ - halfCells + 0.5) * this.cellSize
         const baseY = baseYOverride ?? -0.02
 
-        this.spawnLeafBurst(baseX, baseY, baseZ)
-        this.spawnGreenPuff(baseX, baseY, baseZ)
+        this.spawnLeafBurst(baseX, baseY, baseZ, scaleMul)
+        this.spawnGreenPuff(baseX, baseY, baseZ, scaleMul)
     }
 
     update(deltaTime: number): void {
@@ -58,7 +58,7 @@ export class FoliageParticles {
         }
     }
 
-    private spawnLeafBurst(baseX: number, baseY: number, baseZ: number): void {
+    private spawnLeafBurst(baseX: number, baseY: number, baseZ: number, scaleMul: number): void {
         for (let i = 0; i < 18; i++) {
             const material = new THREE.MeshBasicMaterial({
                 color: Math.random() > 0.45 ? 0x5fbf4a : 0x74cf52,
@@ -69,24 +69,24 @@ export class FoliageParticles {
             })
             const mesh = new THREE.Mesh(this.leafGeometry, material)
             mesh.position.set(
-                baseX + (Math.random() - 0.5) * 0.24,
-                baseY + 0.02 + Math.random() * 0.05,
-                baseZ + (Math.random() - 0.5) * 0.24,
+                baseX + (Math.random() - 0.5) * 0.24 * scaleMul,
+                baseY + 0.02 + Math.random() * 0.05 * scaleMul,
+                baseZ + (Math.random() - 0.5) * 0.24 * scaleMul,
             )
             mesh.rotation.set(
                 (Math.random() - 0.5) * 0.6,
                 Math.random() * Math.PI,
                 (Math.random() - 0.5) * 0.6,
             )
-            mesh.scale.setScalar(0.9 + Math.random() * 0.65)
+            mesh.scale.setScalar((0.9 + Math.random() * 0.65) * scaleMul)
             this.scene.add(mesh)
 
             this.particles.push({
                 mesh,
                 velocity: new THREE.Vector3(
-                    (Math.random() - 0.5) * 1.25,
-                    0.5 + Math.random() * 0.34,
-                    (Math.random() - 0.5) * 1.25,
+                    (Math.random() - 0.5) * 1.25 * scaleMul,
+                    (0.5 + Math.random() * 0.34) * Math.sqrt(scaleMul),
+                    (Math.random() - 0.5) * 1.25 * scaleMul,
                 ),
                 spin: (Math.random() - 0.5) * 10,
                 age: 0,
@@ -95,7 +95,7 @@ export class FoliageParticles {
         }
     }
 
-    private spawnGreenPuff(baseX: number, baseY: number, baseZ: number): void {
+    private spawnGreenPuff(baseX: number, baseY: number, baseZ: number, scaleMul: number): void {
         for (let i = 0; i < 9; i++) {
             const material = new THREE.MeshBasicMaterial({
                 color: 0x9dcf6a,
@@ -105,19 +105,19 @@ export class FoliageParticles {
             })
             const mesh = new THREE.Mesh(this.puffGeometry, material)
             mesh.position.set(
-                baseX + (Math.random() - 0.5) * 0.2,
-                baseY + 0.01 + Math.random() * 0.04,
-                baseZ + (Math.random() - 0.5) * 0.2,
+                baseX + (Math.random() - 0.5) * 0.2 * scaleMul,
+                baseY + 0.01 + Math.random() * 0.04 * scaleMul,
+                baseZ + (Math.random() - 0.5) * 0.2 * scaleMul,
             )
-            mesh.scale.setScalar(1 + Math.random() * 0.7)
+            mesh.scale.setScalar((1 + Math.random() * 0.7) * scaleMul)
             this.scene.add(mesh)
 
             this.particles.push({
                 mesh,
                 velocity: new THREE.Vector3(
-                    (Math.random() - 0.5) * 0.32,
-                    0.21 + Math.random() * 0.18,
-                    (Math.random() - 0.5) * 0.32,
+                    (Math.random() - 0.5) * 0.32 * scaleMul,
+                    (0.21 + Math.random() * 0.18) * Math.sqrt(scaleMul),
+                    (Math.random() - 0.5) * 0.32 * scaleMul,
                 ),
                 spin: (Math.random() - 0.5) * 2.2,
                 age: 0,

@@ -90,7 +90,7 @@ export function useFarming() {
                     if (mesh) {
                         const box = new THREE.Box3().setFromObject(mesh)
                         const foliageY = THREE.MathUtils.lerp(box.min.y, box.max.y, 0.6)
-                        world.tilesFactory.playPlantAnimation(ctx.cellX, ctx.cellZ, foliageY)
+                        world.tilesFactory.playPlantAnimation(ctx.cellX, ctx.cellZ, foliageY, 1.8)
                     } else {
                         world.tilesFactory.playPlantAnimation(ctx.cellX, ctx.cellZ)
                     }

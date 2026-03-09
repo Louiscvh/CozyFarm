@@ -135,8 +135,8 @@ export class TileFactory {
         return true
     }
 
-    playPlantAnimation(cellX: number, cellZ: number, baseYOverride?: number): void {
-        this.foliageParticles.spawnAtCell(cellX, cellZ, baseYOverride)
+    playPlantAnimation(cellX: number, cellZ: number, baseYOverride?: number, scaleMul: number = 1): void {
+        this.foliageParticles.spawnAtCell(cellX, cellZ, baseYOverride, scaleMul)
     }
 
     unwaterCell(cellX: number, cellZ: number): void {
