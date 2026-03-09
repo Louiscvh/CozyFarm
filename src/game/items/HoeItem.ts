@@ -6,6 +6,7 @@ export const HoeItemDef: ItemDef = {
     label: "Houe",
     icon: "⛏️",
     showCursorItem: true,
+    usageHint: "Cliquer sur l'herbe pour labourer",
     usage: {
         kind: "use_on_tile",
         targetTileTypes: ["grass"],
