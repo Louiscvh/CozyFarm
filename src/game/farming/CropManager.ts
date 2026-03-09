@@ -766,7 +766,14 @@ export class CropManager {
             const count = instance.def.fruitVisualCount ?? 8
             const color = instance.def.fruitVisualColor ?? 0xff8a00
             const sphere = new THREE.SphereGeometry(this.world.cellSize * 0.125, 10, 10)
-            const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.45, metalness: 0, emissive: new THREE.Color(color), emissiveIntensity: 0.18 })
+            const mat = new THREE.MeshStandardMaterial({
+                color,
+                roughness: 0.4,
+                metalness: 0,
+                emissive: new THREE.Color(color),
+                emissiveIntensity: 0.28,
+                depthWrite: false,
+            })
             for (let i = 0; i < count; i++) {
                 const m = new THREE.Mesh(sphere, mat.clone())
                 m.castShadow = true
@@ -807,21 +814,25 @@ export class CropManager {
         const worldCenter = new THREE.Vector3()
         worldBox.getCenter(worldCenter)
         const localCenter = root.worldToLocal(worldCenter.clone())
+        const localTop = root.worldToLocal(new THREE.Vector3(worldCenter.x, worldBox.max.y, worldCenter.z)).y
+        const localBottom = root.worldToLocal(new THREE.Vector3(worldCenter.x, worldBox.min.y, worldCenter.z)).y
 
         const crownHeight = Math.max(this.world.cellSize * 0.55, worldSize.y)
-        const canopyRadius = Math.max(this.world.cellSize * 0.28, Math.max(worldSize.x, worldSize.z) * 0.46)
+        const canopyRadius = Math.max(this.world.cellSize * 0.34, Math.max(worldSize.x, worldSize.z) * 0.56)
+        const canopyY = THREE.MathUtils.lerp(localBottom, localTop, 0.7)
 
-        group.position.set(localCenter.x, localCenter.y + crownHeight * 0.2, localCenter.z)
+        group.position.set(localCenter.x, canopyY, localCenter.z)
         group.scale.setScalar(1)
 
         group.children.forEach((child, i) => {
-            const angle = (i / Math.max(1, group.children.length)) * Math.PI * 2
-            const ring = i % 2 === 0 ? 1.02 : 0.9
-            const radial = canopyRadius * ring
+            const t = (i + 0.5) / Math.max(1, group.children.length)
+            const phi = Math.acos(1 - 2 * t)
+            const theta = i * 2.399963229728653
+            const radial = canopyRadius * (0.88 + (i % 3) * 0.08)
             child.position.set(
-                Math.cos(angle) * radial,
-                ((i % 3) - 1) * this.world.cellSize * 0.05,
-                Math.sin(angle) * radial,
+                Math.cos(theta) * Math.sin(phi) * radial,
+                Math.cos(phi) * crownHeight * 0.22,
+                Math.sin(theta) * Math.sin(phi) * radial,
             )
         })
     }
