@@ -16,7 +16,12 @@ export function useFarming() {
                     if (!world) return false
                     if (!world.tilesFactory.isSoil(ctx.cellX, ctx.cellZ)) return false
                     if (world.cropManager.hasCrop(ctx.cellX, ctx.cellZ)) return false
-                    return world.cropManager.plant(def, ctx.cellX, ctx.cellZ) !== null
+
+                    const planted = world.cropManager.plant(def, ctx.cellX, ctx.cellZ)
+                    if (!planted) return false
+
+                    world.tilesFactory.playPlantAnimation(ctx.cellX, ctx.cellZ)
+                    return true
                 }
             )
         }

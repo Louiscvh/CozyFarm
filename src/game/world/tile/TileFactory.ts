@@ -21,6 +21,7 @@ import { TulipEntity } from "../../entity/entities/Tulip"
 import { GrassEntity } from "../../entity/entities/Grass"
 import { WaterSplashParticles } from "../../system/WaterSplashParticles"
 import { TillParticles } from "../../system/TillParticles"
+import { FoliageParticles } from "../../system/FoliageParticles"
 
 export interface DecorCategory { types: Entity[]; density: number }
 export interface FixedEntityDef { def: Entity; tileX: number; tileZ: number; size: number }
@@ -103,6 +104,7 @@ export class TileFactory {
     // ── Water particles ───────────────────────────────────────────
     private readonly waterSplashParticles: WaterSplashParticles
     private readonly tillParticles: TillParticles
+    private readonly foliageParticles: FoliageParticles
 
     constructor(scene: THREE.Scene, worldSize: number, tileSize: number) {
         this.scene = scene
@@ -114,6 +116,7 @@ export class TileFactory {
         this.initSoilMesh()
         this.waterSplashParticles = new WaterSplashParticles(this.scene, this.cellSize, this.worldSizeInCells)
         this.tillParticles = new TillParticles(this.scene, this.cellSize, this.worldSizeInCells)
+        this.foliageParticles = new FoliageParticles(this.scene, this.cellSize, this.worldSizeInCells)
     }
 
     waterCell(cellX: number, cellZ: number): boolean {
@@ -130,6 +133,10 @@ export class TileFactory {
         })
         this.waterSplashParticles.spawnAtCell(cellX, cellZ)
         return true
+    }
+
+    playPlantAnimation(cellX: number, cellZ: number): void {
+        this.foliageParticles.spawnAtCell(cellX, cellZ)
     }
 
     unwaterCell(cellX: number, cellZ: number): void {
@@ -379,6 +386,7 @@ export class TileFactory {
     tickTransitions(deltaTime: number): void {
         this.waterSplashParticles.update(deltaTime)
         this.tillParticles.update(deltaTime)
+        this.foliageParticles.update(deltaTime)
         this.updateSoilWaterColorTransitions(deltaTime)
 
         if (this.transitions.size === 0) return
