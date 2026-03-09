@@ -776,11 +776,14 @@ export class CropManager {
         group.visible = true
         const worldSize = new THREE.Vector3()
         worldBox.getSize(worldSize)
+        const worldCenter = new THREE.Vector3()
+        worldBox.getCenter(worldCenter)
+        const localCenter = root.worldToLocal(worldCenter.clone())
 
         const crownHeight = Math.max(this.world.cellSize * 0.55, worldSize.y)
-        const canopyRadius = Math.max(this.world.cellSize * 0.24, Math.max(worldSize.x, worldSize.z) * 0.42)
+        const canopyRadius = Math.max(this.world.cellSize * 0.24, Math.max(worldSize.x, worldSize.z) * 0.36)
 
-        group.position.set(0, crownHeight * 0.72, 0)
+        group.position.set(localCenter.x, localCenter.y + crownHeight * 0.08, localCenter.z)
         group.scale.setScalar(1)
 
         group.children.forEach((child, i) => {
