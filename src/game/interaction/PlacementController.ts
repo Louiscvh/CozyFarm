@@ -343,7 +343,7 @@ export class PlacementController {
 
             this.targetPos.set(x, this.yOffset, z)
             this.currentPos.copy(this.targetPos)
-            ghostMat.color.set(canPlace ? 0x00ff00 : 0xff2244)
+            ghostMat.color.set(canPlace ? 0xffffff : 0xff2244)
 
             highlightMesh.scale.set(footprint * this.world.cellSize, footprint * this.world.cellSize, 1)
             highlightMesh.position.set(x, this.getSeedHoverY(cellX, cellZ), z)
@@ -417,7 +417,7 @@ export class PlacementController {
 
             this.targetPos.set(x, this.yOffset, z)
             this.currentPos.copy(this.targetPos)
-            ghostMat.color.set(canPlace ? 0x00ff00 : 0xff2244)
+            ghostMat.color.set(canPlace ? 0xffffff : 0xff2244)
 
             highlightMesh.scale.set(this.world.cellSize, this.world.cellSize, 1)
             highlightMesh.position.set(x, hoverY, z)
@@ -508,7 +508,7 @@ export class PlacementController {
 
         placementStore.canPlace = canPlace
         this.targetPos.set(x, this.yOffset, z)
-        ghostMat.color.set(canPlace ? 0x00ff00 : 0xff2244)
+        ghostMat.color.set(canPlace ? 0xffffff : 0xff2244)
 
         highlightMesh.visible = true
         highlightMesh.position.set(x, highlightY, z)
