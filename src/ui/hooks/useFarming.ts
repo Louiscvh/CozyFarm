@@ -14,7 +14,8 @@ export function useFarming() {
                 (ctx) => {
                     const world = World.current
                     if (!world) return false
-                    if (!world.tilesFactory.isSoil(ctx.cellX, ctx.cellZ)) return false
+                    const allowedTiles = def.plantTileTypes ?? ["soil"]
+                    if (!allowedTiles.includes(ctx.tileType)) return false
                     if (world.cropManager.hasCrop(ctx.cellX, ctx.cellZ)) return false
 
                     const planted = world.cropManager.plant(def, ctx.cellX, ctx.cellZ)

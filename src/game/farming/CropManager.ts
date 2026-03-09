@@ -20,6 +20,41 @@ async function loadModel(path: string): Promise<THREE.Object3D> {
     })
 }
 
+
+function buildYoungTreeMesh(phase: GrowthPhase, cellSize: number): THREE.Object3D {
+    const g = new THREE.Group()
+
+    const trunkHeight = Math.max(phase.height ?? 0.08, 0.08)
+    const trunkRadius = Math.max((phase.scaleXZ ?? 0.02) * 0.32, 0.012)
+    const trunkGeo = new THREE.CylinderGeometry(trunkRadius * 0.75, trunkRadius, trunkHeight, 8)
+    const trunkMat = new THREE.MeshStandardMaterial({ color: 0x7a5a34, roughness: 0.95, metalness: 0 })
+    const trunk = new THREE.Mesh(trunkGeo, trunkMat)
+    trunk.position.y = trunkHeight * 0.5
+    trunk.castShadow = true
+    g.add(trunk)
+
+    const canopyRadius = Math.max((phase.scaleXZ ?? 0.08) * 1.2, 0.045)
+    const canopyGeo = new THREE.SphereGeometry(canopyRadius, 10, 10)
+    const canopyMat = new THREE.MeshStandardMaterial({ color: phase.color ?? 0x4b8a35, roughness: 0.9, metalness: 0 })
+    const canopy = new THREE.Mesh(canopyGeo, canopyMat)
+    canopy.position.y = trunkHeight * 0.92 + canopyRadius * 0.8
+    canopy.castShadow = true
+    g.add(canopy)
+
+    const leafGeo = new THREE.SphereGeometry(canopyRadius * 0.32, 8, 8)
+    const leafMat = new THREE.MeshStandardMaterial({ color: 0x5ea93e, roughness: 0.85, metalness: 0 })
+    for (let i = 0; i < 4; i++) {
+        const leaf = new THREE.Mesh(leafGeo, leafMat)
+        const ang = (i / 4) * Math.PI * 2 + 0.3
+        leaf.position.set(Math.cos(ang) * canopyRadius * 0.65, canopy.position.y - canopyRadius * 0.25, Math.sin(ang) * canopyRadius * 0.65)
+        leaf.castShadow = true
+        g.add(leaf)
+    }
+
+    g.userData.visualHeight = trunkHeight + canopyRadius * 2 + cellSize * 0.03
+    return g
+}
+
 function buildCubeMesh(phase: GrowthPhase): THREE.Mesh {
     const geo = new THREE.BoxGeometry(
         (phase.scaleXZ ?? 0.05) * 2,
@@ -420,7 +455,7 @@ export class CropManager {
         tiltZ: number = 0,
         transitionType: "spawn" | "phase" = "spawn",
     ): void {
-        const mesh = buildCubeMesh(phase)
+        const mesh = instance.def.id === "orange_tree" ? buildYoungTreeMesh(phase, this.world.cellSize) : buildCubeMesh(phase)
         mesh.castShadow = true
         mesh.frustumCulled = false
         mesh.userData.isCrop = true
@@ -428,13 +463,18 @@ export class CropManager {
         mesh.userData.cellZ = instance.cellZ
         mesh.userData.uprootArcBoost = Math.max(0, -cropYOffset) * 0.9
 
-        const h = phase.height ?? 0.05
+        const visualHeight = (mesh as THREE.Object3D).userData.visualHeight as number | undefined
+        const h = visualHeight ?? phase.height ?? 0.05
         mesh.position.set(pos.x, h / 2 + cropYOffset, pos.z)
         mesh.rotation.set(tiltX, rotY, tiltZ)
         mesh.scale.setScalar(0)
 
         if (instance.isReady) {
-            ; (mesh.material as THREE.MeshStandardMaterial).emissiveIntensity = 0.12
+            if ((mesh as THREE.Mesh).isMesh) {
+                ; ((mesh as THREE.Mesh).material as THREE.MeshStandardMaterial).emissiveIntensity = 0.12
+            } else {
+                this.setEmissive(mesh, 0.12)
+            }
         }
 
         instance.mesh = mesh

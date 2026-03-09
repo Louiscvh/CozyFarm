@@ -151,7 +151,11 @@ export class PlacementController {
     }
 
     private canPlaceSeed(cellX: number, cellZ: number): boolean {
-        return this.world.tilesFactory.isSoil(cellX, cellZ)
+        const selectedItem = placementStore.selectedItem
+        const cropDef = selectedItem ? ALL_CROPS.find(c => c.seedItemId === selectedItem.id) : null
+        const allowedTiles = cropDef?.plantTileTypes ?? ["soil"]
+        const tileType = this.world.tilesFactory.getTileTypeAtCell(cellX, cellZ) ?? ""
+        return allowedTiles.includes(tileType)
             && !this.world.cropManager.hasCrop(cellX, cellZ)
     }
 
@@ -389,7 +393,7 @@ export class PlacementController {
         } catch { return }
         if (this._ghostToken !== token) return
 
-        const scale = lastPhase.modelScale ?? 1
+        const scale = cropDef.ghostModelScale ?? lastPhase.modelScale ?? 1
         root.scale.setScalar(scale)
 
         const box = new THREE.Box3().setFromObject(root)

@@ -27,6 +27,8 @@ export interface CropDefinition {
     readonly fruitVisualCount?: number
     readonly supportsStake?: boolean
     readonly stakeGrowthMultiplier?: number
+    readonly plantTileTypes?: readonly string[]
+    readonly ghostModelScale?: number
 }
 
 const DEBUG = false
@@ -39,6 +41,7 @@ export const CarrotCrop: CropDefinition = {
     harvestQty: 2,
     yOffset: -0.04,
     usePlacementGhost: true,
+    plantTileTypes: ["soil"],
     phases: [
         { durationSeconds: DEBUG ? 3 : 300, color: 0x5c3317, scaleXZ: 0.01, height: 0.05 },
         { durationSeconds: DEBUG ? 3 : 300, modelPath: "/models/crops/carrot_stage1.glb", modelScale: 0.06, yOffset: -0.13 },
@@ -55,6 +58,7 @@ export const LettuceCrop: CropDefinition = {
     harvestQty: 4,
     yOffset: -0.08,
     usePlacementGhost: true,
+    plantTileTypes: ["soil"],
     phases: [
         { durationSeconds: DEBUG ? 3 : 300, color: 0x008000, scaleXZ: 0.01, height: 0.05, yOffset: -0.05 },
         { durationSeconds: DEBUG ? 3 : 300, modelPath: "/models/crops/lettuce_stage1.glb", modelScale: 0.01 },
@@ -76,11 +80,13 @@ export const OrangeTreeCrop: CropDefinition = {
     fruitVisualColor: 0xff8a00,
     fruitVisualCount: 9,
     usePlacementGhost: true,
+    plantTileTypes: ["grass", "soil"],
+    ghostModelScale: 0.18,
     phases: [
-        { durationSeconds: DEBUG ? 3 : 260, color: 0x7a5d3b, scaleXZ: 0.02, height: 0.06 },
-        { durationSeconds: DEBUG ? 3 : 360, color: 0x4b7a2f, scaleXZ: 0.08, height: 0.2 },
-        { durationSeconds: DEBUG ? 3 : 520, color: 0x4b8a35, scaleXZ: 0.13, height: 0.45 },
-        { durationSeconds: 0, modelPath: "/models/tree_orange.glb", modelScale: 0.45 },
+        { durationSeconds: DEBUG ? 3 : 260, color: 0x7a5d3b, scaleXZ: 0.02, height: 0.08 },
+        { durationSeconds: DEBUG ? 3 : 360, color: 0x4b7a2f, scaleXZ: 0.08, height: 0.22 },
+        { durationSeconds: DEBUG ? 3 : 520, color: 0x4b8a35, scaleXZ: 0.13, height: 0.5 },
+        { durationSeconds: 0, modelPath: "/models/tree_orange.glb", modelScale: 0.18 },
     ],
 }
 
