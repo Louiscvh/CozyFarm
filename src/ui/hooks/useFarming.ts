@@ -1,5 +1,6 @@
 ﻿// src/game/farming/useFarming.ts
 import { useEffect } from "react"
+import * as THREE from "three"
 import { inventoryStore } from "../../ui/store/InventoryStore"
 import { ALL_CROPS } from "../../game/farming/CropDefinition"
 import { itemActionRegistry, type UseOnEntityContext } from "../../game/interaction/ItemActionRegistry"
@@ -85,7 +86,14 @@ export function useFarming() {
                 if (!harvested) return false
                 inventoryStore.produce(harvested.def.harvestItemId, harvested.def.harvestQty)
                 if (harvested.def.fruitRegrowSeconds) {
-                    world.tilesFactory.playPlantAnimation(ctx.cellX, ctx.cellZ)
+                    const mesh = harvested.mesh as THREE.Object3D | null
+                    if (mesh) {
+                        const box = new THREE.Box3().setFromObject(mesh)
+                        const foliageY = THREE.MathUtils.lerp(box.min.y, box.max.y, 0.6)
+                        world.tilesFactory.playPlantAnimation(ctx.cellX, ctx.cellZ, foliageY)
+                    } else {
+                        world.tilesFactory.playPlantAnimation(ctx.cellX, ctx.cellZ)
+                    }
                 }
                 return true
             }

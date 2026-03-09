@@ -25,11 +25,11 @@ export class FoliageParticles {
         this.puffGeometry = new THREE.SphereGeometry(0.024, 6, 6)
     }
 
-    spawnAtCell(cellX: number, cellZ: number): void {
+    spawnAtCell(cellX: number, cellZ: number, baseYOverride?: number): void {
         const halfCells = this.worldSizeInCells / 2
         const baseX = (cellX - halfCells + 0.5) * this.cellSize
         const baseZ = (cellZ - halfCells + 0.5) * this.cellSize
-        const baseY = -0.02
+        const baseY = baseYOverride ?? -0.02
 
         this.spawnLeafBurst(baseX, baseY, baseZ)
         this.spawnGreenPuff(baseX, baseY, baseZ)

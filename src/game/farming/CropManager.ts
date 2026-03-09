@@ -715,7 +715,7 @@ export class CropManager {
             const group = new THREE.Group()
             const count = instance.def.fruitVisualCount ?? 8
             const color = instance.def.fruitVisualColor ?? 0xff8a00
-            const fruitRadius = this.world.cellSize * 0.15
+            const fruitRadius = this.world.cellSize * 0.11
             const sphere = new THREE.SphereGeometry(fruitRadius, 10, 10)
             const mat = new THREE.MeshStandardMaterial({
                 color,
@@ -739,7 +739,7 @@ export class CropManager {
         if (canopySockets.length > 0) {
             group.position.set(0, 0, 0)
             group.scale.setScalar(1)
-            const fruitRadius = this.world.cellSize * 0.15
+            const fruitRadius = this.world.cellSize * 0.11
 
             group.children.forEach((child, i) => {
                 const socket = canopySockets[i % canopySockets.length]
