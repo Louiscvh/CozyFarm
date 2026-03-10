@@ -38,6 +38,7 @@ import { OrangeSaplingItemDef } from "../../game/items/OrangeSaplingItem"
 import { OrangeItemDef } from "../../game/items/OrangeItem"
 import { StakeItemDef } from "../../game/items/StakeItem"
 import { toolLevelStore, type ToolId } from "../store/ToolLevelStore"
+import { ItemIcon } from "./ItemIcon"
 
 // ─── Tous les items (construction + farming) ──────────────────────────────────
 
@@ -385,7 +386,7 @@ export function InventoryBar() {
                     >
                         <span className="inv-slot-hit" data-inv-item-id={item.id} />
                         <span className="inv-slot-key">{index + 1}</span>
-                        <span className="inv-slot-icon">{item.icon}</span>
+                        <ItemIcon icon={item.icon} alt={item.label} />
                         <span className="inv-slot-label">{item.label}</span>
                         {!isInfinite(item) && (
                             <span className="inv-slot-qty">{qty}</span>
@@ -431,7 +432,7 @@ export function InventoryBar() {
                     onDragEnd={cancelDrag}
                 >
                     <span className="inv-slot-hit" data-inv-item-id={item.id} />
-                    <span className="inv-slot-icon">{item.icon}</span>
+                    <ItemIcon icon={item.icon} alt={item.label} />
                     <span className="inv-slot-label">{item.label}</span>
                     {!isInfinite(item) && (
                         <span className="inv-slot-qty">{qty}</span>

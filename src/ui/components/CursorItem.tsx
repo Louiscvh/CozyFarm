@@ -3,6 +3,7 @@ import { useEffect, useState } from "react"
 import { placementStore } from "../store/PlacementStore"
 import { isPlaceable, type ItemDef } from "../../game/entity/ItemDef"
 import "./CursorItem.css"
+import { ItemIcon } from "./ItemIcon"
 
 export function CursorItem() {
     const [item, setItem] = useState<ItemDef | null>(null)
@@ -38,7 +39,7 @@ export function CursorItem() {
             className="cursor-item"
             style={{ transform: `translate(${pos.x}px, ${pos.y}px)` }}
         >
-            <span className="inv-slot-icon">{item.icon}</span>
+            <ItemIcon icon={item.icon} alt={item.label} />
 
         </div>
     )
