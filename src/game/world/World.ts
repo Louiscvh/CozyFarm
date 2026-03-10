@@ -14,6 +14,17 @@ import { computeGrowthRate } from "../farming/GrowthConditions"
 export class World {
   static current: World | null = null
 
+  private static readonly WIND_SWAY_CONFIG = new Map<string, { frequency: number; amplitude: number }>([
+    ["tree1", { frequency: 0.75, amplitude: 0.075 }],
+    ["tree2", { frequency: 0.75, amplitude: 0.075 }],
+    ["tree3", { frequency: 0.75, amplitude: 0.075 }],
+    ["tree_orange", { frequency: 0.75, amplitude: 0.075 }],
+    ["grass", { frequency: 1.45, amplitude: 0.09 }],
+    ["wheatField", { frequency: 1.3, amplitude: 0.1 }],
+    ["flower1", { frequency: 1.6, amplitude: 0.11 }],
+    ["tulip", { frequency: 1.6, amplitude: 0.11 }],
+  ])
+
   readonly size: number = 50
   readonly tileSize: number
   readonly cellSize: number
@@ -72,7 +83,38 @@ export class World {
             if (!entity.userData.isTorch) continue
                 ; (entity as any).updateTorch(now, torchIntensity)
         }
+
+        this.applyAmbientWind(now)
     }
+
+  private applyAmbientWind(now: number) {
+    for (const entity of this.entities) {
+      const windConfig = World.WIND_SWAY_CONFIG.get(entity.userData.id)
+      if (!windConfig) continue
+
+      const baseRotY = entity.userData.baseRotY ?? entity.userData.rotY ?? entity.rotation.y
+      entity.userData.baseRotY = baseRotY
+
+      const phaseSeed = entity.userData.windPhase ?? ((entity.userData.cellX ?? 0) * 0.37 + (entity.userData.cellZ ?? 0) * 0.91)
+      entity.userData.windPhase = phaseSeed
+
+      const windOffset = Math.sin(now * windConfig.frequency + phaseSeed) * windConfig.amplitude
+      const targetRotY = baseRotY + windOffset
+
+      if (entity.userData.isInstanced) {
+        this.instanceManager.setTransform(
+          entity.userData.def,
+          entity.userData.instanceSlot,
+          entity.position,
+          targetRotY,
+          entity.scale.x
+        )
+        entity.userData.rotY = targetRotY
+      } else {
+        entity.rotation.y = targetRotY
+      }
+    }
+  }
 
   // ─── Coordonnées ──────────────────────────────────────────────────────────
 
