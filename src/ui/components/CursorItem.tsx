@@ -1,7 +1,7 @@
 ﻿// src/ui/components/CursorItem.tsx
 import { useEffect, useRef, useState } from "react"
 import { placementStore } from "../store/PlacementStore"
-import type { ItemDef } from "../../game/entity/ItemDef"
+import { isPlaceable, type ItemDef } from "../../game/entity/ItemDef"
 import "./CursorItem.css"
 
 export function CursorItem() {
@@ -43,8 +43,8 @@ export function CursorItem() {
     // ── Souscriptions store ───────────────────────────────────────────────────
     useEffect(() => placementStore.subscribe(() => {
         const selected = placementStore.selectedItem
-        // Affiche uniquement pour les items à usage (pas les plaçables, pas les ressources)
-        if (selected && selected.showCursorItem) {
+        // Affiche pour les outils (showCursorItem) et les entités plaçables
+        if (selected && (selected.showCursorItem || isPlaceable(selected))) {
             setItem(selected)
             setVisible(true)
         } else {
