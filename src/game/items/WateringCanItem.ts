@@ -6,7 +6,7 @@ export const WATERING_CAN_MAX_CHARGES = 10
 export const WateringCanItemDef: ItemDef = {
     id: "watering_can",
     label: "Arrosoir",
-    icon: "💧",
+    icon: "/images/icons/items/watering_can.png",
     showCursorItem: true,
     usageHint: "Cliquer sur la terre pour arroser",
     usage: {

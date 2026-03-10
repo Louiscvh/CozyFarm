@@ -4,6 +4,7 @@ import { createPortal } from "react-dom"
 import type { ItemDef } from "../../game/entity/ItemDef"
 import { World } from "../../game/world/World"
 import { lootFeedbackStore } from "../store/LootFeedbackStore"
+import { ItemIcon } from "./ItemIcon"
 
 interface LootParticle {
     id: number
@@ -137,7 +138,7 @@ export function LootAnimationLayer({ items }: LootAnimationLayerProps) {
                         setParticles(prev => prev.filter(p => p.id !== particle.id))
                     }}
                 >
-                    {particle.icon}
+                    <ItemIcon icon={particle.icon} alt="Loot item" className="loot-fly-icon" />
                 </div>
             ))}
         </>,
