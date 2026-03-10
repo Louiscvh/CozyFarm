@@ -140,11 +140,13 @@ export function EntityPopups() {
       setHoveredPopup(current => {
         if (!current) return null
         if (!w.entities.includes(current.entityObject)) return null
-        if (isOverPopup.current) return current
 
         const hitbox = current.entityObject.getObjectByName("__hitbox__")
         if (!hitbox) return null
-        if (raycaster.intersectObject(hitbox, false).length === 0) return null
+
+        if (!isOverPopup.current && raycaster.intersectObject(hitbox, false).length === 0) {
+          return null
+        }
 
         const targetPos = getEntityTopScreenPos(current.entityObject, w.camera)
         if (!targetPos) return null
