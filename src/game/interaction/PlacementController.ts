@@ -1,4 +1,4 @@
-﻿// src/game/placement/PlacementController.ts
+// src/game/placement/PlacementController.ts
 import * as THREE from "three"
 import { Line2 } from "three/addons/lines/Line2.js"
 import { LineGeometry } from "three/addons/lines/LineGeometry.js"
@@ -32,7 +32,7 @@ const groundPlane = new THREE.Mesh(
 )
 groundPlane.rotation.x = -Math.PI / 2
 
-const highlightMatOk = new THREE.MeshBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.35, depthWrite: false, depthTest: true })
+const highlightMatOk = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.45, depthWrite: false, depthTest: true })
 const highlightMatBad = new THREE.MeshBasicMaterial({ color: 0xff2244, transparent: true, opacity: 0.35, depthWrite: false, depthTest: true })
 const highlightMesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), highlightMatOk)
 highlightMesh.rotation.x = -Math.PI / 2
@@ -51,7 +51,7 @@ hoverBorderGeo.setPositions([
     -hoverInnerHalf, 0, hoverInnerHalf,
 ])
 const hoverBorderMat = new LineMaterial({
-    color: 0xffffff, linewidth: 4, opacity: 1, transparent: true,
+    color: 0xffffff, linewidth: 6, opacity: 1, transparent: true,
     resolution: new THREE.Vector2(window.innerWidth, window.innerHeight),
 })
 const hoverCellMesh = new Line2(hoverBorderGeo, hoverBorderMat)
@@ -365,7 +365,7 @@ export class PlacementController {
 
             this.targetPos.set(x, this.yOffset, z)
             this.currentPos.copy(this.targetPos)
-            ghostMat.color.set(canPlace ? 0x00ff00 : 0xff2244)
+            ghostMat.color.set(canPlace ? 0xffffff : 0xff2244)
 
             highlightMesh.scale.set(footprint * this.world.cellSize, footprint * this.world.cellSize, 1)
             highlightMesh.position.set(x, this.getSeedHoverY(cellX, cellZ), z)
@@ -407,7 +407,7 @@ export class PlacementController {
             const crop = this.world.cropManager.getCrop(cellX, cellZ)
             const canPlace = !!crop?.def.supportsStake && !crop.hasStake
             placementStore.canPlace = canPlace
-            ghostMat.color.set(canPlace ? 0x00ff00 : 0xff2244)
+            ghostMat.color.set(canPlace ? 0xffffff : 0xff2244)
 
             const hoverY = this.getSeedHoverY(cellX, cellZ)
             highlightMesh.scale.set(this.world.cellSize, this.world.cellSize, 1)
@@ -480,7 +480,7 @@ export class PlacementController {
 
             this.targetPos.set(x, this.yOffset, z)
             this.currentPos.copy(this.targetPos)
-            ghostMat.color.set(canPlace ? 0x00ff00 : 0xff2244)
+            ghostMat.color.set(canPlace ? 0xffffff : 0xff2244)
 
             highlightMesh.scale.set(this.world.cellSize, this.world.cellSize, 1)
             highlightMesh.position.set(x, hoverY, z)
@@ -627,7 +627,7 @@ export class PlacementController {
 
         placementStore.canPlace = canPlace
         this.targetPos.set(x, this.yOffset, z)
-        ghostMat.color.set(canPlace ? 0x00ff00 : 0xff2244)
+        ghostMat.color.set(canPlace ? 0xffffff : 0xff2244)
 
         highlightMesh.visible = true
         highlightMesh.position.set(x, highlightY, z)
