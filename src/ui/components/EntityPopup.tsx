@@ -73,7 +73,6 @@ export function EntityPopups() {
   const scheduleOpen = (popup: PopupInfo) => {
     if (hoveredPopup?.id === popup.id) {
       cancelOpen()
-      setHoveredPopup(popup)
       return
     }
 
@@ -167,6 +166,14 @@ export function EntityPopups() {
       if (!topScreenPos) return
 
       cancelClose()
+      setHoveredPopup(current => {
+        if (!current || current.id !== entity.uuid) return current
+        return {
+          ...current,
+          screenPos: smoothScreenPos(current.screenPos, topScreenPos),
+        }
+      })
+
       scheduleOpen({
         entityObject: entity,
         id          : entity.uuid,
