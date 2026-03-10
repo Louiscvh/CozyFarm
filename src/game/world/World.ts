@@ -14,6 +14,8 @@ import { computeGrowthRate } from "../farming/GrowthConditions"
 export class World {
   static current: World | null = null
 
+  private static readonly TREE_IDS = new Set(["tree1", "tree2", "tree3", "tree_orange"])
+
   readonly size: number = 50
   readonly tileSize: number
   readonly cellSize: number
@@ -72,7 +74,40 @@ export class World {
             if (!entity.userData.isTorch) continue
                 ; (entity as any).updateTorch(now, torchIntensity)
         }
+
+        this.applyTreeWind(now)
     }
+
+  private applyTreeWind(now: number) {
+    const baseFrequency = 0.75
+    const swayAmplitude = 0.075
+
+    for (const entity of this.entities) {
+      if (!World.TREE_IDS.has(entity.userData.id)) continue
+
+      const baseRotY = entity.userData.baseRotY ?? entity.userData.rotY ?? entity.rotation.y
+      entity.userData.baseRotY = baseRotY
+
+      const phaseSeed = entity.userData.windPhase ?? ((entity.userData.cellX ?? 0) * 0.37 + (entity.userData.cellZ ?? 0) * 0.91)
+      entity.userData.windPhase = phaseSeed
+
+      const windOffset = Math.sin(now * baseFrequency + phaseSeed) * swayAmplitude
+      const targetRotY = baseRotY + windOffset
+
+      if (entity.userData.isInstanced) {
+        this.instanceManager.setTransform(
+          entity.userData.def,
+          entity.userData.instanceSlot,
+          entity.position,
+          targetRotY,
+          entity.scale.x
+        )
+        entity.userData.rotY = targetRotY
+      } else {
+        entity.rotation.y = targetRotY
+      }
+    }
+  }
 
   // ─── Coordonnées ──────────────────────────────────────────────────────────
 
