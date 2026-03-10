@@ -18,6 +18,7 @@ interface PopupInfo {
 
 export function EntityPopups() {
   const [hoveredPopup, setHoveredPopup] = useState<PopupInfo | null>(null)
+  const hoveredPopupRef = useRef<PopupInfo | null>(null)
   const targetRotY  = useRef<number>(0)
   const rotRafRef   = useRef<number>(0)
   const popupRef    = useRef<HTMLDivElement | null>(null)
@@ -71,7 +72,7 @@ export function EntityPopups() {
   }
 
   const scheduleOpen = (popup: PopupInfo) => {
-    if (hoveredPopup?.id === popup.id) {
+    if (hoveredPopupRef.current?.id === popup.id) {
       cancelOpen()
       return
     }
@@ -86,6 +87,11 @@ export function EntityPopups() {
       pendingEntityIdRef.current = null
     }, HOVER_OPEN_DELAY_MS)
   }
+
+
+  useEffect(() => {
+    hoveredPopupRef.current = hoveredPopup
+  }, [hoveredPopup])
 
 
   useEffect(() => {
@@ -166,14 +172,6 @@ export function EntityPopups() {
       if (!topScreenPos) return
 
       cancelClose()
-      setHoveredPopup(current => {
-        if (!current || current.id !== entity.uuid) return current
-        return {
-          ...current,
-          screenPos: smoothScreenPos(current.screenPos, topScreenPos),
-        }
-      })
-
       scheduleOpen({
         entityObject: entity,
         id          : entity.uuid,
