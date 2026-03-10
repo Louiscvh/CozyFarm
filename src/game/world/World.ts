@@ -79,8 +79,8 @@ export class World {
     }
 
   private applyTreeWind(now: number) {
-    const baseFrequency = 0.65
-    const swayAmplitude = 0.045
+    const baseFrequency = 0.75
+    const swayAmplitude = 0.075
 
     for (const entity of this.entities) {
       if (!World.TREE_IDS.has(entity.userData.id)) continue
