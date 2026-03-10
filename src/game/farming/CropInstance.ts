@@ -11,6 +11,7 @@ export class CropInstance {
     readonly def: CropDefinition
     readonly cellX: number
     readonly cellZ: number
+    readonly sizeVariation: number
 
     private _phase = 0
     private _prevPhase = 0
@@ -32,11 +33,12 @@ export class CropInstance {
     hasStake = false
     occupiesDebugCell = false
 
-    constructor(def: CropDefinition, cellX: number, cellZ: number) {
+    constructor(def: CropDefinition, cellX: number, cellZ: number, sizeVariation: number = 1) {
         this.instanceId = `crop_${++_idCounter}`
         this.def = def
         this.cellX = cellX
         this.cellZ = cellZ
+        this.sizeVariation = sizeVariation
     }
 
     get phaseIndex(): number { return this._phase }

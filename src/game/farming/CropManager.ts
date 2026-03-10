@@ -181,7 +181,8 @@ export class CropManager {
 
     plant(def: CropDefinition, cellX: number, cellZ: number): CropInstance | null {
         if (this.hasCrop(cellX, cellZ)) return null
-        const instance = new CropInstance(def, cellX, cellZ)
+        const sizeVariation = this.cropSizeVariation(cellX, cellZ)
+        const instance = new CropInstance(def, cellX, cellZ, sizeVariation)
         this.crops.set(this.key(cellX, cellZ), instance)
 
         if (!this.world.tilesFactory.isSoil(cellX, cellZ)) {
@@ -221,7 +222,7 @@ export class CropManager {
             instance.occupiesDebugCell = false
         }
 
-        const currentScale = instance.currentPhase.modelScale ?? 1
+        const currentScale = (instance.currentPhase.modelScale ?? 1) * instance.sizeVariation
         instance.startTransition("harvest", currentScale, 0, () => {
             this.disposeMesh(instance)
             this._harvestingInstances.delete(instance)
@@ -253,7 +254,9 @@ export class CropManager {
             detachedStake.position.set(detachedStake.position.x, this.world.cellSize * 0.38, detachedStake.position.z)
         }
 
-        const currentScale = instance.currentScale > 0 ? instance.currentScale : (instance.currentPhase.modelScale ?? 1)
+        const currentScale = instance.currentScale > 0
+            ? instance.currentScale
+            : (instance.currentPhase.modelScale ?? 1) * instance.sizeVariation
         // Sur un déracinage: on garde l'échelle constante, le fade se fait uniquement en opacité.
         instance.startTransition("uproot", currentScale, currentScale, () => {
             this.disposeMesh(instance)
@@ -456,6 +459,12 @@ export class CropManager {
         }
     }
 
+    private cropSizeVariation(cellX: number, cellZ: number): number {
+        const variance = 0.08
+        const random = this.hash01(cellX, cellZ, 21)
+        return 1 + (random - 0.5) * (variance * 2)
+    }
+
     private uprootSpin(cellX: number, cellZ: number): number {
         return (this.hash01(cellX, cellZ, 11) - 0.5) * 1.1
     }
@@ -576,8 +585,8 @@ export class CropManager {
             prevPhase.modelPath === phase.modelPath &&
             instance.mesh
         ) {
-            const fromScale = prevPhase.modelScale ?? 1
-            const toScale = phase.modelScale ?? 1
+            const fromScale = (prevPhase.modelScale ?? 1) * instance.sizeVariation
+            const toScale = (phase.modelScale ?? 1) * instance.sizeVariation
             instance.startTransition("phase", fromScale, toScale)
             return
         }
@@ -590,7 +599,7 @@ export class CropManager {
                 if (!this.crops.has(this.key(instance.cellX, instance.cellZ))) return
                 if (instance.currentPhase !== phase) return
 
-                const targetScale = phase.modelScale ?? 1
+                const targetScale = (phase.modelScale ?? 1) * instance.sizeVariation
                 model.scale.setScalar(targetScale)
 
                 const box = new THREE.Box3().setFromObject(model)
@@ -669,9 +678,9 @@ export class CropManager {
 
         instance.mesh = mesh
         this.scene.add(mesh)
-        this.syncAccessories(instance, pos, cropYOffset, 1)
+        this.syncAccessories(instance, pos, cropYOffset, instance.sizeVariation)
 
-        instance.startTransition(transitionType, 0, 1)
+        instance.startTransition(transitionType, 0, instance.sizeVariation)
     }
 
     private startStakePlacementAnimation(instance: CropInstance): void {
