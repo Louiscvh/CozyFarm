@@ -25,8 +25,36 @@ export function EntityPopups() {
   const openTimer   = useRef<ReturnType<typeof setTimeout> | null>(null)
   const isOverPopup = useRef(false)
   const pendingEntityIdRef = useRef<string | null>(null)
+  const pointerNdcRef = useRef(new THREE.Vector2())
+  const pointerReadyRef = useRef(false)
 
   const HOVER_OPEN_DELAY_MS = 250
+  const FOLLOW_SMOOTHING = 0.34
+
+  const getEntityTopScreenPos = (entityObject: THREE.Object3D, camera: THREE.Camera) => {
+    const hitbox = entityObject.getObjectByName("__hitbox__")
+    if (!hitbox) return null
+
+    const box = new THREE.Box3().setFromObject(hitbox)
+    const topCenter = new THREE.Vector3(
+      (box.min.x + box.max.x) / 2,
+      box.max.y + 0.3,
+      (box.min.z + box.max.z) / 2,
+    ).project(camera)
+
+    return {
+      x: (topCenter.x + 1) / 2 * window.innerWidth,
+      y: (-topCenter.y + 1) / 2 * window.innerHeight,
+    }
+  }
+
+  const smoothScreenPos = (
+    from: { x: number; y: number },
+    to: { x: number; y: number },
+  ) => ({
+    x: THREE.MathUtils.lerp(from.x, to.x, FOLLOW_SMOOTHING),
+    y: THREE.MathUtils.lerp(from.y, to.y, FOLLOW_SMOOTHING),
+  })
 
   const cancelClose = () => {
     if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null }
@@ -65,29 +93,40 @@ export function EntityPopups() {
     const r = Renderer.instance
     if (!r) return
     const prev = r.cameraController.onUpdate
+
     r.cameraController.onUpdate = () => {
-      const mouse = Renderer.instance!.mouse
+      prev?.()
       const w = World.current
-      if (!w) return
+      if (!w || !pointerReadyRef.current) return
+
+      const mouse = pointerNdcRef.current
+      const raycaster = new THREE.Raycaster()
+      raycaster.setFromCamera(mouse, w.camera)
+
+      const hitboxes = w.entities
+        .map(en => en.getObjectByName("__hitbox__"))
+        .filter(Boolean) as THREE.Object3D[]
+      const intersects = raycaster.intersectObjects(hitboxes, false)
+
+      if (intersects.length > 0) {
+        const entity = intersects[0].object.parent!
+        OutlineSystem.instance?.setHovered(entity)
+      } else if (!isOverPopup.current) {
+        OutlineSystem.instance?.setHovered(null)
+      }
 
       setHoveredPopup(current => {
         if (!current) return null
         if (!w.entities.includes(current.entityObject)) return null
         if (isOverPopup.current) return current
 
-        const raycaster = new THREE.Raycaster()
-        raycaster.setFromCamera(mouse, w.camera)
         const hitbox = current.entityObject.getObjectByName("__hitbox__")
         if (!hitbox) return null
         if (raycaster.intersectObject(hitbox, false).length === 0) return null
 
-        const box = new THREE.Box3().setFromObject(hitbox)
-        const topCenter = new THREE.Vector3(
-          (box.min.x + box.max.x) / 2, box.max.y + 0.3, (box.min.z + box.max.z) / 2
-        ).project(w.camera)
-
-        const x = (topCenter.x + 1) / 2 * window.innerWidth
-        const y = (-topCenter.y + 1) / 2 * window.innerHeight
+        const targetPos = getEntityTopScreenPos(current.entityObject, w.camera)
+        if (!targetPos) return null
+        const { x, y } = smoothScreenPos(current.screenPos, targetPos)
         if (Math.abs(x - current.screenPos.x) < 0.5 && Math.abs(y - current.screenPos.y) < 0.5)
           return current
         return { ...current, screenPos: { x, y } }
@@ -108,6 +147,8 @@ export function EntityPopups() {
 
       mouse.x =  (e.clientX / window.innerWidth)  * 2 - 1
       mouse.y = -(e.clientY / window.innerHeight) * 2 + 1
+      pointerNdcRef.current.copy(mouse)
+      pointerReadyRef.current = true
       raycaster.setFromCamera(mouse, w.camera)
 
       const hitboxes = w.entities
@@ -122,19 +163,14 @@ export function EntityPopups() {
 
       const entity = intersects[0].object.parent!
       OutlineSystem.instance?.setHovered(entity)
-      const box    = new THREE.Box3().setFromObject(intersects[0].object)
-      const topCenter = new THREE.Vector3(
-        (box.min.x + box.max.x) / 2, box.max.y + 0.3, (box.min.z + box.max.z) / 2
-      ).project(w.camera)
+      const topScreenPos = getEntityTopScreenPos(entity, w.camera)
+      if (!topScreenPos) return
 
       cancelClose()
       scheduleOpen({
         entityObject: entity,
         id          : entity.uuid,
-        screenPos   : {
-          x: (topCenter.x + 1) / 2 * window.innerWidth,
-          y: (-topCenter.y + 1) / 2 * window.innerHeight,
-        },
+        screenPos   : topScreenPos,
       })
     }
 
