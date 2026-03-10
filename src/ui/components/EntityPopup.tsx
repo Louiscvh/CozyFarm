@@ -31,21 +31,38 @@ export function EntityPopups() {
 
   const HOVER_OPEN_DELAY_MS = 250
   const FOLLOW_SMOOTHING = 0.34
+  const popupAnchorWorldRef = useRef(new THREE.Vector3())
+  const popupAnchorClipRef = useRef(new THREE.Vector3())
 
   const getEntityTopScreenPos = (entityObject: THREE.Object3D, camera: THREE.Camera) => {
     const hitbox = entityObject.getObjectByName("__hitbox__")
-    if (!hitbox) return null
+    if (!(hitbox instanceof THREE.Mesh)) return null
 
-    const box = new THREE.Box3().setFromObject(hitbox)
-    const topCenter = new THREE.Vector3(
-      (box.min.x + box.max.x) / 2,
-      box.max.y + 0.3,
-      (box.min.z + box.max.z) / 2,
-    ).project(camera)
+    let popupAnchorLocal = hitbox.userData.popupAnchorLocal as THREE.Vector3 | undefined
+    if (!popupAnchorLocal) {
+      const geometry = hitbox.geometry
+      geometry.computeBoundingBox()
+      const bbox = geometry.boundingBox
+      if (!bbox) return null
+
+      popupAnchorLocal = new THREE.Vector3(
+        (bbox.min.x + bbox.max.x) / 2,
+        bbox.max.y + 0.3,
+        (bbox.min.z + bbox.max.z) / 2,
+      )
+      hitbox.userData.popupAnchorLocal = popupAnchorLocal
+    }
+
+    const worldPos = popupAnchorWorldRef.current
+    worldPos.copy(popupAnchorLocal)
+    hitbox.localToWorld(worldPos)
+
+    const clipPos = popupAnchorClipRef.current
+    clipPos.copy(worldPos).project(camera)
 
     return {
-      x: (topCenter.x + 1) / 2 * window.innerWidth,
-      y: (-topCenter.y + 1) / 2 * window.innerHeight,
+      x: (clipPos.x + 1) / 2 * window.innerWidth,
+      y: (-clipPos.y + 1) / 2 * window.innerHeight,
     }
   }
 
