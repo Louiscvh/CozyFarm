@@ -102,7 +102,6 @@ export class World {
           targetRotY,
           entity.scale.x
         )
-        entity.userData.rotY = targetRotY
       } else {
         entity.rotation.y = targetRotY
       }

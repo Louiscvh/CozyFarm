@@ -21,44 +21,6 @@ export function EntityPopups() {
   const targetRotY  = useRef<number>(0)
   const rotRafRef   = useRef<number>(0)
   const popupRef    = useRef<HTMLDivElement | null>(null)
-  const closeTimer  = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const openTimer   = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const isOverPopup = useRef(false)
-  const pendingEntityIdRef = useRef<string | null>(null)
-
-  const HOVER_OPEN_DELAY_MS = 250
-
-  const cancelClose = () => {
-    if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null }
-  }
-
-  const scheduleClose = () => {
-    cancelClose()
-    closeTimer.current = setTimeout(() => setHoveredPopup(null), 300)
-  }
-
-  const cancelOpen = () => {
-    if (openTimer.current) { clearTimeout(openTimer.current); openTimer.current = null }
-    pendingEntityIdRef.current = null
-  }
-
-  const scheduleOpen = (popup: PopupInfo) => {
-    if (hoveredPopup?.id === popup.id) {
-      cancelOpen()
-      setHoveredPopup(popup)
-      return
-    }
-
-    if (pendingEntityIdRef.current === popup.id && openTimer.current) return
-
-    cancelOpen()
-    pendingEntityIdRef.current = popup.id
-    openTimer.current = setTimeout(() => {
-      setHoveredPopup(popup)
-      openTimer.current = null
-      pendingEntityIdRef.current = null
-    }, HOVER_OPEN_DELAY_MS)
-  }
 
 
   useEffect(() => {
@@ -66,20 +28,14 @@ export function EntityPopups() {
     if (!r) return
     const prev = r.cameraController.onUpdate
     r.cameraController.onUpdate = () => {
-      const mouse = Renderer.instance!.mouse
       const w = World.current
       if (!w) return
 
       setHoveredPopup(current => {
         if (!current) return null
         if (!w.entities.includes(current.entityObject)) return null
-        if (isOverPopup.current) return current
-
-        const raycaster = new THREE.Raycaster()
-        raycaster.setFromCamera(mouse, w.camera)
         const hitbox = current.entityObject.getObjectByName("__hitbox__")
         if (!hitbox) return null
-        if (raycaster.intersectObject(hitbox, false).length === 0) return null
 
         const box = new THREE.Box3().setFromObject(hitbox)
         const topCenter = new THREE.Vector3(
@@ -103,8 +59,11 @@ export function EntityPopups() {
     function onMouseMove(e: MouseEvent) {
       const w = World.current
       if (!w || !w.camera) return
-      if (placementStore.selectedItem) { cancelClose(); cancelOpen(); OutlineSystem.instance?.setHovered(null); setHoveredPopup(null); return }
-      if (isOverPopup.current)         { cancelClose(); return }
+      if (placementStore.selectedItem) {
+        OutlineSystem.instance?.setHovered(null)
+        setHoveredPopup(null)
+        return
+      }
 
       mouse.x =  (e.clientX / window.innerWidth)  * 2 - 1
       mouse.y = -(e.clientY / window.innerHeight) * 2 + 1
@@ -117,7 +76,32 @@ export function EntityPopups() {
 
       if (intersects.length === 0) {
         OutlineSystem.instance?.setHovered(null)
-        cancelOpen(); scheduleClose(); return
+        return
+      }
+
+      const entity = intersects[0].object.parent!
+      OutlineSystem.instance?.setHovered(entity)
+    }
+
+    function onClick(e: MouseEvent) {
+      const w = World.current
+      if (!w || !w.camera) return
+      if (placementStore.selectedItem) return
+      if (popupRef.current?.contains(e.target as Node)) return
+
+      mouse.x =  (e.clientX / window.innerWidth)  * 2 - 1
+      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1
+      raycaster.setFromCamera(mouse, w.camera)
+
+      const hitboxes = w.entities
+        .map(en => en.getObjectByName("__hitbox__"))
+        .filter(Boolean) as THREE.Object3D[]
+      const intersects = raycaster.intersectObjects(hitboxes, false)
+
+      if (intersects.length === 0) {
+        setHoveredPopup(null)
+        OutlineSystem.instance?.setHovered(null)
+        return
       }
 
       const entity = intersects[0].object.parent!
@@ -127,8 +111,7 @@ export function EntityPopups() {
         (box.min.x + box.max.x) / 2, box.max.y + 0.3, (box.min.z + box.max.z) / 2
       ).project(w.camera)
 
-      cancelClose()
-      scheduleOpen({
+      setHoveredPopup({
         entityObject: entity,
         id          : entity.uuid,
         screenPos   : {
@@ -139,15 +122,17 @@ export function EntityPopups() {
     }
 
     window.addEventListener("mousemove", onMouseMove)
-    return () => { window.removeEventListener("mousemove", onMouseMove); cancelClose(); cancelOpen(); OutlineSystem.instance?.setHovered(null) }
+    window.addEventListener("click", onClick)
+    return () => {
+      window.removeEventListener("mousemove", onMouseMove)
+      window.removeEventListener("click", onClick)
+      OutlineSystem.instance?.setHovered(null)
+    }
   }, [])
 
   // ─── Delete ───────────────────────────────────────────────────────────────
 
   const handleDelete = (popup: PopupInfo) => {
-    cancelClose()
-    cancelOpen()
-    isOverPopup.current = false
     const w = World.current
     if (!w) return
 
@@ -163,9 +148,6 @@ export function EntityPopups() {
   // ─── Move ─────────────────────────────────────────────────────────────────
 
   const handleMove = (popup: PopupInfo) => {
-    cancelClose()
-    cancelOpen()
-    isOverPopup.current = false
     setHoveredPopup(null)
     OutlineSystem.instance?.setHovered(null)
     const w = World.current
@@ -213,14 +195,12 @@ export function EntityPopups() {
   // ─── Rotate ───────────────────────────────────────────────────────────────
 
   const handleRotate = (popup: PopupInfo) => {
-    cancelClose()
-    cancelOpen()
     OutlineSystem.instance?.setHovered(null)
     const e = popup.entityObject
     const w = World.current
     if (!w) return
 
-    const prevRotY = e.userData.isInstanced ? (e.userData.rotY ?? 0) : e.rotation.y
+    const prevRotY = e.userData.baseRotY ?? (e.userData.isInstanced ? (e.userData.rotY ?? 0) : e.rotation.y)
     if (Math.abs(targetRotY.current - prevRotY) > 0.01) targetRotY.current = prevRotY
     const nextRotY = targetRotY.current + THREE.MathUtils.degToRad(90)
     targetRotY.current = nextRotY
@@ -236,8 +216,6 @@ export function EntityPopups() {
     <div
       className="entity-popup"
       ref={popupRef}
-      onMouseEnter={() => { isOverPopup.current = true;  cancelClose()   }}
-      onMouseLeave={() => { isOverPopup.current = false; scheduleClose() }}
       style={{
         position : "absolute",
         display  : "flex",
