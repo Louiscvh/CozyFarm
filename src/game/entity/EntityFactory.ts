@@ -4,6 +4,7 @@ import type { Entity } from "./Entity"
 import { assetManager } from "../../render/AssetManager"
 import { scaleModelToCells } from "./utils/scaleModelToCells"
 import { createTorchMesh } from "./entities/torch/TorchMesh"
+import { createCampfireMesh } from "./entities/campfire/CampfireMesh"
 import { World } from "../world/World"
 
 export let debugHitboxEnabled = false
@@ -76,6 +77,14 @@ export async function createEntity(
   if (def.model === "procedural:torch") {
     const root = createTorchMesh()
     const scale = tileSize * 0.4
+    root.scale.set(scale, scale, scale)
+    attachHitBox(root)
+    return root
+  }
+
+  if (def.model === "procedural:campfire") {
+    const root = createCampfireMesh()
+    const scale = tileSize * 0.55
     root.scale.set(scale, scale, scale)
     attachHitBox(root)
     return root
