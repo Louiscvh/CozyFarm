@@ -26,24 +26,37 @@ export function createCampfireMesh(): TorchObject3D {
   const coreMat = new THREE.MeshStandardMaterial({
     color: 0xff4400,
     emissive: new THREE.Color(0xff3300),
-    emissiveIntensity: 2.6,
+    emissiveIntensity: 2.9,
   })
   const core = new THREE.Mesh(new THREE.SphereGeometry(0.11, 8, 8), coreMat)
-  core.position.y = 0.19
+  core.position.y = 0.18
   root.add(core)
 
-  const flameMat = new THREE.MeshStandardMaterial({
-    color: 0xff8c00,
-    emissive: new THREE.Color(0xff6600),
-    emissiveIntensity: 2.4,
+  const flameOuterMat = new THREE.MeshStandardMaterial({
+    color: 0xff7f1f,
+    emissive: new THREE.Color(0xff5a00),
+    emissiveIntensity: 2.7,
     transparent: true,
-    opacity: 0.84,
+    opacity: 0.8,
     depthWrite: false,
   })
-  const flame = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 8), flameMat)
-  flame.scale.set(0.9, 1.8, 0.9)
-  flame.position.y = 0.32
-  root.add(flame)
+  const flameOuter = new THREE.Mesh(new THREE.SphereGeometry(0.16, 9, 9), flameOuterMat)
+  flameOuter.scale.set(0.9, 1.95, 0.9)
+  flameOuter.position.y = 0.33
+  root.add(flameOuter)
+
+  const flameInnerMat = new THREE.MeshStandardMaterial({
+    color: 0xffc470,
+    emissive: new THREE.Color(0xffa23a),
+    emissiveIntensity: 2.3,
+    transparent: true,
+    opacity: 0.68,
+    depthWrite: false,
+  })
+  const flameInner = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 8), flameInnerMat)
+  flameInner.scale.set(0.72, 1.55, 0.72)
+  flameInner.position.y = 0.31
+  root.add(flameInner)
 
   const particlePositions = new Float32Array(CAMPFIRE_PARTICLE_COUNT * 3)
   const particleVelocity = new Float32Array(CAMPFIRE_PARTICLE_COUNT)
@@ -63,9 +76,9 @@ export function createCampfireMesh(): TorchObject3D {
 
   const particlesMaterial = new THREE.PointsMaterial({
     color: 0xffb366,
-    size: 0.082,
+    size: 0.09,
     transparent: true,
-    opacity: 0.75,
+    opacity: 0.76,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
   })
@@ -82,11 +95,14 @@ export function createCampfireMesh(): TorchObject3D {
     const flicker = Math.sin(now * 8 + phase) * 0.15 + Math.sin(now * 5.7 + phase * 2) * 0.1
     const intensity = THREE.MathUtils.clamp(fireIntensity, 0, 1)
 
-    coreMat.emissiveIntensity = 1.8 + intensity * 2.2 + flicker * 0.7
-    flameMat.emissiveIntensity = 1.5 + intensity * 2.4 + flicker * 0.8
+    coreMat.emissiveIntensity = 1.9 + intensity * 2.5 + flicker * 0.8
+    flameOuterMat.emissiveIntensity = 1.6 + intensity * 2.8 + flicker * 0.95
+    flameInnerMat.emissiveIntensity = 1.3 + intensity * 2.2 + flicker * 0.7
 
-    flame.scale.set(0.9 + flicker * 0.28, 1.8 + flicker * 0.42, 0.9 + flicker * 0.28)
-    flame.position.y = 0.32 + flicker * 0.02
+    flameOuter.scale.set(0.9 + flicker * 0.3, 1.95 + flicker * 0.5, 0.9 + flicker * 0.3)
+    flameOuter.position.y = 0.33 + flicker * 0.022
+    flameInner.scale.set(0.72 + flicker * 0.22, 1.55 + flicker * 0.32, 0.72 + flicker * 0.22)
+    flameInner.position.y = 0.31 + flicker * 0.017
 
     const positions = particlesGeometry.attributes.position.array as Float32Array
     for (let i = 0; i < CAMPFIRE_PARTICLE_COUNT; i++) {
@@ -97,7 +113,7 @@ export function createCampfireMesh(): TorchObject3D {
       positions[stride + 2] += Math.cos(swirl) * 0.00065
       positions[stride + 1] += particleVelocity[i] * (0.65 + intensity * 0.75)
 
-      if (positions[stride + 1] > 0.84) {
+      if (positions[stride + 1] > 0.86) {
         positions[stride] = Math.cos(swirl * 1.2) * 0.045
         positions[stride + 1] = 0.16 + (i % 3) * 0.025
         positions[stride + 2] = Math.sin(swirl * 1.2) * 0.045
@@ -105,7 +121,7 @@ export function createCampfireMesh(): TorchObject3D {
     }
     particlesGeometry.attributes.position.needsUpdate = true
 
-    particlesMaterial.opacity = 0.58 + intensity * 0.35
+    particlesMaterial.opacity = 0.58 + intensity * 0.36
   }
 
   return root

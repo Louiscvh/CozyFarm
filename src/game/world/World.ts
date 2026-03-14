@@ -215,6 +215,7 @@ export class World {
     entity.rotation.y = THREE.MathUtils.degToRad(defaultRotDeg)
 
     entity.userData.id          = def.id
+    entity.userData.def         = def
     entity.userData.cellX       = cellX
     entity.userData.cellZ       = cellZ
     entity.userData.sizeInCells = cells
