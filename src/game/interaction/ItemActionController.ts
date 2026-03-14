@@ -377,7 +377,14 @@ export class ItemActionController {
         if (success) {
             this.consumeItemIfNeeded(item)
             if (this.isSeedItem(item)) this.sinkSeedGhost()
-            soundManager.playSuccess()
+
+            if (item.id === "hoe") {
+                soundManager.playCrop()
+            } else if (item.id === "watering_can") {
+                soundManager.playWateringCan()
+            } else {
+                soundManager.playSuccess()
+            }
         } else {
             soundManager.playError()
         }
