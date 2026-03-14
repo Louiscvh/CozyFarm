@@ -20,6 +20,7 @@ export class Weather {
   private targetTemperature: number = 15
   private rain:    Rain
   private readonly shadowCoverage = 24
+  private readonly shadowPcfKernel = 4
 
   public daylight: number = 1
 
@@ -119,9 +120,10 @@ export class Weather {
     light.shadow.camera.bottom = -d
     light.shadow.camera.near   = 1
     light.shadow.camera.far    = 220
-    light.shadow.bias = -0.0001
-    light.shadow.normalBias = 0.014
-    light.shadow.radius = 4
+    // 4x4 PCF approximé via rayon de filtre + offset pour limiter acne/décalage.
+    light.shadow.bias = -0.00008
+    light.shadow.normalBias = 0.02
+    light.shadow.radius = this.shadowPcfKernel * 0.5
     light.target.position.set(0, 0, 0)
     light.target.updateMatrixWorld()
     this.scene.add(light, light.target)
