@@ -11,11 +11,19 @@ function smoothstep(edge0: number, edge1: number, x: number): number {
 export class Weather {
   private scene:  THREE.Scene
   private camera: THREE.Camera
+  private readonly baseSkyColor = new THREE.Color("#ffb3a7")
+  private readonly dawnSkyColor = new THREE.Color("#ff9f7f")
+  private readonly noonSkyColor = new THREE.Color("#ffd9a8")
+  private readonly nightSkyColor = new THREE.Color("#081122")
 
   private sun:     THREE.DirectionalLight
   private moon:    THREE.DirectionalLight
   private backSun: THREE.DirectionalLight
   private ambient: THREE.AmbientLight
+  private sunFlareCore: THREE.Sprite
+  private sunFlareHalo: THREE.Sprite
+  private sunGlowParticles: THREE.Points
+  private sunGlowMaterial!: THREE.PointsMaterial
   public temperature: number = 15
   private targetTemperature: number = 15
   private rain:    Rain
@@ -35,6 +43,9 @@ export class Weather {
     this.moon    = this._createMoon()
     this.backSun = this._createBackSun()
     this.ambient = this._createAmbient()
+    this.sunFlareCore = this._createSunFlare(1.35, "#ffeab8", 0.95)
+    this.sunFlareHalo = this._createSunFlare(2.8, "#ffba7a", 0.38)
+    this.sunGlowParticles = this._createSunGlowParticles()
 
     this.rain    = new Rain(scene)
   }
@@ -73,6 +84,14 @@ export class Weather {
     this.scene.remove(this.moon, this.moon.target)
     this.scene.remove(this.backSun)
     this.scene.remove(this.ambient)
+    this.scene.remove(this.sunFlareCore)
+    this.scene.remove(this.sunFlareHalo)
+    this.scene.remove(this.sunGlowParticles)
+
+    this.sunFlareCore.material.dispose()
+    this.sunFlareHalo.material.dispose()
+    this.sunGlowParticles.geometry.dispose()
+    this.sunGlowMaterial.dispose()
     this.rain.dispose()
   }
 
@@ -151,6 +170,62 @@ export class Weather {
     return light
   }
 
+  private _createSunFlare(scale: number, color: string, opacity: number): THREE.Sprite {
+    const material = new THREE.SpriteMaterial({
+      color,
+      transparent: true,
+      opacity,
+      depthWrite: false,
+      depthTest: false,
+      blending: THREE.AdditiveBlending,
+      toneMapped: false,
+    })
+    const flare = new THREE.Sprite(material)
+    flare.scale.setScalar(scale)
+    flare.renderOrder = 5
+    this.scene.add(flare)
+    return flare
+  }
+
+  private _createSunGlowParticles(): THREE.Points {
+    const particleCount = 96
+    const positions = new Float32Array(particleCount * 3)
+    const sizes = new Float32Array(particleCount)
+
+    for (let i = 0; i < particleCount; i++) {
+      const stride = i * 3
+      const radius = Math.sqrt(Math.random())
+      const theta = Math.random() * Math.PI * 2
+      const phi = Math.acos(2 * Math.random() - 1)
+
+      positions[stride] = Math.sin(phi) * Math.cos(theta) * radius
+      positions[stride + 1] = Math.cos(phi) * radius * 0.55
+      positions[stride + 2] = Math.sin(phi) * Math.sin(theta) * radius
+      sizes[i] = THREE.MathUtils.lerp(0.15, 0.55, Math.random())
+    }
+
+    const geometry = new THREE.BufferGeometry()
+    geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3))
+    geometry.setAttribute("size", new THREE.BufferAttribute(sizes, 1))
+
+    this.sunGlowMaterial = new THREE.PointsMaterial({
+      color: "#ffd7a5",
+      size: 0.24,
+      sizeAttenuation: true,
+      transparent: true,
+      opacity: 0.42,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      toneMapped: false,
+    })
+
+    const points = new THREE.Points(geometry, this.sunGlowMaterial)
+    points.frustumCulled = false
+    points.renderOrder = 4
+    this.scene.add(points)
+    return points
+  }
+
   // ─── Sun/Moon cycle ──────────────────────────────────────────────────────────
 
   private _updateSun() {
@@ -190,6 +265,38 @@ export class Weather {
 
     this.ambient.color     = new THREE.Color("#060810").lerp(new THREE.Color("#ffe0c7"), this.daylight)
     this.ambient.intensity = THREE.MathUtils.lerp(0.03, 0.55, this.daylight)
+
+    this._updateSunVfx(t)
+  }
+
+  private _updateSunVfx(dayT: number) {
+    const dawn = 1 - Math.abs(dayT - 0.27) * 8
+    const dusk = 1 - Math.abs(dayT - 0.9) * 8
+    const goldenBoost = Math.max(0, dawn, dusk)
+    const flareStrength = THREE.MathUtils.clamp(this.daylight * 0.85 + goldenBoost * 0.35, 0, 1)
+
+    const flarePos = this.sun.position.clone().multiplyScalar(0.82)
+    this.sunFlareCore.position.copy(flarePos)
+    this.sunFlareHalo.position.copy(flarePos)
+
+    const flareScale = THREE.MathUtils.lerp(1.6, 3.1, flareStrength)
+    this.sunFlareCore.scale.setScalar(flareScale)
+    this.sunFlareHalo.scale.setScalar(flareScale * 2.35)
+
+    ;(this.sunFlareCore.material as THREE.SpriteMaterial).opacity = flareStrength * 0.95
+    ;(this.sunFlareHalo.material as THREE.SpriteMaterial).opacity = flareStrength * 0.42
+
+    this.sunGlowParticles.position.copy(flarePos)
+    this.sunGlowParticles.scale.setScalar(THREE.MathUtils.lerp(2.4, 4.8, flareStrength))
+    this.sunGlowParticles.rotation.y += 0.0009
+    this.sunGlowParticles.rotation.x = Math.sin(performance.now() * 0.0001) * 0.12
+    this.sunGlowMaterial.opacity = flareStrength * 0.35
+    this.sunGlowMaterial.size = THREE.MathUtils.lerp(0.16, 0.34, flareStrength)
+
+    const skyColor = this.nightSkyColor.clone().lerp(this.baseSkyColor, this.daylight)
+    skyColor.lerp(this.noonSkyColor, Math.max(0, this.daylight - 0.35) * 1.2)
+    skyColor.lerp(this.dawnSkyColor, goldenBoost * 0.45)
+    this.scene.background = skyColor
   }
 
 }
