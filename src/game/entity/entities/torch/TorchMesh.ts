@@ -1,5 +1,7 @@
 import * as THREE from "three"
 
+const TORCH_PARTICLE_COUNT = 6
+
 export interface TorchObject3D extends THREE.Group {
   updateFireVisual(now: number, fireIntensity: number): void
 }
@@ -58,6 +60,31 @@ export function createTorchMesh(): TorchObject3D {
   const flame2 = makeFlameLayer(0.4, 1.4, 0.14, 0.42)
   root.add(flame0, flame1, flame2)
 
+  const particlePositions = new Float32Array(TORCH_PARTICLE_COUNT * 3)
+  const particleVelocity = new Float32Array(TORCH_PARTICLE_COUNT)
+  for (let i = 0; i < TORCH_PARTICLE_COUNT; i++) {
+    const stride = i * 3
+    const angle = (i / TORCH_PARTICLE_COUNT) * Math.PI * 2
+    particlePositions[stride] = Math.cos(angle) * 0.03
+    particlePositions[stride + 1] = 1.0 + (i % 2) * 0.05
+    particlePositions[stride + 2] = Math.sin(angle) * 0.03
+    particleVelocity[i] = 0.0048 + i * 0.00045
+  }
+
+  const particleGeometry = new THREE.BufferGeometry()
+  particleGeometry.setAttribute("position", new THREE.BufferAttribute(particlePositions, 3))
+
+  const particleMaterial = new THREE.PointsMaterial({
+    color: 0xffb366,
+    size: 0.03,
+    transparent: true,
+    opacity: 0.68,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+  })
+  const particles = new THREE.Points(particleGeometry, particleMaterial)
+  root.add(particles)
+
   root.userData.isFireSource = true
   root.userData.fireType = "torch"
   root.userData.fireRange = 7
@@ -82,6 +109,23 @@ export function createTorchMesh(): TorchObject3D {
     ;(flame0.material as THREE.MeshStandardMaterial).emissiveIntensity = flameEmissive
     ;(flame1.material as THREE.MeshStandardMaterial).emissiveIntensity = flameEmissive * 0.95
     ;(flame2.material as THREE.MeshStandardMaterial).emissiveIntensity = flameEmissive * 0.85
+
+    const positions = particleGeometry.attributes.position.array as Float32Array
+    for (let i = 0; i < TORCH_PARTICLE_COUNT; i++) {
+      const stride = i * 3
+      const swirl = now * 2.2 + i * 0.9 + id * 0.17
+      positions[stride] += Math.sin(swirl) * 0.00045
+      positions[stride + 2] += Math.cos(swirl) * 0.00045
+      positions[stride + 1] += particleVelocity[i] * (0.7 + intensity * 0.7)
+
+      if (positions[stride + 1] > 1.42) {
+        positions[stride] = Math.cos(swirl * 1.2) * 0.025
+        positions[stride + 1] = 1.0 + (i % 2) * 0.04
+        positions[stride + 2] = Math.sin(swirl * 1.2) * 0.025
+      }
+    }
+    particleGeometry.attributes.position.needsUpdate = true
+    particleMaterial.opacity = 0.5 + intensity * 0.22
   }
 
   return root

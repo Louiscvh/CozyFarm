@@ -25,7 +25,7 @@ export class FireLightManager {
   constructor(scene: THREE.Scene) {
     this.scene = scene
     for (let i = 0; i < MAX_DYNAMIC_LIGHTS; i++) {
-      const light = new THREE.PointLight(0xff7a1a, 0, 8)
+      const light = new THREE.PointLight(0xff8c33, 0, 9)
       light.visible = false
       light.castShadow = false
       this.scene.add(light)
@@ -55,13 +55,13 @@ export class FireLightManager {
       if (usedLights >= this.lights.length) break
 
       const light = this.lights[usedLights]
-      const distanceFade = 1 / (1 + cluster.distanceSq * 0.03)
-      const cappedStrength = Math.min(cluster.strength, 4.5)
-      const flicker = 1 + Math.sin(now + usedLights * 1.7) * 0.08
+      const distanceFade = 1 / (1 + cluster.distanceSq * 0.022)
+      const cappedStrength = Math.min(cluster.strength, 5.2)
+      const flicker = 1 + Math.sin(now + usedLights * 1.7) * 0.09
 
       light.position.copy(cluster.position)
-      light.distance = Math.min(14, cluster.range)
-      light.intensity = fireIntensity * cappedStrength * 1.5 * distanceFade * flicker
+      light.distance = Math.min(16, cluster.range)
+      light.intensity = fireIntensity * cappedStrength * 2.2 * distanceFade * flicker
       light.visible = true
 
       usedLights++
@@ -83,7 +83,7 @@ export class FireLightManager {
       position.y += 0.6
 
       const distanceSq = position.distanceToSquared(camera.position)
-      if (distanceSq > 28 * 28) continue
+      if (distanceSq > 32 * 32) continue
 
       sources.push({
         position,
@@ -124,7 +124,6 @@ export class FireLightManager {
       existing.range = Math.max(existing.range, source.range)
       existing.distanceSq = Math.min(existing.distanceSq, source.distanceSq)
       existing.weight += source.strength / (1 + source.distanceSq * 0.01)
-
     }
 
     return Array.from(bucket.values())
