@@ -19,8 +19,7 @@ export class Weather {
   public temperature: number = 15
   private targetTemperature: number = 15
   private rain:    Rain
-  private readonly minShadowCoverage = 26
-  private readonly shadowCoveragePadding = 8
+  private readonly shadowCoverage = 30
 
   public daylight: number = 1
 
@@ -112,18 +111,19 @@ export class Weather {
   private _createSun(): THREE.DirectionalLight {
     const light = new THREE.DirectionalLight("#ffb347", 1)
     light.castShadow = true
-    light.shadow.mapSize.set(8192, 8192)
-    const d = this.minShadowCoverage
+    light.shadow.mapSize.set(4096, 4096)
+    const d = this.shadowCoverage
     light.shadow.camera.left   = -d
     light.shadow.camera.right  =  d
     light.shadow.camera.top    =  d
     light.shadow.camera.bottom = -d
     light.shadow.camera.near   = 1
-    light.shadow.camera.far    = 260
-    light.shadow.bias = -0.00006
-    light.shadow.normalBias = 0.01
-    light.shadow.radius = 4
-    light.shadow.blurSamples = 8
+    light.shadow.camera.far    = 220
+    light.shadow.bias = -0.00012
+    light.shadow.normalBias = 0.018
+    light.shadow.radius = 2
+    light.target.position.set(0, 0, 0)
+    light.target.updateMatrixWorld()
     this.scene.add(light, light.target)
     return light
   }
@@ -168,7 +168,6 @@ export class Weather {
       Math.max(0, sunY) * radius,
       50
     )
-    this._updateSunShadow()
     this.sun.intensity = this.daylight * 2
     this.sun.color      = new THREE.Color("#001133").lerp(new THREE.Color("#ffb347"), this.daylight)
     this.backSun.intensity = this.daylight * 0.4
@@ -191,54 +190,4 @@ export class Weather {
     this.ambient.intensity = THREE.MathUtils.lerp(0.03, 0.55, this.daylight)
   }
 
-  private _updateSunShadow() {
-    const sunDir = new THREE.Vector3().copy(this.sun.position).normalize()
-    const cameraDir = new THREE.Vector3()
-    this.camera.getWorldDirection(cameraDir)
-
-    const cameraForwardXZ = new THREE.Vector3(cameraDir.x, 0, cameraDir.z)
-    if (cameraForwardXZ.lengthSq() < 1e-5) {
-      cameraForwardXZ.set(0, 0, 1)
-    } else {
-      cameraForwardXZ.normalize()
-    }
-
-    const focus = new THREE.Vector3(this.camera.position.x, 0, this.camera.position.z)
-      .addScaledVector(cameraForwardXZ, 5)
-
-    const sunDistance = 90
-    this.sun.target.position.copy(focus)
-    this.sun.position.copy(focus).addScaledVector(sunDir, sunDistance)
-
-    const shadowCam = this.sun.shadow.camera as THREE.OrthographicCamera
-    const coverage = this._getShadowCoverageForCamera()
-    shadowCam.left = -coverage
-    shadowCam.right = coverage
-    shadowCam.top = coverage
-    shadowCam.bottom = -coverage
-
-    // Stabilise la shadow map pour éviter l'effet de "décalage"/shimmering lors des mouvements.
-    const texelSize = (coverage * 2) / this.sun.shadow.mapSize.x
-
-    this.sun.position.x = Math.round(this.sun.position.x / texelSize) * texelSize
-    this.sun.position.z = Math.round(this.sun.position.z / texelSize) * texelSize
-    this.sun.target.position.x = Math.round(this.sun.target.position.x / texelSize) * texelSize
-    this.sun.target.position.z = Math.round(this.sun.target.position.z / texelSize) * texelSize
-
-    this.sun.target.updateMatrixWorld()
-    this.sun.updateMatrixWorld()
-    shadowCam.updateProjectionMatrix()
-    shadowCam.updateMatrixWorld()
-  }
-
-  private _getShadowCoverageForCamera() {
-    if ((this.camera as THREE.OrthographicCamera).isOrthographicCamera) {
-      const orthoCam = this.camera as THREE.OrthographicCamera
-      const halfWidth = Math.max(Math.abs(orthoCam.left), Math.abs(orthoCam.right)) / orthoCam.zoom
-      const halfHeight = Math.max(Math.abs(orthoCam.top), Math.abs(orthoCam.bottom)) / orthoCam.zoom
-      return Math.max(this.minShadowCoverage, Math.max(halfWidth, halfHeight) + this.shadowCoveragePadding)
-    }
-
-    return this.minShadowCoverage + this.shadowCoveragePadding
-  }
 }
