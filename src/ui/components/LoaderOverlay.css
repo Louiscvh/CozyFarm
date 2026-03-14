@@ -25,6 +25,45 @@
   pointer-events: none;
 }
 
+
+.loader-particles {
+  position: fixed;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.45s ease-out;
+}
+
+.loader-particles.fade-out {
+  opacity: 0;
+}
+
+.loader-particle {
+  position: absolute;
+  top: 110%;
+  font-size: clamp(16px, 2.2vw, 30px);
+  line-height: 1;
+  filter: drop-shadow(0 2px 2px rgb(0 0 0 / 10%));
+  animation-name: particle-float;
+  animation-iteration-count: infinite;
+  animation-timing-function: ease-in-out;
+  will-change: transform, opacity;
+  opacity: 0;
+}
+
+.loader-particle::before {
+  content: "🍃";
+  display: block;
+}
+
+.loader-particle.variant-1::before {
+  content: "🌸";
+}
+
+.loader-particle.variant-2::before {
+  content: "🌼";
+}
 /* Logo */
 .loader-logo-wrap {
   position: fixed;
@@ -95,6 +134,32 @@
 
   100% {
     transform: scale(0);
+    opacity: 0;
+  }
+}
+
+@keyframes particle-float {
+  0% {
+    transform: translate3d(-12px, 16px, 0) rotate(0deg) scale(0.8);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 0.95;
+  }
+
+  45% {
+    transform: translate3d(22px, -34vh, 0) rotate(65deg) scale(1);
+    opacity: 0.85;
+  }
+
+  75% {
+    transform: translate3d(-18px, -78vh, 0) rotate(-25deg) scale(0.95);
+    opacity: 0.7;
+  }
+
+  100% {
+    transform: translate3d(14px, -118vh, 0) rotate(35deg) scale(0.75);
     opacity: 0;
   }
 }

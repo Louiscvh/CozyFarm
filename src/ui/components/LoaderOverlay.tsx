@@ -5,6 +5,7 @@ type Phase = "start" | "reveal" | "logo-bounce" | "logo-gone" | "done"
 
 export const LoaderOverlay = () => {
   const [phase, setPhase] = useState<Phase>("start")
+  const particles = Array.from({ length: 18 }, (_, index) => index)
 
   useEffect(() => {
     const timers: number[] = []
@@ -41,6 +42,24 @@ export const LoaderOverlay = () => {
 
   return (
     <div className="loader-root">
+      <div
+        className={`loader-particles ${
+          phase === "logo-gone" ? "fade-out" : ""
+        }`}
+      >
+        {particles.map((particle) => (
+          <span
+            key={particle}
+            className={`loader-particle variant-${particle % 3}`}
+            style={{
+              left: `${(particle * 17) % 100}%`,
+              animationDelay: `${(particle % 6) * -0.7}s`,
+              animationDuration: `${5.2 + (particle % 5) * 0.8}s`,
+            }}
+          />
+        ))}
+      </div>
+
       <div className="loader-logo-wrap">
         <img
           src="/images/logo_CF.png"
