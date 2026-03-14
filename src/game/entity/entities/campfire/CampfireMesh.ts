@@ -40,9 +40,8 @@ export function createCampfireMesh(): TorchObject3D {
     opacity: 0.8,
     depthWrite: false,
   })
-  const flameOuter = new THREE.Mesh(new THREE.SphereGeometry(0.16, 9, 9), flameOuterMat)
-  flameOuter.scale.set(0.9, 1.95, 0.9)
-  flameOuter.position.y = 0.33
+  const flameOuter = new THREE.Mesh(new THREE.ConeGeometry(0.13, 0.34, 8), flameOuterMat)
+  flameOuter.position.y = 0.34
   root.add(flameOuter)
 
   const flameInnerMat = new THREE.MeshStandardMaterial({
@@ -53,9 +52,8 @@ export function createCampfireMesh(): TorchObject3D {
     opacity: 0.68,
     depthWrite: false,
   })
-  const flameInner = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 8), flameInnerMat)
-  flameInner.scale.set(0.72, 1.55, 0.72)
-  flameInner.position.y = 0.31
+  const flameInner = new THREE.Mesh(new THREE.ConeGeometry(0.08, 0.27, 8), flameInnerMat)
+  flameInner.position.y = 0.33
   root.add(flameInner)
 
   const particlePositions = new Float32Array(CAMPFIRE_PARTICLE_COUNT * 3)
@@ -99,10 +97,10 @@ export function createCampfireMesh(): TorchObject3D {
     flameOuterMat.emissiveIntensity = 1.6 + intensity * 2.8 + flicker * 0.95
     flameInnerMat.emissiveIntensity = 1.3 + intensity * 2.2 + flicker * 0.7
 
-    flameOuter.scale.set(0.9 + flicker * 0.3, 1.95 + flicker * 0.5, 0.9 + flicker * 0.3)
-    flameOuter.position.y = 0.33 + flicker * 0.022
-    flameInner.scale.set(0.72 + flicker * 0.22, 1.55 + flicker * 0.32, 0.72 + flicker * 0.22)
-    flameInner.position.y = 0.31 + flicker * 0.017
+    flameOuter.scale.set(1 + flicker * 0.22, 1.02 + flicker * 0.5, 1 + flicker * 0.22)
+    flameOuter.position.y = 0.34 + flicker * 0.022
+    flameInner.scale.set(1 + flicker * 0.18, 1 + flicker * 0.35, 1 + flicker * 0.18)
+    flameInner.position.y = 0.33 + flicker * 0.017
 
     const positions = particlesGeometry.attributes.position.array as Float32Array
     for (let i = 0; i < CAMPFIRE_PARTICLE_COUNT; i++) {
