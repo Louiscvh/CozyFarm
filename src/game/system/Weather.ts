@@ -112,7 +112,7 @@ export class Weather {
   private _createSun(): THREE.DirectionalLight {
     const light = new THREE.DirectionalLight("#ffb347", 1)
     light.castShadow = true
-    light.shadow.mapSize.set(4096, 4096)
+    light.shadow.mapSize.set(8192, 8192)
     const d = this.minShadowCoverage
     light.shadow.camera.left   = -d
     light.shadow.camera.right  =  d
@@ -120,9 +120,10 @@ export class Weather {
     light.shadow.camera.bottom = -d
     light.shadow.camera.near   = 1
     light.shadow.camera.far    = 260
-    light.shadow.bias = -0.0002
-    light.shadow.normalBias = 0.025
-    light.shadow.radius = 2
+    light.shadow.bias = -0.00006
+    light.shadow.normalBias = 0.01
+    light.shadow.radius = 4
+    light.shadow.blurSamples = 8
     this.scene.add(light, light.target)
     return light
   }
@@ -195,8 +196,15 @@ export class Weather {
     const cameraDir = new THREE.Vector3()
     this.camera.getWorldDirection(cameraDir)
 
+    const cameraForwardXZ = new THREE.Vector3(cameraDir.x, 0, cameraDir.z)
+    if (cameraForwardXZ.lengthSq() < 1e-5) {
+      cameraForwardXZ.set(0, 0, 1)
+    } else {
+      cameraForwardXZ.normalize()
+    }
+
     const focus = new THREE.Vector3(this.camera.position.x, 0, this.camera.position.z)
-      .addScaledVector(new THREE.Vector3(cameraDir.x, 0, cameraDir.z).normalize(), 5)
+      .addScaledVector(cameraForwardXZ, 5)
 
     const sunDistance = 90
     this.sun.target.position.copy(focus)
