@@ -19,6 +19,7 @@ export class Weather {
   public temperature: number = 15
   private targetTemperature: number = 15
   private rain:    Rain
+  private readonly shadowCoverage = 22
 
   public daylight: number = 1
 
@@ -111,14 +112,16 @@ export class Weather {
     const light = new THREE.DirectionalLight("#ffb347", 1)
     light.castShadow = true
     light.shadow.mapSize.set(4096, 4096)
-    const d = 30
+    const d = this.shadowCoverage
     light.shadow.camera.left   = -d
     light.shadow.camera.right  =  d
     light.shadow.camera.top    =  d
     light.shadow.camera.bottom = -d
-    light.shadow.camera.near   = 1
-    light.shadow.camera.far    = 200
-    light.shadow.bias = -0.001
+    light.shadow.camera.near   = 10
+    light.shadow.camera.far    = 180
+    light.shadow.bias = -0.0002
+    light.shadow.normalBias = 0.025
+    light.shadow.radius = 2
     this.scene.add(light, light.target)
     return light
   }
@@ -163,6 +166,7 @@ export class Weather {
       Math.max(0, sunY) * radius,
       50
     )
+    this._updateSunShadow()
     this.sun.intensity = this.daylight * 2
     this.sun.color      = new THREE.Color("#001133").lerp(new THREE.Color("#ffb347"), this.daylight)
     this.backSun.intensity = this.daylight * 0.4
@@ -183,5 +187,26 @@ export class Weather {
 
     this.ambient.color     = new THREE.Color("#060810").lerp(new THREE.Color("#ffe0c7"), this.daylight)
     this.ambient.intensity = THREE.MathUtils.lerp(0.03, 0.55, this.daylight)
+  }
+
+  private _updateSunShadow() {
+    const sunDir = new THREE.Vector3().copy(this.sun.position).normalize()
+    const focus = new THREE.Vector3(this.camera.position.x, 0, this.camera.position.z)
+
+    const sunDistance = 80
+    this.sun.target.position.copy(focus)
+    this.sun.position.copy(focus).addScaledVector(sunDir, sunDistance)
+
+    // Stabilise la shadow map pour éviter l'effet de "décalage"/shimmering lors des mouvements.
+    const shadowCam = this.sun.shadow.camera as THREE.OrthographicCamera
+    const texelSize = (this.shadowCoverage * 2) / this.sun.shadow.mapSize.x
+
+    this.sun.position.x = Math.round(this.sun.position.x / texelSize) * texelSize
+    this.sun.position.z = Math.round(this.sun.position.z / texelSize) * texelSize
+    this.sun.target.position.x = Math.round(this.sun.target.position.x / texelSize) * texelSize
+    this.sun.target.position.z = Math.round(this.sun.target.position.z / texelSize) * texelSize
+
+    this.sun.target.updateMatrixWorld()
+    shadowCam.updateProjectionMatrix()
   }
 }
