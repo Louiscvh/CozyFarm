@@ -25,7 +25,7 @@ export class FireLightManager {
   constructor(scene: THREE.Scene) {
     this.scene = scene
     for (let i = 0; i < MAX_DYNAMIC_LIGHTS; i++) {
-      const light = new THREE.PointLight(0xff8c33, 0, 9)
+      const light = new THREE.PointLight(0xff9b47, 0, 10)
       light.visible = false
       light.castShadow = false
       this.scene.add(light)
@@ -55,13 +55,13 @@ export class FireLightManager {
       if (usedLights >= this.lights.length) break
 
       const light = this.lights[usedLights]
-      const distanceFade = 1 / (1 + cluster.distanceSq * 0.022)
-      const cappedStrength = Math.min(cluster.strength, 5.2)
+      const distanceFade = 1 / (1 + cluster.distanceSq * 0.018)
+      const cappedStrength = Math.min(cluster.strength, 6.5)
       const flicker = 1 + Math.sin(now + usedLights * 1.7) * 0.09
 
       light.position.copy(cluster.position)
-      light.distance = Math.min(16, cluster.range)
-      light.intensity = fireIntensity * cappedStrength * 2.2 * distanceFade * flicker
+      light.distance = Math.min(18, cluster.range + 1)
+      light.intensity = fireIntensity * cappedStrength * 2.8 * distanceFade * flicker
       light.visible = true
 
       usedLights++
@@ -83,7 +83,7 @@ export class FireLightManager {
       position.y += 0.6
 
       const distanceSq = position.distanceToSquared(camera.position)
-      if (distanceSq > 32 * 32) continue
+      if (distanceSq > 36 * 36) continue
 
       sources.push({
         position,

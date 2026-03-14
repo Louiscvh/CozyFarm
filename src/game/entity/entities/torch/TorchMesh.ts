@@ -76,9 +76,9 @@ export function createTorchMesh(): TorchObject3D {
 
   const particleMaterial = new THREE.PointsMaterial({
     color: 0xffb366,
-    size: 0.03,
+    size: 0.05,
     transparent: true,
-    opacity: 0.68,
+    opacity: 0.74,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
   })
