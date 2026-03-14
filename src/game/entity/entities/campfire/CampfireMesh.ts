@@ -9,19 +9,15 @@ export function createCampfireMesh(): TorchObject3D {
   const logGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.55, 8)
   const logMat = new THREE.MeshStandardMaterial({ color: 0x5a3a1b, roughness: 0.95 })
 
-  const log1 = new THREE.Mesh(logGeo, logMat)
-  log1.rotation.z = Math.PI / 2.8
-  log1.position.y = 0.06
-
-  const log2 = new THREE.Mesh(logGeo, logMat)
-  log2.rotation.z = -Math.PI / 2.8
-  log2.position.y = 0.06
-
-  const log3 = new THREE.Mesh(logGeo, logMat)
-  log3.rotation.x = Math.PI / 2
-  log3.position.y = 0.06
-
-  root.add(log1, log2, log3)
+  const logAngles = [0, Math.PI / 2, Math.PI / 4, (3 * Math.PI) / 4]
+  for (let i = 0; i < logAngles.length; i++) {
+    const log = new THREE.Mesh(logGeo, logMat)
+    const angle = logAngles[i]
+    log.rotation.z = Math.PI / 2
+    log.rotation.y = angle
+    log.position.set(Math.cos(angle) * 0.02, 0.06, Math.sin(angle) * 0.02)
+    root.add(log)
+  }
 
   const coreMat = new THREE.MeshStandardMaterial({
     color: 0xff4400,

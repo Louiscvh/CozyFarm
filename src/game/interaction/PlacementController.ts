@@ -344,9 +344,9 @@ export class PlacementController {
         const info = this.world.instanceManager.getInfo(entity)
         const groundSnap = info?.yOffset ?? (() => {
             const box = new THREE.Box3().setFromObject(root)
-            return -box.min.y
+            return box.min.y < 0 ? -box.min.y : 0
         })()
-        this.yOffset = groundSnap + (entity.yOffset ?? 0)
+        this.yOffset = groundSnap
 
         applyGhostMaterials(root)
         root.rotation.y = targetRotRad
