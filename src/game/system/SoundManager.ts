@@ -5,6 +5,9 @@
 const SFX = {
     success: new URL("../../assets/click.mp3", import.meta.url).href,
     error: new URL("../../assets/click_error.mp3", import.meta.url).href,
+    crop: "/sounds/crop.mp3",
+    wateringCan: "/sounds/watering_can.mp3",
+    axe: "/sounds/axe.mp3",
 } as const
 
 const AMBIENT_SRC = "/sounds/ambient.mp3"
@@ -29,6 +32,9 @@ export class SoundManager {
 
     playSuccess(): void { playSfx(SFX.success, 0.6) }
     playError(): void { playSfx(SFX.error, 0.4) }
+    playCrop(): void { playSfx(SFX.crop, 0.55) }
+    playWateringCan(): void { playSfx(SFX.wateringCan, 0.55) }
+    playAxe(): void { playSfx(SFX.axe, 0.55) }
 
     // ── Ambient ───────────────────────────────────────────────────────────────
 
