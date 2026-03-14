@@ -342,7 +342,7 @@ export class ItemActionController {
 
         if (success) {
             this.consumeItemIfNeeded(item)
-            soundManager.playSuccess()
+            this.playToolSuccessSound(item)
         } else {
             soundManager.playError()
         }
@@ -378,16 +378,29 @@ export class ItemActionController {
             this.consumeItemIfNeeded(item)
             if (this.isSeedItem(item)) this.sinkSeedGhost()
 
-            if (item.id === "hoe" || item.id === "shovel") {
-                soundManager.playCrop()
-            } else if (item.id === "watering_can") {
-                soundManager.playWateringCan()
-            } else {
-                soundManager.playSuccess()
-            }
+            this.playToolSuccessSound(item)
         } else {
             soundManager.playError()
         }
+    }
+
+    private playToolSuccessSound(item: ItemDef): void {
+        if (item.id === "hoe" || item.id === "shovel") {
+            soundManager.playCrop()
+            return
+        }
+
+        if (item.id === "watering_can") {
+            soundManager.playWateringCan()
+            return
+        }
+
+        if (item.id === "axe") {
+            soundManager.playAxe()
+            return
+        }
+
+        soundManager.playSuccess()
     }
 
     // ─── Item consumption ─────────────────────────────────────────────────────
