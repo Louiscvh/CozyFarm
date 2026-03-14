@@ -111,7 +111,7 @@ export class Weather {
   private _createSun(): THREE.DirectionalLight {
     const light = new THREE.DirectionalLight("#ffb347", 1)
     light.castShadow = true
-    light.shadow.mapSize.set(6144, 6144)
+    light.shadow.mapSize.set(4096, 4096)
     const d = this.shadowCoverage
     light.shadow.camera.left   = -d
     light.shadow.camera.right  =  d
@@ -121,7 +121,7 @@ export class Weather {
     light.shadow.camera.far    = 220
     light.shadow.bias = -0.0001
     light.shadow.normalBias = 0.014
-    light.shadow.radius = 3
+    light.shadow.radius = 4
     light.target.position.set(0, 0, 0)
     light.target.updateMatrixWorld()
     this.scene.add(light, light.target)
