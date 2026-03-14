@@ -19,7 +19,7 @@ export class Weather {
   public temperature: number = 15
   private targetTemperature: number = 15
   private rain:    Rain
-  private readonly shadowCoverage = 30
+  private readonly shadowCoverage = 24
 
   public daylight: number = 1
 
@@ -111,7 +111,7 @@ export class Weather {
   private _createSun(): THREE.DirectionalLight {
     const light = new THREE.DirectionalLight("#ffb347", 1)
     light.castShadow = true
-    light.shadow.mapSize.set(4096, 4096)
+    light.shadow.mapSize.set(6144, 6144)
     const d = this.shadowCoverage
     light.shadow.camera.left   = -d
     light.shadow.camera.right  =  d
@@ -119,9 +119,9 @@ export class Weather {
     light.shadow.camera.bottom = -d
     light.shadow.camera.near   = 1
     light.shadow.camera.far    = 220
-    light.shadow.bias = -0.00012
-    light.shadow.normalBias = 0.018
-    light.shadow.radius = 2
+    light.shadow.bias = -0.0001
+    light.shadow.normalBias = 0.014
+    light.shadow.radius = 3
     light.target.position.set(0, 0, 0)
     light.target.updateMatrixWorld()
     this.scene.add(light, light.target)
