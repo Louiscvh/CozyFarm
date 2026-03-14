@@ -126,6 +126,7 @@ export function animateRotate(w: W, e: THREE.Object3D, targetRotY: number): () =
       w.instanceManager.setTransform(e.userData.def, e.userData.instanceSlot, e.position, rotY)
       e.userData.rotY = rotY
     }
+    e.userData.baseRotY = rotY
     e.rotation.y = rotY
   }
 
