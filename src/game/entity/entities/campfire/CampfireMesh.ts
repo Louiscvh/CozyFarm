@@ -4,27 +4,20 @@ import type { TorchObject3D } from "../torch/TorchMesh"
 export function createCampfireMesh(): TorchObject3D {
   const root = new THREE.Group() as TorchObject3D
 
-  const groundAsh = new THREE.Mesh(
-    new THREE.CylinderGeometry(0.35, 0.4, 0.06, 10),
-    new THREE.MeshStandardMaterial({ color: 0x2c2c2c, roughness: 1 })
-  )
-  groundAsh.position.y = 0.03
-  root.add(groundAsh)
-
   const logGeo = new THREE.CylinderGeometry(0.06, 0.06, 0.55, 8)
   const logMat = new THREE.MeshStandardMaterial({ color: 0x5a3a1b, roughness: 0.95 })
 
   const log1 = new THREE.Mesh(logGeo, logMat)
   log1.rotation.z = Math.PI / 2.8
-  log1.position.y = 0.12
+  log1.position.y = 0.06
 
   const log2 = new THREE.Mesh(logGeo, logMat)
   log2.rotation.z = -Math.PI / 2.8
-  log2.position.y = 0.12
+  log2.position.y = 0.06
 
   const log3 = new THREE.Mesh(logGeo, logMat)
   log3.rotation.x = Math.PI / 2
-  log3.position.y = 0.12
+  log3.position.y = 0.06
 
   root.add(log1, log2, log3)
 
@@ -36,7 +29,7 @@ export function createCampfireMesh(): TorchObject3D {
       emissiveIntensity: 2.2,
     })
   )
-  core.position.y = 0.21
+  core.position.y = 0.19
   root.add(core)
 
   const flame = new THREE.Mesh(
@@ -51,13 +44,13 @@ export function createCampfireMesh(): TorchObject3D {
     })
   )
   flame.scale.set(0.9, 1.7, 0.9)
-  flame.position.y = 0.33
+  flame.position.y = 0.31
   root.add(flame)
 
   root.userData.isFireSource = true
   root.userData.fireType = "campfire"
-  root.userData.fireRange = 10
-  root.userData.fireStrength = 1.8
+  root.userData.fireRange = 11
+  root.userData.fireStrength = 1.9
 
   root.updateFireVisual = function(now: number, fireIntensity: number) {
     const phase = root.id * 0.31
@@ -68,7 +61,7 @@ export function createCampfireMesh(): TorchObject3D {
     ;(flame.material as THREE.MeshStandardMaterial).emissiveIntensity = 1.2 + intensity * 1.4 + flicker * 0.55
 
     flame.scale.set(0.9 + flicker * 0.25, 1.7 + flicker * 0.35, 0.9 + flicker * 0.25)
-    flame.position.y = 0.33 + flicker * 0.018
+    flame.position.y = 0.31 + flicker * 0.018
   }
 
   return root

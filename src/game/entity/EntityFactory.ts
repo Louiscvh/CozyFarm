@@ -86,6 +86,7 @@ export async function createEntity(
     const root = createCampfireMesh()
     const scale = tileSize * 0.55
     root.scale.set(scale, scale, scale)
+    root.position.y = def.yOffset ?? 0
     attachHitBox(root)
     return root
   }

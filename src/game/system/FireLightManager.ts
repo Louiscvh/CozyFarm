@@ -1,15 +1,25 @@
 import * as THREE from "three"
 
-interface FireSource {
-  object: THREE.Object3D
+interface FireSourceData {
+  position: THREE.Vector3
+  strength: number
+  range: number
   distanceSq: number
 }
 
-const MAX_DYNAMIC_LIGHTS = 6
+interface FireCluster {
+  position: THREE.Vector3
+  strength: number
+  range: number
+  weight: number
+  distanceSq: number
+}
+
+const MAX_DYNAMIC_LIGHTS = 8
+const CLUSTER_SIZE = 2.5
 
 export class FireLightManager {
   private readonly lights: THREE.PointLight[] = []
-  private readonly tempWorldPos = new THREE.Vector3()
   private readonly scene: THREE.Scene
 
   constructor(scene: THREE.Scene) {
@@ -29,38 +39,95 @@ export class FireLightManager {
       return
     }
 
-    const sources: FireSource[] = []
-    for (const entity of entities) {
-      if (!entity.userData.isFireSource) continue
-      entity.getWorldPosition(this.tempWorldPos)
-      sources.push({
-        object: entity,
-        distanceSq: this.tempWorldPos.distanceToSquared(camera.position),
-      })
+    const sources = this.collectSources(entities, camera)
+    if (sources.length === 0) {
+      this.disableAllLights()
+      return
     }
 
-    sources.sort((a, b) => a.distanceSq - b.distanceSq)
+    const clusters = this.clusterSources(sources)
+    clusters.sort((a, b) => b.weight - a.weight)
 
     let usedLights = 0
-    for (const source of sources) {
+    const now = performance.now() * 0.018
+
+    for (const cluster of clusters) {
       if (usedLights >= this.lights.length) break
 
       const light = this.lights[usedLights]
-      const baseStrength = source.object.userData.fireStrength ?? 1
-      const range = source.object.userData.fireRange ?? 8
-      const flicker = 1 + Math.sin(performance.now() * 0.018 + source.object.id) * 0.08
+      const distanceFade = 1 / (1 + cluster.distanceSq * 0.03)
+      const cappedStrength = Math.min(cluster.strength, 4.5)
+      const flicker = 1 + Math.sin(now + usedLights * 1.7) * 0.08
 
-      source.object.getWorldPosition(light.position)
-      light.position.y += 0.6
-      light.distance = range
-      light.intensity = fireIntensity * baseStrength * 1.6 * flicker
+      light.position.copy(cluster.position)
+      light.distance = Math.min(14, cluster.range)
+      light.intensity = fireIntensity * cappedStrength * 1.5 * distanceFade * flicker
       light.visible = true
+
       usedLights++
     }
 
     for (let i = usedLights; i < this.lights.length; i++) {
       this.lights[i].visible = false
     }
+  }
+
+  private collectSources(entities: THREE.Object3D[], camera: THREE.Camera): FireSourceData[] {
+    const sources: FireSourceData[] = []
+
+    for (const entity of entities) {
+      if (!entity.userData.isFireSource) continue
+
+      const position = new THREE.Vector3()
+      entity.getWorldPosition(position)
+      position.y += 0.6
+
+      const distanceSq = position.distanceToSquared(camera.position)
+      if (distanceSq > 28 * 28) continue
+
+      sources.push({
+        position,
+        distanceSq,
+        strength: entity.userData.fireStrength ?? 1,
+        range: entity.userData.fireRange ?? 8,
+      })
+    }
+
+    return sources
+  }
+
+  private clusterSources(sources: FireSourceData[]): FireCluster[] {
+    const bucket = new Map<string, FireCluster>()
+
+    for (const source of sources) {
+      const keyX = Math.round(source.position.x / CLUSTER_SIZE)
+      const keyZ = Math.round(source.position.z / CLUSTER_SIZE)
+      const key = `${keyX}:${keyZ}`
+
+      const existing = bucket.get(key)
+      if (!existing) {
+        bucket.set(key, {
+          position: source.position.clone(),
+          strength: source.strength,
+          range: source.range,
+          weight: source.strength / (1 + source.distanceSq * 0.01),
+          distanceSq: source.distanceSq,
+        })
+        continue
+      }
+
+      const mergedStrength = existing.strength + source.strength
+      const sourceWeight = source.strength / mergedStrength
+
+      existing.position.lerp(source.position, sourceWeight)
+      existing.strength = mergedStrength
+      existing.range = Math.max(existing.range, source.range)
+      existing.distanceSq = Math.min(existing.distanceSq, source.distanceSq)
+      existing.weight += source.strength / (1 + source.distanceSq * 0.01)
+
+    }
+
+    return Array.from(bucket.values())
   }
 
   private disableAllLights() {
