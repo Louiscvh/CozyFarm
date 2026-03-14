@@ -19,7 +19,8 @@ export class Weather {
   public temperature: number = 15
   private targetTemperature: number = 15
   private rain:    Rain
-  private readonly shadowCoverage = 22
+  private readonly minShadowCoverage = 26
+  private readonly shadowCoveragePadding = 8
 
   public daylight: number = 1
 
@@ -112,13 +113,13 @@ export class Weather {
     const light = new THREE.DirectionalLight("#ffb347", 1)
     light.castShadow = true
     light.shadow.mapSize.set(4096, 4096)
-    const d = this.shadowCoverage
+    const d = this.minShadowCoverage
     light.shadow.camera.left   = -d
     light.shadow.camera.right  =  d
     light.shadow.camera.top    =  d
     light.shadow.camera.bottom = -d
-    light.shadow.camera.near   = 10
-    light.shadow.camera.far    = 180
+    light.shadow.camera.near   = 1
+    light.shadow.camera.far    = 260
     light.shadow.bias = -0.0002
     light.shadow.normalBias = 0.025
     light.shadow.radius = 2
@@ -191,15 +192,25 @@ export class Weather {
 
   private _updateSunShadow() {
     const sunDir = new THREE.Vector3().copy(this.sun.position).normalize()
-    const focus = new THREE.Vector3(this.camera.position.x, 0, this.camera.position.z)
+    const cameraDir = new THREE.Vector3()
+    this.camera.getWorldDirection(cameraDir)
 
-    const sunDistance = 80
+    const focus = new THREE.Vector3(this.camera.position.x, 0, this.camera.position.z)
+      .addScaledVector(new THREE.Vector3(cameraDir.x, 0, cameraDir.z).normalize(), 5)
+
+    const sunDistance = 90
     this.sun.target.position.copy(focus)
     this.sun.position.copy(focus).addScaledVector(sunDir, sunDistance)
 
-    // Stabilise la shadow map pour éviter l'effet de "décalage"/shimmering lors des mouvements.
     const shadowCam = this.sun.shadow.camera as THREE.OrthographicCamera
-    const texelSize = (this.shadowCoverage * 2) / this.sun.shadow.mapSize.x
+    const coverage = this._getShadowCoverageForCamera()
+    shadowCam.left = -coverage
+    shadowCam.right = coverage
+    shadowCam.top = coverage
+    shadowCam.bottom = -coverage
+
+    // Stabilise la shadow map pour éviter l'effet de "décalage"/shimmering lors des mouvements.
+    const texelSize = (coverage * 2) / this.sun.shadow.mapSize.x
 
     this.sun.position.x = Math.round(this.sun.position.x / texelSize) * texelSize
     this.sun.position.z = Math.round(this.sun.position.z / texelSize) * texelSize
@@ -207,6 +218,19 @@ export class Weather {
     this.sun.target.position.z = Math.round(this.sun.target.position.z / texelSize) * texelSize
 
     this.sun.target.updateMatrixWorld()
+    this.sun.updateMatrixWorld()
     shadowCam.updateProjectionMatrix()
+    shadowCam.updateMatrixWorld()
+  }
+
+  private _getShadowCoverageForCamera() {
+    if ((this.camera as THREE.OrthographicCamera).isOrthographicCamera) {
+      const orthoCam = this.camera as THREE.OrthographicCamera
+      const halfWidth = Math.max(Math.abs(orthoCam.left), Math.abs(orthoCam.right)) / orthoCam.zoom
+      const halfHeight = Math.max(Math.abs(orthoCam.top), Math.abs(orthoCam.bottom)) / orthoCam.zoom
+      return Math.max(this.minShadowCoverage, Math.max(halfWidth, halfHeight) + this.shadowCoveragePadding)
+    }
+
+    return this.minShadowCoverage + this.shadowCoveragePadding
   }
 }
