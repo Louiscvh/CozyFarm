@@ -10,6 +10,7 @@ import { InstancedEntityManager } from "../entity/InstancedEntityManager"
 import { debugHitboxEnabled } from "../entity/EntityFactory"
 import { CropManager } from "../farming/CropManager"
 import { computeGrowthRate } from "../farming/GrowthConditions"
+import { FireLightManager } from "../system/FireLightManager"
 
 export class World {
   static current: World | null = null
@@ -30,6 +31,7 @@ export class World {
   public tilesFactory: TileFactory
   public instanceManager: InstancedEntityManager
   public cropManager: CropManager
+  public fireLightManager: FireLightManager
 
   constructor(scene: THREE.Scene, tileSize: number = 2) {
     World.current    = this
@@ -41,6 +43,7 @@ export class World {
     this.tilesFactory    = new TileFactory(scene, this.size, tileSize)
     this.instanceManager = new InstancedEntityManager(scene)
     this.cropManager = new CropManager(scene, this)  // ← ajouter
+    this.fireLightManager = new FireLightManager(scene)
 
     this.initialize()
   }
@@ -71,9 +74,11 @@ export class World {
 
         const torchIntensity = this.weather ? 1 - this.weather.daylight : 1
         for (const entity of this.entities) {
-            if (!entity.userData.isTorch) continue
-                ; (entity as any).updateTorch(now, torchIntensity)
+            if (!entity.userData.isFireSource) continue
+                ; (entity as any).updateFireVisual(now, torchIntensity)
         }
+
+        this.fireLightManager.update(this.entities, this.camera ?? null, torchIntensity)
 
         this.applyTreeWind(now)
     }
@@ -210,6 +215,7 @@ export class World {
     entity.rotation.y = THREE.MathUtils.degToRad(defaultRotDeg)
 
     entity.userData.id          = def.id
+    entity.userData.def         = def
     entity.userData.cellX       = cellX
     entity.userData.cellZ       = cellZ
     entity.userData.sizeInCells = cells

@@ -170,15 +170,15 @@ export function EntityPopups() {
     OutlineSystem.instance?.setHovered(null)
     const w = World.current
     if (!w) return
-    const e           = popup.entityObject
-    const def         = e.userData.def as Entity
-    const cellX       = e.userData.cellX as number
-    const cellZ       = e.userData.cellZ as number
-
-    // Derive footprint from the definition — never rely solely on userData.sizeInCells
-    const sizeInCells = getFootprint(def)
+    const e = popup.entityObject
+    const def = e.userData.def as Entity | undefined
+    const cellX = e.userData.cellX as number | undefined
+    const cellZ = e.userData.cellZ as number | undefined
 
     if (!def || cellX === undefined || cellZ === undefined) return
+
+    // Fall back to runtime footprint if definition is incomplete
+    const sizeInCells = getFootprint(def) || (e.userData.sizeInCells as number) || 1
 
     const originalPos  = e.position.clone()
     const originalRotY = e.userData.isInstanced ? (e.userData.rotY ?? 0) : e.rotation.y

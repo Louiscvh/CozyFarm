@@ -344,9 +344,9 @@ export class PlacementController {
         const info = this.world.instanceManager.getInfo(entity)
         const groundSnap = info?.yOffset ?? (() => {
             const box = new THREE.Box3().setFromObject(root)
-            return -box.min.y
+            return box.min.y < 0 ? -box.min.y : 0
         })()
-        this.yOffset = groundSnap + (entity.yOffset ?? 0)
+        this.yOffset = groundSnap
 
         applyGhostMaterials(root)
         root.rotation.y = targetRotRad
@@ -673,7 +673,8 @@ export class PlacementController {
         const fromCellZ = ent.userData.cellZ as number
         const fromRotY = ent.userData.rotY as number
         const newRotY = this.targetRotY
-        const extraY = (ent.userData.def?.yOffset ?? 0) as number
+        // Preserve current vertical placement (includes procedural/hitbox adjustments)
+        const extraY = ent.position.y
 
         const half = this.world.sizeInCells / 2
         const startX = (placeCellX - half) * this.world.cellSize

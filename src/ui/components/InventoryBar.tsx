@@ -11,6 +11,7 @@ import { Flower1Entity } from "../../game/entity/entities/Flower1"
 import { FarmEntity } from "../../game/entity/entities/FarmEntity"
 import { WheatField } from "../../game/entity/entities/WheatField"
 import { TorchEntity } from "../../game/entity/entities/torch/TorchEntity"
+import { CampfireEntity } from "../../game/entity/entities/campfire/CampfireEntity"
 import { CabanaEntity } from "../../game/entity/entities/Cabana"
 import { Tree3Entity } from "../../game/entity/entities/Tree3"
 import { WoodPlankEntity } from "../../game/entity/entities/WoodPlank"
@@ -63,6 +64,7 @@ const ALL_ITEMS: ItemDef[] = [
     { id: "cabana", label: "Cabane", icon: "🛖", usage: { kind: "placeable", entity: CabanaEntity } },
     { id: "wind_mill", label: "Moulin", icon: "💨", usage: { kind: "placeable", entity: WindMillEntity } },
     { id: "torch", label: "Torche", icon: "🔥", usage: { kind: "placeable", entity: TorchEntity } },
+    { id: "campfire", label: "Feu de camp", icon: "🏕️", usage: { kind: "placeable", entity: CampfireEntity } },
     { id: "wood_plank", label: "Planche", icon: "🪵", usage: { kind: "placeable", entity: WoodPlankEntity } },
     { id: "wood_fence", label: "Barrière", icon: "🪜", usage: { kind: "placeable", entity: WoodFenceEntity } },
     { id: "tree_orange", label: "Oranger", icon: "🍊", usage: { kind: "placeable", entity: TreeOrangeEntity } },
@@ -100,6 +102,7 @@ inventoryStore.register([
     { id: "stake", maxQty: 64, initialQty: 10 },
     { id: "cabana", maxQty: 8 },
     { id: "torch", maxQty: 32 },
+    { id: "campfire", maxQty: 16 },
     { id: "wood_plank", maxQty: 32 },
     { id: "wood_fence", maxQty: 16 },
     { id: "grass", maxQty: 64 },
