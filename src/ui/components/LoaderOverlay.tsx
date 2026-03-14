@@ -52,9 +52,10 @@ export const LoaderOverlay = () => {
             key={particle}
             className={`loader-particle variant-${particle % 3}`}
             style={{
-              left: `${(particle * 17) % 100}%`,
-              animationDelay: `${(particle % 6) * -0.7}s`,
-              animationDuration: `${5.2 + (particle % 5) * 0.8}s`,
+              top: `${(particle * 11) % 100}%`,
+              animationDelay: `${(particle % 6) * -0.6}s`,
+              animationDuration: `${4.8 + (particle % 5) * 0.7}s`,
+              ["--wind-drift" as string]: `${26 + (particle % 5) * 6}px`,
             }}
           />
         ))}
