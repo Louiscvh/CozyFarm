@@ -19,6 +19,8 @@ export class Weather {
   public temperature: number = 15
   private targetTemperature: number = 15
   private rain:    Rain
+  private readonly shadowCoverage = 24
+  private readonly shadowPcfKernel = 4
 
   public daylight: number = 1
 
@@ -111,14 +113,19 @@ export class Weather {
     const light = new THREE.DirectionalLight("#ffb347", 1)
     light.castShadow = true
     light.shadow.mapSize.set(4096, 4096)
-    const d = 30
+    const d = this.shadowCoverage
     light.shadow.camera.left   = -d
     light.shadow.camera.right  =  d
     light.shadow.camera.top    =  d
     light.shadow.camera.bottom = -d
     light.shadow.camera.near   = 1
-    light.shadow.camera.far    = 200
-    light.shadow.bias = -0.001
+    light.shadow.camera.far    = 220
+    // 4x4 PCF approximé via rayon de filtre + offset pour limiter acne/décalage.
+    light.shadow.bias = -0.00008
+    light.shadow.normalBias = 0.02
+    light.shadow.radius = this.shadowPcfKernel * 0.5
+    light.target.position.set(0, 0, 0)
+    light.target.updateMatrixWorld()
     this.scene.add(light, light.target)
     return light
   }
@@ -184,4 +191,5 @@ export class Weather {
     this.ambient.color     = new THREE.Color("#060810").lerp(new THREE.Color("#ffe0c7"), this.daylight)
     this.ambient.intensity = THREE.MathUtils.lerp(0.03, 0.55, this.daylight)
   }
+
 }
