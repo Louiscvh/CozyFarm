@@ -185,7 +185,7 @@ export class PlacementController {
     }
 
     private getHoverCursorY(cellX: number, cellZ: number, _shape: HoverShape, footprint: number): number {
-        let maxBaseY = GRID_Y
+        let minBaseY = Number.POSITIVE_INFINITY
         const half = Math.floor(footprint / 2)
         const startX = cellX - half
         const startZ = cellZ - half
@@ -194,11 +194,12 @@ export class PlacementController {
             for (let dz = 0; dz < footprint; dz++) {
                 const isSoil = this.world.tilesFactory.isSoil(startX + dx, startZ + dz)
                 const baseY = isSoil ? SOIL_SURFACE_Y : GRID_Y
-                if (baseY > maxBaseY) maxBaseY = baseY
+                if (baseY < minBaseY) minBaseY = baseY
             }
         }
 
-        return maxBaseY + 0.006
+        if (!Number.isFinite(minBaseY)) return GRID_Y + 0.006
+        return minBaseY + 0.006
     }
 
     // ─── Helpers de coordonnées ───────────────────────────────────────────────
