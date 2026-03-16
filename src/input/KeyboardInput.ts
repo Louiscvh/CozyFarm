@@ -2,7 +2,15 @@ export class KeyboardInput {
     keys = new Set<string>()
   
     constructor() {
-      window.addEventListener("keydown", e => this.keys.add(e.key.toLowerCase()))
+      window.addEventListener("keydown", e => {
+        const key = e.key.toLowerCase()
+
+        if ((e.ctrlKey || e.metaKey) && key === "a") {
+          e.preventDefault()
+        }
+
+        this.keys.add(key)
+      })
       window.addEventListener("keyup", e => this.keys.delete(e.key.toLowerCase()))
     }
   
