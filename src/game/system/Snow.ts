@@ -62,7 +62,7 @@ export class Snow {
 
     this.material = new THREE.PointsMaterial({
       color: "#ffffff",
-      size: 0.19,
+      size: 0.28,
       transparent: true,
       opacity: 0.9,
       depthWrite: false,

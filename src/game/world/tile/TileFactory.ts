@@ -133,15 +133,11 @@ export class TileFactory {
     }
 
     private initSnowMesh(): void {
-        const geo = new THREE.PlaneGeometry(this.cellSize * 0.9, this.cellSize * 0.9)
+        const geo = new THREE.BoxGeometry(this.cellSize, 0.2, this.cellSize)
         const mat = new THREE.MeshStandardMaterial({
-            color: "#ffffff",
-            roughness: 0.95,
+            color: "#f4f8ff",
+            roughness: 0.96,
             metalness: 0,
-            transparent: true,
-            opacity: 0.92,
-            side: THREE.DoubleSide,
-            depthWrite: false,
         })
         const mesh = new THREE.InstancedMesh(geo, mat, this.SNOW_MAX)
         mesh.castShadow = false
@@ -175,12 +171,11 @@ export class TileFactory {
         const half = this.worldSizeInCells / 2
         _dummy.position.set(
             (cellX - half + 0.5) * this.cellSize,
-            0.011,
+            0.1,
             (cellZ - half + 0.5) * this.cellSize,
         )
-        _dummy.rotation.set(-Math.PI / 2, 0, Math.random() * Math.PI)
-        const s = 0.85 + Math.random() * 0.18
-        _dummy.scale.set(s, s, 1)
+        _dummy.rotation.set(0, 0, 0)
+        _dummy.scale.set(1, 1, 1)
         _dummy.updateMatrix()
 
         this.snowMesh.setMatrixAt(slot, _dummy.matrix)
