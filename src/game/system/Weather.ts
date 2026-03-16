@@ -184,8 +184,8 @@ export class Weather {
     this._applyPrecipitation(shouldPrecipitate ? this.currentDayRainIntensity : "none")
   }
 
-  private _applyPrecipitation(intensity: RainIntensity) {
-    if (intensity === this.currentPrecipIntensity) return
+  private _applyPrecipitation(intensity: RainIntensity, force = false) {
+    if (!force && intensity === this.currentPrecipIntensity) return
     const previous = this.currentPrecipIntensity
     this.currentPrecipIntensity = intensity
 
@@ -274,7 +274,7 @@ export class Weather {
     const season = getSeasonState().season
     if (season.id !== this.seasonId) {
       this.seasonId = season.id
-      this._applyPrecipitation(this.currentPrecipIntensity)
+      this._applyPrecipitation(this.currentPrecipIntensity, true)
     }
     this.seasonSky.lerp(new THREE.Color(season.skyColor), 0.015)
     this.seasonLight.lerp(new THREE.Color(season.lightTint), 0.015)
