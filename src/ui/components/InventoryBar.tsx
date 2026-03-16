@@ -159,10 +159,13 @@ export function InventoryBar() {
     const [, forceUpdate] = useState(0)
     const [expanded, setExpanded] = useState(false)
     const [hotbar, setHotbar] = useState<(string | null)[]>(INITIAL_HOTBAR)
+    const [extraOrder, setExtraOrder] = useState<string[]>(() =>
+        ALL_ITEMS.map(item => item.id).filter(id => !INITIAL_HOTBAR.includes(id))
+    )
 
     const extraItems = useMemo(
-        () => ALL_ITEMS.filter(i => !hotbar.includes(i.id)),
-        [hotbar]
+        () => extraOrder.map(id => itemById(id)).filter((item): item is ItemDef => item !== null),
+        [extraOrder]
     )
     const hasExtra = extraItems.length > 0
     const dragSrc = useRef<DragSource | null>(null)
@@ -267,15 +270,35 @@ export function InventoryBar() {
     function onDropHotbar(targetIndex: number) {
         const src = dragSrc.current
         if (!src) return
-        setHotbar(prev => {
-            const next = [...prev]
-            if (src.zone === "hotbar") {
-                const tmp = next[targetIndex]; next[targetIndex] = next[src.index]; next[src.index] = tmp
-            } else {
+
+        if (src.zone === "hotbar") {
+            setHotbar(prev => {
+                const next = [...prev]
+                const tmp = next[targetIndex]
+                next[targetIndex] = next[src.index]
+                next[src.index] = tmp
+                return next
+            })
+        } else {
+            setHotbar(prev => {
+                const next = [...prev]
+                const replacedId = next[targetIndex]
                 next[targetIndex] = src.id
-            }
-            return next
-        })
+
+                setExtraOrder(extraPrev => {
+                    const srcPos = extraPrev.indexOf(src.id)
+                    if (srcPos === -1) return extraPrev
+
+                    const extraNext = [...extraPrev]
+                    if (replacedId) extraNext[srcPos] = replacedId
+                    else extraNext.splice(srcPos, 1)
+                    return extraNext
+                })
+
+                return next
+            })
+        }
+
         setDragOver(null); dragSrc.current = null
     }
 
@@ -286,7 +309,34 @@ export function InventoryBar() {
         if (src.zone === "hotbar") {
             setHotbar(prev => {
                 const next = [...prev]
-                next[src.index] = targetId ?? null
+                const movedId = next[src.index]
+                if (!movedId) return next
+
+                if (!targetId) {
+                    next[src.index] = null
+                    setExtraOrder(extraPrev => extraPrev.includes(movedId) ? extraPrev : [...extraPrev, movedId])
+                    return next
+                }
+
+                next[src.index] = targetId
+                setExtraOrder(extraPrev => {
+                    const targetPos = extraPrev.indexOf(targetId)
+                    if (targetPos === -1) return extraPrev
+                    const extraNext = [...extraPrev]
+                    extraNext[targetPos] = movedId
+                    return extraNext
+                })
+                return next
+            })
+        } else if (targetId) {
+            setExtraOrder(prev => {
+                const srcPos = prev.indexOf(src.id)
+                const targetPos = prev.indexOf(targetId)
+                if (srcPos === -1 || targetPos === -1 || srcPos === targetPos) return prev
+                const next = [...prev]
+                const tmp = next[targetPos]
+                next[targetPos] = next[srcPos]
+                next[srcPos] = tmp
                 return next
             })
         }
