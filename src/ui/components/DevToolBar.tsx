@@ -106,13 +106,12 @@ export const DevToolBar = () => {
             <UIButton onClick={handleToggleGrid} className={gridVisible ? "selected" : ""} title="Afficher grille complète">🔲</UIButton>
             <UIButton onClick={() => setPerfOpen(v => !v)} className={perfOpen ? "selected" : ""} title="Moniteur performances">📊</UIButton>
           </section>
-        </div>
 
-        <div className="line">
           <section>
             <UIButton onClick={() => shiftSeason(1)} title="Saison suivante">⏭️</UIButton>
           </section>
         </div>
+
       </div>
 
       {perfOpen && <PerfMonitor onClose={() => setPerfOpen(false)} />}
