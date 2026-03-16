@@ -66,6 +66,8 @@ export function useFarming() {
 
                 if (world.cropManager.removeLooseStake(cellX, cellZ)) { changed = true; continue }
 
+                if (world.tilesFactory.clearSnowCell(cellX, cellZ)) { changed = true; continue }
+
                 changed = world.tilesFactory.untillCell(cellX, cellZ) || changed
             }
 

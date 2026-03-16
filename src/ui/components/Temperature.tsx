@@ -8,12 +8,9 @@ import { getSeasonState } from "../../game/system/Season"
 export const Temperature = () => {
   const [temperature, setTemperature] = useState(20)
   const [seasonLetter, setSeasonLetter] = useState(getSeasonState().season.shortLabel)
-  const [seasonProgress, setSeasonProgress] = useState(0)
-  const [yearProgress, setYearProgress] = useState(0)
-  const [nextSeasonLetter, setNextSeasonLetter] = useState(getSeasonState().nextSeasonLabel[0]?.toUpperCase() ?? "?")
   const rotatorRef = useRef<HTMLDivElement>(null)
   const prevT      = useRef(Time.getVisualDayT())
-  const totalAngle = useRef(prevT.current * 360)
+  const totalAngle = useRef(Time.getVisualDayT() * 360)
   const rafRef     = useRef<number>(0)
 
   useEffect(() => {
@@ -62,9 +59,6 @@ export const Temperature = () => {
       setTemperature(Math.round(weather.getTemperature()))
       const state = getSeasonState()
       setSeasonLetter(state.season.shortLabel)
-      setSeasonProgress(state.seasonProgress)
-      setYearProgress(state.yearProgress)
-      setNextSeasonLetter(state.nextSeasonLabel[0]?.toUpperCase() ?? "?")
     }, 300)
     return () => clearInterval(id)
   }, [])
@@ -84,10 +78,6 @@ export const Temperature = () => {
       </UIButton>
       <UIButton className="season-widget static">
         <div className="season-letter">{seasonLetter}</div>
-        <div className="season-sub">→ {nextSeasonLetter} ({Math.round((1 - seasonProgress) * 100)}%)</div>
-        <div className="year-progress-track">
-          <div className="year-progress-fill" style={{ width: `${Math.max(2, yearProgress * 100)}%` }} />
-        </div>
       </UIButton>
     </div>
   )

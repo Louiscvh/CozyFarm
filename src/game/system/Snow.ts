@@ -7,8 +7,8 @@ export class Snow {
   private material: THREE.PointsMaterial | null = null
   private flakes: Float32Array | null = null
   private velocity: Float32Array | null = null
-  private count = 1200
-  private spread = 70
+  private count = 3200
+  private spread = 90
 
   constructor(scene: THREE.Scene) {
     this.scene = scene
@@ -62,9 +62,9 @@ export class Snow {
 
     this.material = new THREE.PointsMaterial({
       color: "#ffffff",
-      size: 0.15,
+      size: 0.19,
       transparent: true,
-      opacity: 0.8,
+      opacity: 0.9,
       depthWrite: false,
     })
 

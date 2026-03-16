@@ -21,7 +21,6 @@
 }
 
 .season-widget {
-  min-width: 180px;
   display: flex;
   flex-direction: column;
   gap: 4px;
@@ -32,24 +31,6 @@
   font-weight: 800;
   font-size: 1.5rem;
   line-height: 1;
-}
-
-.season-sub {
-  font-size: 0.72rem;
-  opacity: 0.8;
-}
-
-.year-progress-track {
-  height: 5px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.2);
-  overflow: hidden;
-}
-
-.year-progress-fill {
-  height: 100%;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #68c6ff, #ffd26f);
 }
 
 .cycle-widget {

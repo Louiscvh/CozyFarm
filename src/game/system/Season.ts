@@ -53,8 +53,9 @@ export function getSeasonState(): SeasonState {
 
 export function shiftSeason(step: -1 | 1): void {
   const totalDays = Time.elapsed / Time.cycleSeconds
+  const dayProgress = Time.getLogicalDayT()
   const absoluteSeason = Math.floor(totalDays / DAYS_PER_SEASON)
-  const targetAbsoluteSeason = absoluteSeason + step
-  const targetTotalDays = Math.max(0, targetAbsoluteSeason * DAYS_PER_SEASON)
+  const targetAbsoluteSeason = Math.max(0, absoluteSeason + step)
+  const targetTotalDays = targetAbsoluteSeason * DAYS_PER_SEASON + dayProgress
   Time.elapsed = targetTotalDays * Time.cycleSeconds
 }
