@@ -7,7 +7,7 @@ import "./DevToolBar.css"
 import { toggleDebugHitbox } from "../../game/entity/EntityFactory"
 import { PerfMonitor } from "./PerfMonitor"
 import { toggleDebugGrid } from "../../game/system/Grid"
-import { getSeasonState } from "../../game/system/Season"
+import { getSeasonState, shiftSeason } from "../../game/system/Season"
 
 export const DevToolBar = () => {
   const [visible, setVisible]                   = useState(false)
@@ -95,21 +95,22 @@ export const DevToolBar = () => {
           <section>
             <UIButton onClick={goDay}>🌞</UIButton>
             <UIButton onClick={goNight}>🌙</UIButton>
-          </section>
-        </div>
-
-
-        <div className="line">
-          <section>
             <UIButton onClick={toggleRain} className={isRaining ? "selected" : ""}>{isWinter ? "❄️" : "☔️"}</UIButton>
           </section>
         </div>
+
         <div className="line">
           <section>
             <UIButton onClick={toggleDebugMarkers} className={footprintVisible ? "selected" : ""}>🚧</UIButton>
             <UIButton onClick={toggleHitbox} className={hitboxVisible ? "selected" : ""}>📦</UIButton>
             <UIButton onClick={handleToggleGrid} className={gridVisible ? "selected" : ""} title="Afficher grille complète">🔲</UIButton>
             <UIButton onClick={() => setPerfOpen(v => !v)} className={perfOpen ? "selected" : ""} title="Moniteur performances">📊</UIButton>
+          </section>
+        </div>
+
+        <div className="line">
+          <section>
+            <UIButton onClick={() => shiftSeason(1)} title="Saison suivante">⏭️</UIButton>
           </section>
         </div>
       </div>
