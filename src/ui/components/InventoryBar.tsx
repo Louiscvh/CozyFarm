@@ -159,16 +159,66 @@ export function InventoryBar() {
     const [, forceUpdate] = useState(0)
     const [expanded, setExpanded] = useState(false)
     const [hotbar, setHotbar] = useState<(string | null)[]>(INITIAL_HOTBAR)
+    const [extraOrder, setExtraOrder] = useState<string[]>(() =>
+        ALL_ITEMS.map(item => item.id).filter(id => !INITIAL_HOTBAR.includes(id))
+    )
 
     const extraItems = useMemo(
-        () => ALL_ITEMS.filter(i => !hotbar.includes(i.id)),
-        [hotbar]
+        () => extraOrder.map(id => itemById(id)).filter((item): item is ItemDef => item !== null),
+        [extraOrder]
     )
     const hasExtra = extraItems.length > 0
     const dragSrc = useRef<DragSource | null>(null)
     const [dragOver, setDragOver] = useState<
     { zone: "hotbar"; index: number } | { zone: "extra"; id: string } | null
         >(null)
+    const itemNodeRefs = useRef(new Map<string, HTMLElement>())
+
+    const runInventoryMoveAnimation = (update: () => void) => {
+        const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        const beforeRects = new Map<string, DOMRect>()
+
+        itemNodeRefs.current.forEach((node, itemId) => {
+            beforeRects.set(itemId, node.getBoundingClientRect())
+        })
+
+        update()
+
+        if (reduceMotion) return
+
+        requestAnimationFrame(() => {
+            itemNodeRefs.current.forEach((node, itemId) => {
+                const before = beforeRects.get(itemId)
+                if (!before) return
+
+                const after = node.getBoundingClientRect()
+                const deltaX = before.left - after.left
+                const deltaY = before.top - after.top
+                if (!deltaX && !deltaY) return
+
+                node.style.transition = "none"
+                node.style.transform = `translate(${deltaX}px, ${deltaY}px)`
+                node.getBoundingClientRect()
+                node.style.transition = "transform 180ms cubic-bezier(0.22, 1, 0.36, 1)"
+                node.style.transform = "translate(0px, 0px)"
+
+                const cleanup = () => {
+                    node.style.transition = ""
+                    node.style.transform = ""
+                    node.removeEventListener("transitionend", cleanup)
+                }
+                node.addEventListener("transitionend", cleanup)
+            })
+        })
+    }
+
+    const setItemNodeRef = (itemId: string) => (node: HTMLElement | null) => {
+        if (!node) {
+            itemNodeRefs.current.delete(itemId)
+            return
+        }
+        itemNodeRefs.current.set(itemId, node)
+    }
 
     const setDragOverHotbar = (index: number) => {
         setDragOver(prev => prev?.zone === "hotbar" && prev.index === index ? prev : { zone: "hotbar", index })
@@ -267,31 +317,84 @@ export function InventoryBar() {
     function onDropHotbar(targetIndex: number) {
         const src = dragSrc.current
         if (!src) return
-        setHotbar(prev => {
-            const next = [...prev]
+
+        runInventoryMoveAnimation(() => {
             if (src.zone === "hotbar") {
-                const tmp = next[targetIndex]; next[targetIndex] = next[src.index]; next[src.index] = tmp
+                setHotbar(prev => {
+                    const next = [...prev]
+                    const tmp = next[targetIndex]
+                    next[targetIndex] = next[src.index]
+                    next[src.index] = tmp
+                    return next
+                })
             } else {
-                next[targetIndex] = src.id
+                setHotbar(prev => {
+                    const next = [...prev]
+                    const replacedId = next[targetIndex]
+                    next[targetIndex] = src.id
+
+                    setExtraOrder(extraPrev => {
+                        const srcPos = extraPrev.indexOf(src.id)
+                        if (srcPos === -1) return extraPrev
+
+                        const extraNext = [...extraPrev]
+                        if (replacedId) extraNext[srcPos] = replacedId
+                        else extraNext.splice(srcPos, 1)
+                        return extraNext
+                    })
+
+                    return next
+                })
             }
-            return next
+
+            setDragOver(null)
+            dragSrc.current = null
         })
-        setDragOver(null); dragSrc.current = null
     }
 
     function onDropExtra(targetId?: string) {
         const src = dragSrc.current
         if (!src) return
 
-        if (src.zone === "hotbar") {
-            setHotbar(prev => {
-                const next = [...prev]
-                next[src.index] = targetId ?? null
-                return next
-            })
-        }
+        runInventoryMoveAnimation(() => {
+            if (src.zone === "hotbar") {
+                setHotbar(prev => {
+                    const next = [...prev]
+                    const movedId = next[src.index]
+                    if (!movedId) return next
 
-        setDragOver(null); dragSrc.current = null
+                    if (!targetId) {
+                        next[src.index] = null
+                        setExtraOrder(extraPrev => extraPrev.includes(movedId) ? extraPrev : [...extraPrev, movedId])
+                        return next
+                    }
+
+                    next[src.index] = targetId
+                    setExtraOrder(extraPrev => {
+                        const targetPos = extraPrev.indexOf(targetId)
+                        if (targetPos === -1) return extraPrev
+                        const extraNext = [...extraPrev]
+                        extraNext[targetPos] = movedId
+                        return extraNext
+                    })
+                    return next
+                })
+            } else if (targetId) {
+                setExtraOrder(prev => {
+                    const srcPos = prev.indexOf(src.id)
+                    const targetPos = prev.indexOf(targetId)
+                    if (srcPos === -1 || targetPos === -1 || srcPos === targetPos) return prev
+                    const next = [...prev]
+                    const tmp = next[targetPos]
+                    next[targetPos] = next[srcPos]
+                    next[srcPos] = tmp
+                    return next
+                })
+            }
+
+            setDragOver(null)
+            dragSrc.current = null
+        })
     }
 
     function cancelDrag() { setDragOver(null); dragSrc.current = null }
@@ -366,6 +469,7 @@ export function InventoryBar() {
         return (
             <div
                 key={index}
+                ref={item ? setItemNodeRef(item.id) : null}
                 className={["inv-slot-wrap", over ? "drag-over" : ""].filter(Boolean).join(" ")}
                 onDragOver={e => { e.preventDefault(); setDragOverHotbar(index) }}
                 onDragLeave={() => setDragOver(null)}
@@ -414,6 +518,7 @@ export function InventoryBar() {
         return (
             <div
                 key={item.id}
+                ref={setItemNodeRef(item.id)}
                 className={["inv-slot-wrap", over ? "drag-over" : ""].filter(Boolean).join(" ")}
                 onDragOver={e => { e.preventDefault(); setDragOverExtra(item.id) }}
                 onDragLeave={() => setDragOver(null)}
