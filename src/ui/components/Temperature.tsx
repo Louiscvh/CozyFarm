@@ -16,6 +16,8 @@ export const Temperature = () => {
 
   const prevYearT = useRef(getSeasonState().yearProgress)
   const totalSeasonAngle = useRef(getSeasonState().yearProgress * 360)
+  const seasonTargetAngle = useRef(totalSeasonAngle.current)
+  const seasonDisplayAngle = useRef(totalSeasonAngle.current)
 
   const rafRef = useRef<number>(0)
 
@@ -42,10 +44,17 @@ export const Temperature = () => {
 
       if (Math.abs(yearDelta) > 0.0001) {
         totalSeasonAngle.current += yearDelta * 360
+        seasonTargetAngle.current = totalSeasonAngle.current
         prevYearT.current = yearT
+      }
+
+      const seasonSmoothing = 0.16
+      const seasonAngleDiff = seasonTargetAngle.current - seasonDisplayAngle.current
+      if (Math.abs(seasonAngleDiff) > 0.01) {
+        seasonDisplayAngle.current += seasonAngleDiff * seasonSmoothing
         if (seasonRotatorRef.current) {
           seasonRotatorRef.current.style.transform =
-            `translateY(50%) rotate(${totalSeasonAngle.current}deg)`
+            `translateY(50%) rotate(${seasonDisplayAngle.current}deg)`
         }
       }
 
@@ -58,8 +67,24 @@ export const Temperature = () => {
       } else {
         prevDayT.current = Time.getVisualDayT()
         prevYearT.current = getSeasonState().yearProgress
+        totalSeasonAngle.current = prevYearT.current * 360
+        seasonTargetAngle.current = totalSeasonAngle.current
+        seasonDisplayAngle.current = totalSeasonAngle.current
+        if (seasonRotatorRef.current) {
+          seasonRotatorRef.current.style.transform =
+            `translateY(50%) rotate(${seasonDisplayAngle.current}deg)`
+        }
         rafRef.current = requestAnimationFrame(loop)
       }
+    }
+
+    if (dayRotatorRef.current) {
+      dayRotatorRef.current.style.transform =
+        `translateY(50%) rotate(${totalDayAngle.current}deg)`
+    }
+    if (seasonRotatorRef.current) {
+      seasonRotatorRef.current.style.transform =
+        `translateY(50%) rotate(${seasonDisplayAngle.current}deg)`
     }
 
     document.addEventListener("visibilitychange", onVisibility)
