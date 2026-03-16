@@ -7,26 +7,46 @@ import { getSeasonState } from "../../game/system/Season"
 
 export const Temperature = () => {
   const [temperature, setTemperature] = useState(20)
-  const [seasonLetter, setSeasonLetter] = useState(getSeasonState().season.shortLabel)
-  const rotatorRef = useRef<HTMLDivElement>(null)
-  const prevT      = useRef(Time.getVisualDayT())
-  const totalAngle = useRef(Time.getVisualDayT() * 360)
-  const rafRef     = useRef<number>(0)
+
+  const dayRotatorRef = useRef<HTMLDivElement>(null)
+  const seasonRotatorRef = useRef<HTMLDivElement>(null)
+
+  const prevDayT = useRef(Time.getVisualDayT())
+  const totalDayAngle = useRef(Time.getVisualDayT() * 360)
+
+  const prevYearT = useRef(getSeasonState().yearProgress)
+  const totalSeasonAngle = useRef(getSeasonState().yearProgress * 360)
+
+  const rafRef = useRef<number>(0)
 
   useEffect(() => {
     const loop = () => {
-      const t = Time.getVisualDayT()
-      let delta = t - prevT.current
-      if (delta >  0.5) delta -= 1
-      if (delta < -0.5) delta += 1
+      const dayT = Time.getVisualDayT()
+      let dayDelta = dayT - prevDayT.current
+      if (dayDelta > 0.5) dayDelta -= 1
+      if (dayDelta < -0.5) dayDelta += 1
 
-      // Skip DOM write if angle moved less than 0.01° — saves style recalc
-      if (Math.abs(delta) > 0.0001) {
-        totalAngle.current += delta * 360
-        prevT.current = t
-        if (rotatorRef.current)
-          rotatorRef.current.style.transform =
-            `translateY(50%) rotate(${totalAngle.current}deg)`
+      if (Math.abs(dayDelta) > 0.0001) {
+        totalDayAngle.current += dayDelta * 360
+        prevDayT.current = dayT
+        if (dayRotatorRef.current) {
+          dayRotatorRef.current.style.transform =
+            `translateY(50%) rotate(${totalDayAngle.current}deg)`
+        }
+      }
+
+      const yearT = getSeasonState().yearProgress
+      let yearDelta = yearT - prevYearT.current
+      if (yearDelta > 0.5) yearDelta -= 1
+      if (yearDelta < -0.5) yearDelta += 1
+
+      if (Math.abs(yearDelta) > 0.0001) {
+        totalSeasonAngle.current += yearDelta * 360
+        prevYearT.current = yearT
+        if (seasonRotatorRef.current) {
+          seasonRotatorRef.current.style.transform =
+            `translateY(50%) rotate(${totalSeasonAngle.current}deg)`
+        }
       }
 
       rafRef.current = requestAnimationFrame(loop)
@@ -36,8 +56,8 @@ export const Temperature = () => {
       if (document.hidden) {
         cancelAnimationFrame(rafRef.current)
       } else {
-        // Reset prevT so the first delta after coming back is 0, not the whole absence
-        prevT.current = Time.getVisualDayT()
+        prevDayT.current = Time.getVisualDayT()
+        prevYearT.current = getSeasonState().yearProgress
         rafRef.current = requestAnimationFrame(loop)
       }
     }
@@ -53,12 +73,10 @@ export const Temperature = () => {
 
   useEffect(() => {
     const id = setInterval(() => {
-      if (document.hidden) return   // no point updating while tab is hidden
+      if (document.hidden) return
       const weather = Renderer.instance?.world?.weather
       if (!weather) return
       setTemperature(Math.round(weather.getTemperature()))
-      const state = getSeasonState()
-      setSeasonLetter(state.season.shortLabel)
     }, 300)
     return () => clearInterval(id)
   }, [])
@@ -67,17 +85,26 @@ export const Temperature = () => {
     <div className="temperature-bar">
       <UIButton className="cycle-widget static">
         <div className="cycle-mask">
-          <div ref={rotatorRef} className="cycle-rotator">
+          <div ref={dayRotatorRef} className="cycle-rotator">
             <div className="sun">☀️</div>
             <div className="moon">🌚</div>
           </div>
         </div>
       </UIButton>
+
       <UIButton className="temperature-widget static">
         {temperature}°C
       </UIButton>
-      <UIButton className="season-widget static">
-        <div className="season-letter">{seasonLetter}</div>
+
+      <UIButton className="season-cycle-widget static">
+        <div className="cycle-mask">
+          <div ref={seasonRotatorRef} className="season-cycle-rotator">
+            <div className="season-icon autumn">🍂</div>
+            <div className="season-icon winter">❄️</div>
+            <div className="season-icon spring">🌸</div>
+            <div className="season-icon summer">🌻</div>
+          </div>
+        </div>
       </UIButton>
     </div>
   )
