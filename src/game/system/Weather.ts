@@ -190,16 +190,13 @@ export class Weather {
     this.currentPrecipIntensity = intensity
 
     const isWinter = getSeasonState().season.id === "winter"
-    if (isWinter) {
-      this.rain.setIntensity("none")
-      this.snow.setIntensity(intensity)
-      weatherLog(`Weather change at ${formatGameHourFromDayT(Time.getLogicalDayT())} | rainChance=${Math.round(DAY_RAIN_CHANCE * 100)}% | continueChance=${Math.round(CONTINUE_NEXT_DAY_CHANCE * 100)}% | ${previous} -> ${intensity} (snow)`)
-      return
-    }
 
+    // Précipitations rendues en overlay UI (filtre écran),
+    // donc on coupe les systèmes 3D pour éviter interactions/raycast caméra.
+    this.rain.setIntensity("none")
     this.snow.setIntensity("none")
-    this.rain.setIntensity(intensity)
-    weatherLog(`Weather change at ${formatGameHourFromDayT(Time.getLogicalDayT())} | rainChance=${Math.round(DAY_RAIN_CHANCE * 100)}% | continueChance=${Math.round(CONTINUE_NEXT_DAY_CHANCE * 100)}% | ${previous} -> ${intensity} (rain)`)
+
+    weatherLog(`Weather change at ${formatGameHourFromDayT(Time.getLogicalDayT())} | rainChance=${Math.round(DAY_RAIN_CHANCE * 100)}% | continueChance=${Math.round(CONTINUE_NEXT_DAY_CHANCE * 100)}% | ${previous} -> ${intensity} (${isWinter ? "snow" : "rain"})`)
   }
 
   private _updateTemperature(deltaTime: number) {

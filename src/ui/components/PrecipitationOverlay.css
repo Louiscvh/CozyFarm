@@ -1,0 +1,36 @@
+.precip-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 15;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.precip-particle {
+  position: absolute;
+  top: -8%;
+  will-change: transform;
+  animation-name: precip-fall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+
+.precip-overlay.rain .precip-particle {
+  width: 2px;
+  height: 28px;
+  border-radius: 999px;
+  background: linear-gradient(to bottom, rgba(210, 235, 255, 0), rgba(170, 210, 255, 0.95));
+}
+
+.precip-overlay.snow .precip-particle {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+@keyframes precip-fall {
+  from { transform: translate3d(var(--drift, 0px), -12vh, 0) scale(var(--scale, 1)); }
+  to { transform: translate3d(calc(var(--drift, 0px) * -0.35), 112vh, 0) scale(var(--scale, 1)); }
+}

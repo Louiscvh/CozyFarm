@@ -11,6 +11,7 @@ import { RollBackBar } from "./ui/components/RollBackBar"
 import { Temperature } from "./ui/components/Temperature"
 import { PlacementManager } from "./ui/components/PlacementManager"
 import { CursorItem } from "./ui/components/CursorItem"
+import { PrecipitationOverlay } from "./ui/components/PrecipitationOverlay"
 
 export const App = () => {
   return (
@@ -18,6 +19,7 @@ export const App = () => {
       {/* System */}
       <LoaderOverlay />
       <PlacementManager />
+      <PrecipitationOverlay />
 
       <div id="ui-root">
         <header>
