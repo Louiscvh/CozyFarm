@@ -362,14 +362,3 @@ body.placing { cursor: crosshair; }
   45% { transform: scale(1.045); }
   100% { transform: scale(1); }
 }
-
-/* ── View Transition: swap visuel des items ── */
-::view-transition-group(*) {
-  animation-duration: 180ms;
-  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
-}
-
-::view-transition-old(*),
-::view-transition-new(*) {
-  animation-duration: 180ms;
-}

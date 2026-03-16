@@ -1,5 +1,5 @@
 // src/ui/components/InventoryBar.tsx
-import { useState, useEffect, useMemo, useRef } from "react"
+import { useState, useEffect, useMemo, useRef, useLayoutEffect } from "react"
 import { placementStore } from "../store/PlacementStore"
 import { inventoryStore } from "../store/InventoryStore"
 import type { ItemDef } from "../../game/entity/ItemDef"
@@ -137,19 +137,6 @@ type DragSource =
     | { zone: "hotbar"; index: number }
     | { zone: "extra"; id: string }
 
-type ViewTransitionDocument = Document & {
-    startViewTransition?: (updateCallback: () => void) => void
-}
-
-const runInventoryTransition = (update: () => void) => {
-    const doc = document as ViewTransitionDocument
-    if (doc.startViewTransition) {
-        doc.startViewTransition(update)
-        return
-    }
-    update()
-}
-
 const isLevelableTool = (itemId: string | null): itemId is ToolId =>
     itemId === "hoe" || itemId === "watering_can" || itemId === "axe" || itemId === "shovel"
 
@@ -185,6 +172,50 @@ export function InventoryBar() {
     const [dragOver, setDragOver] = useState<
     { zone: "hotbar"; index: number } | { zone: "extra"; id: string } | null
         >(null)
+    const itemNodeRefs = useRef(new Map<string, HTMLElement>())
+    const previousItemRects = useRef<Map<string, DOMRect>>(new Map())
+
+    useLayoutEffect(() => {
+        const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        const nextRects = new Map<string, DOMRect>()
+
+        itemNodeRefs.current.forEach((node, itemId) => {
+            const nextRect = node.getBoundingClientRect()
+            nextRects.set(itemId, nextRect)
+
+            if (reduceMotion) return
+
+            const previousRect = previousItemRects.current.get(itemId)
+            if (!previousRect) return
+
+            const deltaX = previousRect.left - nextRect.left
+            const deltaY = previousRect.top - nextRect.top
+            if (!deltaX && !deltaY) return
+
+            node.style.transition = "none"
+            node.style.transform = `translate(${deltaX}px, ${deltaY}px)`
+            node.getBoundingClientRect()
+            node.style.transition = "transform 180ms cubic-bezier(0.22, 1, 0.36, 1)"
+            node.style.transform = "translate(0px, 0px)"
+
+            const cleanup = () => {
+                node.style.transition = ""
+                node.style.transform = ""
+                node.removeEventListener("transitionend", cleanup)
+            }
+            node.addEventListener("transitionend", cleanup)
+        })
+
+        previousItemRects.current = nextRects
+    }, [hotbar, extraOrder, expanded])
+
+    const setItemNodeRef = (itemId: string) => (node: HTMLElement | null) => {
+        if (!node) {
+            itemNodeRefs.current.delete(itemId)
+            return
+        }
+        itemNodeRefs.current.set(itemId, node)
+    }
 
     const setDragOverHotbar = (index: number) => {
         setDragOver(prev => prev?.zone === "hotbar" && prev.index === index ? prev : { zone: "hotbar", index })
@@ -284,7 +315,7 @@ export function InventoryBar() {
         const src = dragSrc.current
         if (!src) return
 
-        runInventoryTransition(() => {
+        
             if (src.zone === "hotbar") {
                 setHotbar(prev => {
                     const next = [...prev]
@@ -313,16 +344,15 @@ export function InventoryBar() {
                 })
             }
 
-            setDragOver(null)
-            dragSrc.current = null
-        })
+        setDragOver(null)
+        dragSrc.current = null
     }
 
     function onDropExtra(targetId?: string) {
         const src = dragSrc.current
         if (!src) return
 
-        runInventoryTransition(() => {
+        
             if (src.zone === "hotbar") {
                 setHotbar(prev => {
                     const next = [...prev]
@@ -358,9 +388,8 @@ export function InventoryBar() {
                 })
             }
 
-            setDragOver(null)
-            dragSrc.current = null
-        })
+        setDragOver(null)
+        dragSrc.current = null
     }
 
     function cancelDrag() { setDragOver(null); dragSrc.current = null }
@@ -435,6 +464,7 @@ export function InventoryBar() {
         return (
             <div
                 key={index}
+                ref={item ? setItemNodeRef(item.id) : null}
                 className={["inv-slot-wrap", over ? "drag-over" : ""].filter(Boolean).join(" ")}
                 onDragOver={e => { e.preventDefault(); setDragOverHotbar(index) }}
                 onDragLeave={() => setDragOver(null)}
@@ -453,7 +483,6 @@ export function InventoryBar() {
                         onMouseDown={e => e.stopPropagation()}
                         disabled={isDisabled}
                         draggable
-                        style={{ viewTransitionName: `inventory-item-${item.id}` }}
                         onDragStart={() => onDragStartHotbar(index)}
                         onDragEnd={cancelDrag}
                     >
@@ -484,6 +513,7 @@ export function InventoryBar() {
         return (
             <div
                 key={item.id}
+                ref={setItemNodeRef(item.id)}
                 className={["inv-slot-wrap", over ? "drag-over" : ""].filter(Boolean).join(" ")}
                 onDragOver={e => { e.preventDefault(); setDragOverExtra(item.id) }}
                 onDragLeave={() => setDragOver(null)}
@@ -501,7 +531,6 @@ export function InventoryBar() {
                     onMouseDown={e => e.stopPropagation()}
                     disabled={isDisabled}
                     draggable
-                    style={{ viewTransitionName: `inventory-item-${item.id}` }}
                     onDragStart={() => onDragStartExtra(item.id)}
                     onDragEnd={cancelDrag}
                 >
