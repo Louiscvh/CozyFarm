@@ -1,6 +1,7 @@
 ﻿// src/game/farming/GrowthConditions.ts
 import { Time } from "../core/Time"
 import type { Weather } from "../system/Weather"
+import { getSeasonState } from "../system/Season"
 
 export interface GrowthConditions {
     /** Multiplicateur final appliqué à deltaTime pour la croissance (hors arrosage) */
@@ -13,6 +14,7 @@ export interface GrowthConditions {
         temperatureMult: number
         rainMult: number
         timeSpeedMult: number
+        seasonMult: number
         wateredMult: number
     }
 }
@@ -43,6 +45,7 @@ export function computeGrowthRate(weather: Weather | null): GrowthConditions {
                 temperatureMult: 0,
                 rainMult: 0,
                 timeSpeedMult: 0,
+                seasonMult: 0,
                 wateredMult: WATERED_MULT,
             },
         }
@@ -60,8 +63,9 @@ export function computeGrowthRate(weather: Weather | null): GrowthConditions {
 
     // ── Vitesse du temps ───────────────────────────────────────────
     const timeSpeedMult = Time.timeScale
+    const seasonMult = getSeasonState().season.growthMultiplier
 
-    const growthRate = temperatureMult * rainMult * timeSpeedMult
+    const growthRate = temperatureMult * rainMult * timeSpeedMult * seasonMult
 
     return {
         growthRate,
@@ -71,6 +75,7 @@ export function computeGrowthRate(weather: Weather | null): GrowthConditions {
             temperatureMult,
             rainMult,
             timeSpeedMult,
+            seasonMult,
             wateredMult: WATERED_MULT,
         },
     }

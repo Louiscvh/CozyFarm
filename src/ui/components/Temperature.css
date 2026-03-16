@@ -20,6 +20,37 @@
   font-family: "JetBrains Mono", monospace;
 }
 
+.season-widget {
+  min-width: 180px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px 10px;
+}
+
+.season-title {
+  font-weight: 700;
+  font-size: 0.88rem;
+}
+
+.season-sub {
+  font-size: 0.72rem;
+  opacity: 0.8;
+}
+
+.year-progress-track {
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+  overflow: hidden;
+}
+
+.year-progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #68c6ff, #ffd26f);
+}
+
 .cycle-widget {
   z-index: 1000;
   overflow: hidden;

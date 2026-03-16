@@ -2,6 +2,8 @@
 import * as THREE from "three"
 import { Time } from "../core/Time"
 import { Rain, type RainIntensity } from "../system/Rain"
+import { getSeasonState, type SeasonId } from "./Season"
+import { Snow } from "./Snow"
 
 function smoothstep(edge0: number, edge1: number, x: number): number {
   const t = Math.max(0, Math.min(1, (x - edge0) / (edge1 - edge0)))
@@ -19,10 +21,14 @@ export class Weather {
   public temperature: number = 15
   private targetTemperature: number = 15
   private rain:    Rain
+  private snow:    Snow
   private readonly shadowCoverage = 24
   private readonly shadowPcfKernel = 4
 
   public daylight: number = 1
+  private seasonId: SeasonId = "autumn"
+  private seasonSky = new THREE.Color("#f4b184")
+  private seasonLight = new THREE.Color("#ffd2b0")
 
   // Source de vérité unique : l'intensité courante
   private currentRainIntensity: RainIntensity = "none"
@@ -37,6 +43,7 @@ export class Weather {
     this.ambient = this._createAmbient()
 
     this.rain    = new Rain(scene)
+    this.snow    = new Snow(scene)
   }
 
   // ─── Public API ──────────────────────────────────────────────────────────────
@@ -66,6 +73,8 @@ export class Weather {
   
     const camPos = this.camera.position
     this.rain.update(deltaTime, camPos)
+    this.snow.setEnabled(getSeasonState().season.id === "winter")
+    this.snow.update(deltaTime, camPos)
   }
 
   dispose() {
@@ -74,9 +83,11 @@ export class Weather {
     this.scene.remove(this.backSun)
     this.scene.remove(this.ambient)
     this.rain.dispose()
+    this.snow.dispose()
   }
 
   private _updateTemperature(deltaTime: number) {
+    const season = getSeasonState().season
     // Température de base selon lumière du jour
     // Nuit ≈ 8°C
     // Jour plein ≈ 22°C
@@ -84,6 +95,7 @@ export class Weather {
     const maxTemp = 22
   
     let baseTemp = THREE.MathUtils.lerp(minTemp, maxTemp, this.daylight)
+    baseTemp += season.temperatureOffset
   
     // Refroidissement pluie
     if (this.currentRainIntensity === "heavy") {
@@ -154,6 +166,13 @@ export class Weather {
   // ─── Sun/Moon cycle ──────────────────────────────────────────────────────────
 
   private _updateSun() {
+    const season = getSeasonState().season
+    if (season.id !== this.seasonId) {
+      this.seasonId = season.id
+    }
+    this.seasonSky.lerp(new THREE.Color(season.skyColor), 0.015)
+    this.seasonLight.lerp(new THREE.Color(season.lightTint), 0.015)
+
     const t = Time.getVisualDayT()
     const radius   = 100
     const sunriseT = 0.25
@@ -171,7 +190,7 @@ export class Weather {
       50
     )
     this.sun.intensity = this.daylight * 2
-    this.sun.color      = new THREE.Color("#001133").lerp(new THREE.Color("#ffb347"), this.daylight)
+    this.sun.color      = new THREE.Color("#001133").lerp(this.seasonLight, this.daylight)
     this.backSun.intensity = this.daylight * 0.4
 
     const nightProgress = t < sunriseT
@@ -188,8 +207,14 @@ export class Weather {
     const nightDepth    = isDay ? 0 : Math.max(0, moonY)
     this.moon.intensity = nightDepth * smoothstep(0, 0.3, 1 - this.daylight) * 0.05
 
-    this.ambient.color     = new THREE.Color("#060810").lerp(new THREE.Color("#ffe0c7"), this.daylight)
+    this.ambient.color     = new THREE.Color("#060810").lerp(this.seasonLight, this.daylight)
     this.ambient.intensity = THREE.MathUtils.lerp(0.03, 0.55, this.daylight)
+
+    if (this.scene.background instanceof THREE.Color) {
+      this.scene.background.copy(this.seasonSky)
+    } else {
+      this.scene.background = this.seasonSky.clone()
+    }
   }
 
 }

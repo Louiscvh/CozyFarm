@@ -23,6 +23,7 @@ import { WaterSplashParticles } from "../../system/WaterSplashParticles"
 import { TillParticles } from "../../system/TillParticles"
 import { FoliageParticles } from "../../system/FoliageParticles"
 import { WoodChipParticles } from "../../system/WoodChipParticles"
+import { getSeasonState, type SeasonId } from "../../system/Season"
 
 export interface DecorCategory { types: Entity[]; density: number }
 export interface FixedEntityDef { def: Entity; tileX: number; tileZ: number; size: number }
@@ -107,6 +108,8 @@ export class TileFactory {
     private readonly tillParticles: TillParticles
     private readonly foliageParticles: FoliageParticles
     private readonly woodChipParticles: WoodChipParticles
+    private seasonId: SeasonId = "autumn"
+    private currentTerrainTint = new THREE.Color("#d59f72")
 
     constructor(scene: THREE.Scene, worldSize: number, tileSize: number) {
         this.scene = scene
@@ -120,6 +123,20 @@ export class TileFactory {
         this.tillParticles = new TillParticles(this.scene, this.cellSize, this.worldSizeInCells)
         this.foliageParticles = new FoliageParticles(this.scene, this.cellSize, this.worldSizeInCells)
         this.woodChipParticles = new WoodChipParticles(this.scene, this.cellSize, this.worldSizeInCells)
+    }
+
+    updateSeasonVisuals(): void {
+        const season = getSeasonState().season
+        if (season.id !== this.seasonId) {
+            this.seasonId = season.id
+        }
+
+        this.currentTerrainTint.lerp(new THREE.Color(season.terrainTint), 0.02)
+        for (const mesh of this.instancedMeshes.values()) {
+            const material = mesh.material
+            if (!(material instanceof THREE.MeshStandardMaterial)) continue
+            material.color.copy(this.currentTerrainTint)
+        }
     }
 
     waterCell(cellX: number, cellZ: number): boolean {
