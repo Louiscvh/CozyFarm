@@ -51,6 +51,15 @@ export const DevToolBar = () => {
     return () => window.removeEventListener("keydown", onKey)
   }, [])
 
+  useEffect(() => {
+    const id = setInterval(() => {
+      const weather = World.current?.weather
+      if (!weather) return
+      setIsRaining(weather.getRainIntensity() !== "none")
+    }, 250)
+    return () => clearInterval(id)
+  }, [])
+
   const toggleDebugMarkers = () => {
     World.current?.tilesFactory.toggleDebugMarkers()
     setFootprintVisible(v => !v)

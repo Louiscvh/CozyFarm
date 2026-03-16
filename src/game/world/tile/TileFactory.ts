@@ -96,6 +96,7 @@ export class TileFactory {
     private snowFreeSlots: number[] = []
     private snowHighWater = 0
     private readonly SNOW_MAX = 3000
+    private winterSnowBudget = 0
 
     private wateredCells = new Set<string>()
     private readonly SOIL_COLOR_DRY = new THREE.Color(1, 1, 1)
@@ -133,7 +134,7 @@ export class TileFactory {
     }
 
     private initSnowMesh(): void {
-        const geo = new THREE.BoxGeometry(this.cellSize, 0.2, this.cellSize)
+        const geo = new THREE.BoxGeometry(this.cellSize, 0.05, this.cellSize)
         const mat = new THREE.MeshStandardMaterial({
             color: "#f4f8ff",
             roughness: 0.96,
@@ -171,7 +172,7 @@ export class TileFactory {
         const half = this.worldSizeInCells / 2
         _dummy.position.set(
             (cellX - half + 0.5) * this.cellSize,
-            0.1,
+            0.025,
             (cellZ - half + 0.5) * this.cellSize,
         )
         _dummy.rotation.set(0, 0, 0)
@@ -207,7 +208,8 @@ export class TileFactory {
     }
 
     private clearAllSnow(): void {
-        for (const [key, slot] of this.snowSlots) {
+        const entries = Array.from(this.snowSlots.entries())
+        for (const [key, slot] of entries) {
             this.snowMesh.setMatrixAt(slot, _zero)
             this.snowFreeSlots.push(slot)
             this.snowSlots.delete(key)
@@ -220,11 +222,21 @@ export class TileFactory {
         if (season.id !== this.seasonId) {
             const wasWinter = this.seasonId === "winter"
             this.seasonId = season.id
-            if (!wasWinter && this.seasonId === "winter") this.populateSnow(1800)
-            if (wasWinter && this.seasonId !== "winter") this.clearAllSnow()
+            if (!wasWinter && this.seasonId === "winter") this.winterSnowBudget = 1800
+            if (wasWinter && this.seasonId !== "winter") {
+                this.winterSnowBudget = 0
+                this.clearAllSnow()
+            }
         }
 
-        if (this.seasonId === "winter") this.populateSnow(22)
+        if (this.seasonId === "winter") {
+            if (this.winterSnowBudget > 0) {
+                const step = Math.min(14, this.winterSnowBudget)
+                this.populateSnow(step)
+                this.winterSnowBudget -= step
+            }
+            this.populateSnow(2)
+        }
 
         this.currentTerrainTint.lerp(new THREE.Color(season.terrainTint), 0.02)
         for (const mesh of this.instancedMeshes.values()) {

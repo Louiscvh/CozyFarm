@@ -16,6 +16,10 @@ const EVENING_T = 20 / 24
 const DAY_RAIN_CHANCE = 0.45
 const CONTINUE_NEXT_DAY_CHANCE = 0.12
 
+function weatherLog(message: string) {
+  console.log(`[Weather] ${message}`)
+}
+
 export class Weather {
   private scene: THREE.Scene
   private camera: THREE.Camera
@@ -65,6 +69,7 @@ export class Weather {
   setRain(intensity: RainIntensity) {
     this.manualOverrideActive = true
     this.manualOverrideIntensity = intensity
+    weatherLog(`Manual override -> ${intensity}`)
     this._applyPrecipitation(intensity)
   }
 
@@ -121,11 +126,13 @@ export class Weather {
       if (this.plannedWetDay) {
         this.currentDayRainIntensity = Math.random() < 0.65 ? "moderate" : "heavy"
       }
+      weatherLog(`Dawn plan day=${dayIndex} wet=${this.plannedWetDay} intensity=${this.currentDayRainIntensity}`)
     }
 
     if (dayT >= EVENING_T && this.eveningProcessedDay !== dayIndex) {
       this.eveningProcessedDay = dayIndex
       this.carryWetToNextDay = this.plannedWetDay && Math.random() < CONTINUE_NEXT_DAY_CHANCE
+      weatherLog(`Evening stop day=${dayIndex}, carry=${this.carryWetToNextDay}`)
       this.plannedWetDay = false
       this.manualOverrideActive = false
       this._applyPrecipitation("none")
@@ -143,17 +150,20 @@ export class Weather {
 
   private _applyPrecipitation(intensity: RainIntensity) {
     if (intensity === this.currentPrecipIntensity) return
+    const previous = this.currentPrecipIntensity
     this.currentPrecipIntensity = intensity
 
     const isWinter = getSeasonState().season.id === "winter"
     if (isWinter) {
       this.rain.setIntensity("none")
       this.snow.setIntensity(intensity)
+      weatherLog(`Precipitation changed ${previous} -> ${intensity} (snow)`)
       return
     }
 
     this.snow.setIntensity("none")
     this.rain.setIntensity(intensity)
+    weatherLog(`Precipitation changed ${previous} -> ${intensity} (rain)`)
   }
 
   private _updateTemperature(deltaTime: number) {
