@@ -15,6 +15,7 @@ export class MouseDrag {
 
     // Souris (desktop)
     window.addEventListener("mousedown", e => {
+      e.preventDefault()
       this.dragging = true
       this.lastX = e.clientX
       this.lastY = e.clientY
@@ -28,6 +29,8 @@ export class MouseDrag {
 
     window.addEventListener("mousemove", e => {
       if (!this.dragging) return
+
+      e.preventDefault()
 
       const dx = e.clientX - this.lastX
       const dy = e.clientY - this.lastY
