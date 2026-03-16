@@ -1,5 +1,5 @@
 // src/ui/components/InventoryBar.tsx
-import { useState, useEffect, useMemo, useRef, useLayoutEffect } from "react"
+import { useState, useEffect, useMemo, useRef } from "react"
 import { placementStore } from "../store/PlacementStore"
 import { inventoryStore } from "../store/InventoryStore"
 import type { ItemDef } from "../../game/entity/ItemDef"
@@ -173,41 +173,44 @@ export function InventoryBar() {
     { zone: "hotbar"; index: number } | { zone: "extra"; id: string } | null
         >(null)
     const itemNodeRefs = useRef(new Map<string, HTMLElement>())
-    const previousItemRects = useRef<Map<string, DOMRect>>(new Map())
 
-    useLayoutEffect(() => {
+    const runInventoryMoveAnimation = (update: () => void) => {
         const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches
-        const nextRects = new Map<string, DOMRect>()
+        const beforeRects = new Map<string, DOMRect>()
 
         itemNodeRefs.current.forEach((node, itemId) => {
-            const nextRect = node.getBoundingClientRect()
-            nextRects.set(itemId, nextRect)
-
-            if (reduceMotion) return
-
-            const previousRect = previousItemRects.current.get(itemId)
-            if (!previousRect) return
-
-            const deltaX = previousRect.left - nextRect.left
-            const deltaY = previousRect.top - nextRect.top
-            if (!deltaX && !deltaY) return
-
-            node.style.transition = "none"
-            node.style.transform = `translate(${deltaX}px, ${deltaY}px)`
-            node.getBoundingClientRect()
-            node.style.transition = "transform 180ms cubic-bezier(0.22, 1, 0.36, 1)"
-            node.style.transform = "translate(0px, 0px)"
-
-            const cleanup = () => {
-                node.style.transition = ""
-                node.style.transform = ""
-                node.removeEventListener("transitionend", cleanup)
-            }
-            node.addEventListener("transitionend", cleanup)
+            beforeRects.set(itemId, node.getBoundingClientRect())
         })
 
-        previousItemRects.current = nextRects
-    }, [hotbar, extraOrder, expanded])
+        update()
+
+        if (reduceMotion) return
+
+        requestAnimationFrame(() => {
+            itemNodeRefs.current.forEach((node, itemId) => {
+                const before = beforeRects.get(itemId)
+                if (!before) return
+
+                const after = node.getBoundingClientRect()
+                const deltaX = before.left - after.left
+                const deltaY = before.top - after.top
+                if (!deltaX && !deltaY) return
+
+                node.style.transition = "none"
+                node.style.transform = `translate(${deltaX}px, ${deltaY}px)`
+                node.getBoundingClientRect()
+                node.style.transition = "transform 180ms cubic-bezier(0.22, 1, 0.36, 1)"
+                node.style.transform = "translate(0px, 0px)"
+
+                const cleanup = () => {
+                    node.style.transition = ""
+                    node.style.transform = ""
+                    node.removeEventListener("transitionend", cleanup)
+                }
+                node.addEventListener("transitionend", cleanup)
+            })
+        })
+    }
 
     const setItemNodeRef = (itemId: string) => (node: HTMLElement | null) => {
         if (!node) {
@@ -315,7 +318,7 @@ export function InventoryBar() {
         const src = dragSrc.current
         if (!src) return
 
-        
+        runInventoryMoveAnimation(() => {
             if (src.zone === "hotbar") {
                 setHotbar(prev => {
                     const next = [...prev]
@@ -344,15 +347,16 @@ export function InventoryBar() {
                 })
             }
 
-        setDragOver(null)
-        dragSrc.current = null
+            setDragOver(null)
+            dragSrc.current = null
+        })
     }
 
     function onDropExtra(targetId?: string) {
         const src = dragSrc.current
         if (!src) return
 
-        
+        runInventoryMoveAnimation(() => {
             if (src.zone === "hotbar") {
                 setHotbar(prev => {
                     const next = [...prev]
@@ -388,8 +392,9 @@ export function InventoryBar() {
                 })
             }
 
-        setDragOver(null)
-        dragSrc.current = null
+            setDragOver(null)
+            dragSrc.current = null
+        })
     }
 
     function cancelDrag() { setDragOver(null); dragSrc.current = null }
