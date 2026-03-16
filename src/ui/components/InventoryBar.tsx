@@ -137,6 +137,19 @@ type DragSource =
     | { zone: "hotbar"; index: number }
     | { zone: "extra"; id: string }
 
+type ViewTransitionDocument = Document & {
+    startViewTransition?: (updateCallback: () => void) => void
+}
+
+const runInventoryTransition = (update: () => void) => {
+    const doc = document as ViewTransitionDocument
+    if (doc.startViewTransition) {
+        doc.startViewTransition(update)
+        return
+    }
+    update()
+}
+
 const isLevelableTool = (itemId: string | null): itemId is ToolId =>
     itemId === "hoe" || itemId === "watering_can" || itemId === "axe" || itemId === "shovel"
 
@@ -271,77 +284,83 @@ export function InventoryBar() {
         const src = dragSrc.current
         if (!src) return
 
-        if (src.zone === "hotbar") {
-            setHotbar(prev => {
-                const next = [...prev]
-                const tmp = next[targetIndex]
-                next[targetIndex] = next[src.index]
-                next[src.index] = tmp
-                return next
-            })
-        } else {
-            setHotbar(prev => {
-                const next = [...prev]
-                const replacedId = next[targetIndex]
-                next[targetIndex] = src.id
-
-                setExtraOrder(extraPrev => {
-                    const srcPos = extraPrev.indexOf(src.id)
-                    if (srcPos === -1) return extraPrev
-
-                    const extraNext = [...extraPrev]
-                    if (replacedId) extraNext[srcPos] = replacedId
-                    else extraNext.splice(srcPos, 1)
-                    return extraNext
+        runInventoryTransition(() => {
+            if (src.zone === "hotbar") {
+                setHotbar(prev => {
+                    const next = [...prev]
+                    const tmp = next[targetIndex]
+                    next[targetIndex] = next[src.index]
+                    next[src.index] = tmp
+                    return next
                 })
+            } else {
+                setHotbar(prev => {
+                    const next = [...prev]
+                    const replacedId = next[targetIndex]
+                    next[targetIndex] = src.id
 
-                return next
-            })
-        }
+                    setExtraOrder(extraPrev => {
+                        const srcPos = extraPrev.indexOf(src.id)
+                        if (srcPos === -1) return extraPrev
 
-        setDragOver(null); dragSrc.current = null
+                        const extraNext = [...extraPrev]
+                        if (replacedId) extraNext[srcPos] = replacedId
+                        else extraNext.splice(srcPos, 1)
+                        return extraNext
+                    })
+
+                    return next
+                })
+            }
+
+            setDragOver(null)
+            dragSrc.current = null
+        })
     }
 
     function onDropExtra(targetId?: string) {
         const src = dragSrc.current
         if (!src) return
 
-        if (src.zone === "hotbar") {
-            setHotbar(prev => {
-                const next = [...prev]
-                const movedId = next[src.index]
-                if (!movedId) return next
+        runInventoryTransition(() => {
+            if (src.zone === "hotbar") {
+                setHotbar(prev => {
+                    const next = [...prev]
+                    const movedId = next[src.index]
+                    if (!movedId) return next
 
-                if (!targetId) {
-                    next[src.index] = null
-                    setExtraOrder(extraPrev => extraPrev.includes(movedId) ? extraPrev : [...extraPrev, movedId])
+                    if (!targetId) {
+                        next[src.index] = null
+                        setExtraOrder(extraPrev => extraPrev.includes(movedId) ? extraPrev : [...extraPrev, movedId])
+                        return next
+                    }
+
+                    next[src.index] = targetId
+                    setExtraOrder(extraPrev => {
+                        const targetPos = extraPrev.indexOf(targetId)
+                        if (targetPos === -1) return extraPrev
+                        const extraNext = [...extraPrev]
+                        extraNext[targetPos] = movedId
+                        return extraNext
+                    })
                     return next
-                }
-
-                next[src.index] = targetId
-                setExtraOrder(extraPrev => {
-                    const targetPos = extraPrev.indexOf(targetId)
-                    if (targetPos === -1) return extraPrev
-                    const extraNext = [...extraPrev]
-                    extraNext[targetPos] = movedId
-                    return extraNext
                 })
-                return next
-            })
-        } else if (targetId) {
-            setExtraOrder(prev => {
-                const srcPos = prev.indexOf(src.id)
-                const targetPos = prev.indexOf(targetId)
-                if (srcPos === -1 || targetPos === -1 || srcPos === targetPos) return prev
-                const next = [...prev]
-                const tmp = next[targetPos]
-                next[targetPos] = next[srcPos]
-                next[srcPos] = tmp
-                return next
-            })
-        }
+            } else if (targetId) {
+                setExtraOrder(prev => {
+                    const srcPos = prev.indexOf(src.id)
+                    const targetPos = prev.indexOf(targetId)
+                    if (srcPos === -1 || targetPos === -1 || srcPos === targetPos) return prev
+                    const next = [...prev]
+                    const tmp = next[targetPos]
+                    next[targetPos] = next[srcPos]
+                    next[srcPos] = tmp
+                    return next
+                })
+            }
 
-        setDragOver(null); dragSrc.current = null
+            setDragOver(null)
+            dragSrc.current = null
+        })
     }
 
     function cancelDrag() { setDragOver(null); dragSrc.current = null }
@@ -434,6 +453,7 @@ export function InventoryBar() {
                         onMouseDown={e => e.stopPropagation()}
                         disabled={isDisabled}
                         draggable
+                        style={{ viewTransitionName: `inventory-item-${item.id}` }}
                         onDragStart={() => onDragStartHotbar(index)}
                         onDragEnd={cancelDrag}
                     >
@@ -481,6 +501,7 @@ export function InventoryBar() {
                     onMouseDown={e => e.stopPropagation()}
                     disabled={isDisabled}
                     draggable
+                    style={{ viewTransitionName: `inventory-item-${item.id}` }}
                     onDragStart={() => onDragStartExtra(item.id)}
                     onDragEnd={cancelDrag}
                 >
