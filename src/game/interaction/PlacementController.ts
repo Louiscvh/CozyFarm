@@ -55,7 +55,7 @@ const hoverBorderMat = new LineMaterial({
     resolution: new THREE.Vector2(window.innerWidth, window.innerHeight),
 })
 const hoverCellMesh = new Line2(hoverBorderGeo, hoverBorderMat)
-hoverCellMesh.position.y = GRID_Y + 0.002
+hoverCellMesh.position.y = 0.06
 hoverCellMesh.visible = false
 hoverCellMesh.frustumCulled = false
 

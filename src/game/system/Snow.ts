@@ -42,10 +42,7 @@ const VERT = /* glsl */`
     float phase  = r4 * height;
     float y = mod(height - uLocalTime * uSpeed * (0.8 + r3 * 0.4) + phase, height);
 
-    float swayX = sin(uLocalTime * 0.8 + aSeed * 12.0) * 0.35;
-    float swayZ = cos(uLocalTime * 0.7 + aSeed * 9.0) * 0.35;
-
-    vec3 worldPos = vec3(x + swayX, uCamPos.y + y - (height * 0.5), z + swayZ);
+    vec3 worldPos = vec3(x, uCamPos.y + y - (height * 0.5), z);
 
     vec4 mvPosition = modelViewMatrix * vec4(worldPos, 1.0);
     gl_Position = projectionMatrix * mvPosition;

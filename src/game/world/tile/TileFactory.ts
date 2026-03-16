@@ -164,11 +164,17 @@ export class TileFactory {
         if (this.snowSlots.has(key)) return false
         if (!this.canHaveSnow(cellX, cellZ)) return false
 
-        const slot = this.snowFreeSlots.pop() ?? this.snowHighWater++
-        if (slot >= this.SNOW_MAX) return false
+        let slot: number
+        if (this.snowFreeSlots.length > 0) {
+            slot = this.snowFreeSlots.pop()!
+        } else {
+            if (this.snowHighWater >= this.SNOW_MAX) return false
+            slot = this.snowHighWater
+            this.snowHighWater += 1
+        }
 
         this.snowSlots.set(key, slot)
-        this.snowMesh.count = Math.max(this.snowMesh.count, this.snowHighWater)
+        this.snowMesh.count = Math.min(this.SNOW_MAX, Math.max(this.snowMesh.count, this.snowHighWater))
 
         const half = this.worldSizeInCells / 2
         _dummy.position.set(
@@ -209,6 +215,14 @@ export class TileFactory {
         this.snowMesh.setMatrixAt(slot, _zero)
         this.snowMesh.instanceMatrix.needsUpdate = true
         this.snowFreeSlots.push(slot)
+
+        while (this.snowHighWater > 0 && this.snowFreeSlots.includes(this.snowHighWater - 1)) {
+            const top = this.snowHighWater - 1
+            const idx = this.snowFreeSlots.indexOf(top)
+            if (idx >= 0) this.snowFreeSlots.splice(idx, 1)
+            this.snowHighWater -= 1
+        }
+        this.snowMesh.count = Math.max(0, Math.min(this.SNOW_MAX, this.snowHighWater))
         return true
     }
 
