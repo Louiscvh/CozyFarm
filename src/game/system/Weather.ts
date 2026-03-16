@@ -20,6 +20,12 @@ function weatherLog(message: string) {
   console.log(`[Weather] ${message}`)
 }
 
+function formatGameHour(dayT: number): string {
+  const hours = Math.floor(dayT * 24)
+  const minutes = Math.floor((dayT * 24 * 60) % 60)
+  return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`
+}
+
 export class Weather {
   private scene: THREE.Scene
   private camera: THREE.Camera
@@ -126,13 +132,13 @@ export class Weather {
       if (this.plannedWetDay) {
         this.currentDayRainIntensity = Math.random() < 0.65 ? "moderate" : "heavy"
       }
-      weatherLog(`Dawn plan day=${dayIndex} wet=${this.plannedWetDay} intensity=${this.currentDayRainIntensity}`)
+      weatherLog(`Dawn window 04:00-08:00 | trigger=${formatGameHour(dayT)} | rainChance=${Math.round(DAY_RAIN_CHANCE*100)}% | continueChance=${Math.round(CONTINUE_NEXT_DAY_CHANCE*100)}% | day=${dayIndex} wet=${this.plannedWetDay} intensity=${this.currentDayRainIntensity}`)
     }
 
     if (dayT >= EVENING_T && this.eveningProcessedDay !== dayIndex) {
       this.eveningProcessedDay = dayIndex
       this.carryWetToNextDay = this.plannedWetDay && Math.random() < CONTINUE_NEXT_DAY_CHANCE
-      weatherLog(`Evening stop day=${dayIndex}, carry=${this.carryWetToNextDay}`)
+      weatherLog(`Evening cutoff 20:00 | trigger=${formatGameHour(dayT)} | continueChance=${Math.round(CONTINUE_NEXT_DAY_CHANCE*100)}% | day=${dayIndex} carry=${this.carryWetToNextDay}`)
       this.plannedWetDay = false
       this.manualOverrideActive = false
       this._applyPrecipitation("none")
@@ -157,13 +163,13 @@ export class Weather {
     if (isWinter) {
       this.rain.setIntensity("none")
       this.snow.setIntensity(intensity)
-      weatherLog(`Precipitation changed ${previous} -> ${intensity} (snow)`)
+      weatherLog(`Weather change at ${formatGameHour(Time.getLogicalDayT())} | 04:00-08:00 decision | rainChance=${Math.round(DAY_RAIN_CHANCE*100)}% | continueChance=${Math.round(CONTINUE_NEXT_DAY_CHANCE*100)}% | ${previous} -> ${intensity} (snow)`)
       return
     }
 
     this.snow.setIntensity("none")
     this.rain.setIntensity(intensity)
-    weatherLog(`Precipitation changed ${previous} -> ${intensity} (rain)`)
+    weatherLog(`Weather change at ${formatGameHour(Time.getLogicalDayT())} | 04:00-08:00 decision | rainChance=${Math.round(DAY_RAIN_CHANCE*100)}% | continueChance=${Math.round(CONTINUE_NEXT_DAY_CHANCE*100)}% | ${previous} -> ${intensity} (rain)`)
   }
 
   private _updateTemperature(deltaTime: number) {

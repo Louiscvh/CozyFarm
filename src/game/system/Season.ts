@@ -23,10 +23,10 @@ export interface SeasonState {
 
 const DAYS_PER_SEASON = 3
 const SEASONS: SeasonConfig[] = [
-  { id: "autumn", label: "Automne", shortLabel: "A", skyColor: "#f4b184", lightTint: "#ffd2b0", terrainTint: "#d59f72", temperatureOffset: -2, growthMultiplier: 0.9 },
-  { id: "winter", label: "Hiver", shortLabel: "H", skyColor: "#cfe4ff", lightTint: "#e6f1ff", terrainTint: "#e5edf7", temperatureOffset: -8, growthMultiplier: 0.55 },
-  { id: "spring", label: "Printemps", shortLabel: "P", skyColor: "#b7e6c9", lightTint: "#e0ffd9", terrainTint: "#8ccd7b", temperatureOffset: 1, growthMultiplier: 1.2 },
-  { id: "summer", label: "Été", shortLabel: "E", skyColor: "#8fd4ff", lightTint: "#fff2c2", terrainTint: "#95cc66", temperatureOffset: 5, growthMultiplier: 1.05 },
+  { id: "autumn", label: "Automne", shortLabel: "🍂", skyColor: "#f4b184", lightTint: "#ffd2b0", terrainTint: "#d59f72", temperatureOffset: -2, growthMultiplier: 0.9 },
+  { id: "winter", label: "Hiver", shortLabel: "❄️", skyColor: "#cfe4ff", lightTint: "#e6f1ff", terrainTint: "#e5edf7", temperatureOffset: -8, growthMultiplier: 0.55 },
+  { id: "spring", label: "Printemps", shortLabel: "🌸", skyColor: "#b7e6c9", lightTint: "#e0ffd9", terrainTint: "#8ccd7b", temperatureOffset: 1, growthMultiplier: 1.2 },
+  { id: "summer", label: "Été", shortLabel: "🌻", skyColor: "#8fd4ff", lightTint: "#fff2c2", terrainTint: "#95cc66", temperatureOffset: 5, growthMultiplier: 1.05 },
 ]
 
 const DAYS_PER_YEAR = DAYS_PER_SEASON * SEASONS.length

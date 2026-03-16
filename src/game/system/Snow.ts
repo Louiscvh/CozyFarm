@@ -12,9 +12,9 @@ interface SnowConfig {
 
 const SNOW_CONFIGS: Record<RainIntensity, SnowConfig> = {
   none: { count: 0, spread: 90, opacity: 0, size: 0.3, speedMin: 0, speedMax: 0 },
-  light: { count: 3200, spread: 100, opacity: 0.9, size: 0.34, speedMin: 1.6, speedMax: 2.7 },
-  moderate: { count: 5200, spread: 110, opacity: 0.95, size: 0.42, speedMin: 2.1, speedMax: 3.3 },
-  heavy: { count: 7600, spread: 120, opacity: 1, size: 0.52, speedMin: 2.7, speedMax: 4.4 },
+  light: { count: 3600, spread: 120, opacity: 0.92, size: 0.5, speedMin: 1.6, speedMax: 2.7 },
+  moderate: { count: 5600, spread: 125, opacity: 0.98, size: 0.62, speedMin: 2.1, speedMax: 3.3 },
+  heavy: { count: 8200, spread: 130, opacity: 1, size: 0.78, speedMin: 2.7, speedMax: 4.4 },
 }
 
 export class Snow {
@@ -57,9 +57,9 @@ export class Snow {
       arr[idx + 2] += Math.cos((i * 9.71) + now * 0.00021) * dt * 0.26
       arr[idx + 1] -= this.velocity[i] * dt
 
-      if (arr[idx + 1] < cameraPosition.y - 2) {
+      if (arr[idx + 1] < cameraPosition.y - 45) {
         arr[idx] = cameraPosition.x + (Math.random() - 0.5) * this.spread
-        arr[idx + 1] = cameraPosition.y + 24 + Math.random() * 14
+        arr[idx + 1] = cameraPosition.y + 45 + Math.random() * 20
         arr[idx + 2] = cameraPosition.z + (Math.random() - 0.5) * this.spread
       }
     }
@@ -84,7 +84,7 @@ export class Snow {
     for (let i = 0; i < this.count; i++) {
       const idx = i * 3
       this.flakes[idx] = (Math.random() - 0.5) * this.spread
-      this.flakes[idx + 1] = 3 + Math.random() * 36
+      this.flakes[idx + 1] = -45 + Math.random() * 90
       this.flakes[idx + 2] = (Math.random() - 0.5) * this.spread
       this.velocity[i] = config.speedMin + Math.random() * (config.speedMax - config.speedMin)
     }
