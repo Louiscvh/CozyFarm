@@ -103,8 +103,9 @@ export class ItemActionController {
         if (item.usage.actionId === "farming:uproot_or_untill") {
             const crop = this.world.cropManager.getCrop(cellX, cellZ)
             const hasLooseStake = this.world.cropManager.hasLooseStake(cellX, cellZ)
+            const hasSnow = this.world.tilesFactory.hasSnowAtCell(cellX, cellZ)
             const canUntill = effectiveTileType === "soil"
-            return !!crop || hasLooseStake || canUntill
+            return !!crop || hasLooseStake || canUntill || hasSnow
         }
 
         const hasCrop = !!this.world.cropManager.getCrop(cellX, cellZ)

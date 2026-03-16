@@ -97,6 +97,7 @@ export class TileFactory {
     private snowHighWater = 0
     private readonly SNOW_MAX = 3000
     private winterSnowBudget = 0
+    private springMeltBudget = 0
 
     private wateredCells = new Set<string>()
     private readonly SOIL_COLOR_DRY = new THREE.Color(1, 1, 1)
@@ -195,6 +196,10 @@ export class TileFactory {
         }
     }
 
+    hasSnowAtCell(cellX: number, cellZ: number): boolean {
+        return this.snowSlots.has(this.cellKey(cellX, cellZ))
+    }
+
     clearSnowCell(cellX: number, cellZ: number): boolean {
         const key = this.cellKey(cellX, cellZ)
         const slot = this.snowSlots.get(key)
@@ -205,6 +210,20 @@ export class TileFactory {
         this.snowMesh.instanceMatrix.needsUpdate = true
         this.snowFreeSlots.push(slot)
         return true
+    }
+
+    private meltSnowStep(maxRemove: number): number {
+        const keys = Array.from(this.snowSlots.keys())
+        if (keys.length === 0) return 0
+
+        let removed = 0
+        for (let i = 0; i < maxRemove && keys.length > 0; i++) {
+            const idx = Math.floor(Math.random() * keys.length)
+            const key = keys.splice(idx, 1)[0]
+            const [x, z] = key.split("|").map(Number)
+            if (this.clearSnowCell(x, z)) removed++
+        }
+        return removed
     }
 
     private clearAllSnow(): void {
@@ -222,9 +241,16 @@ export class TileFactory {
         if (season.id !== this.seasonId) {
             const wasWinter = this.seasonId === "winter"
             this.seasonId = season.id
-            if (!wasWinter && this.seasonId === "winter") this.winterSnowBudget = 1800
-            if (wasWinter && this.seasonId !== "winter") {
+            if (!wasWinter && this.seasonId === "winter") {
+                this.winterSnowBudget = 1800
+                this.springMeltBudget = 0
+            }
+            if (wasWinter && this.seasonId === "spring") {
                 this.winterSnowBudget = 0
+                this.springMeltBudget = this.snowSlots.size
+            } else if (wasWinter && this.seasonId !== "spring") {
+                this.winterSnowBudget = 0
+                this.springMeltBudget = 0
                 this.clearAllSnow()
             }
         }
@@ -236,6 +262,9 @@ export class TileFactory {
                 this.winterSnowBudget -= step
             }
             this.populateSnow(2)
+        } else if (this.seasonId === "spring" && this.snowSlots.size > 0) {
+            const removed = this.meltSnowStep(6)
+            this.springMeltBudget = Math.max(0, this.springMeltBudget - removed)
         }
 
         this.currentTerrainTint.lerp(new THREE.Color(season.terrainTint), 0.02)

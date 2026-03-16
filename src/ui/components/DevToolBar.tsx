@@ -95,11 +95,15 @@ export const DevToolBar = () => {
           <section>
             <UIButton onClick={goDay}>🌞</UIButton>
             <UIButton onClick={goNight}>🌙</UIButton>
-            <UIButton onClick={toggleRain} className={isRaining ? "selected" : ""}>{isWinter ? "❄️" : "☔️"}</UIButton>
-            
-          </section>
+                      </section>
         </div>
 
+
+        <div className="line">
+          <section>
+            <UIButton onClick={toggleRain} className={isRaining ? "selected" : ""}>{isWinter ? "❄️" : "☔️"}</UIButton>
+          </section>
+        </div>
         <div className="line">
           <section>
             <UIButton onClick={toggleDebugMarkers} className={footprintVisible ? "selected" : ""}>🚧</UIButton>
