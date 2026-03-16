@@ -28,9 +28,10 @@
   padding: 4px 10px;
 }
 
-.season-title {
-  font-weight: 700;
-  font-size: 0.88rem;
+.season-letter {
+  font-weight: 800;
+  font-size: 1.5rem;
+  line-height: 1;
 }
 
 .season-sub {

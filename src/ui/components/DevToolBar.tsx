@@ -7,6 +7,7 @@ import "./DevToolBar.css"
 import { toggleDebugHitbox } from "../../game/entity/EntityFactory"
 import { PerfMonitor } from "./PerfMonitor"
 import { toggleDebugGrid } from "../../game/system/Grid"
+import { shiftSeason } from "../../game/system/Season"
 
 export const DevToolBar = () => {
   const [visible, setVisible]                   = useState(false)
@@ -83,6 +84,8 @@ export const DevToolBar = () => {
             <UIButton onClick={goDay}>🌞</UIButton>
             <UIButton onClick={goNight}>🌙</UIButton>
             <UIButton onClick={toggleRain} className={isRaining ? "selected" : ""}>☔️</UIButton>
+            <UIButton onClick={() => shiftSeason(-1)} title="Saison précédente">⏮️</UIButton>
+            <UIButton onClick={() => shiftSeason(1)} title="Saison suivante">⏭️</UIButton>
           </section>
         </div>
 
