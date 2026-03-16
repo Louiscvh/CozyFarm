@@ -12,9 +12,9 @@ interface SnowConfig {
 
 const SNOW_CONFIGS: Record<RainIntensity, SnowConfig> = {
   none: { count: 0, spread: 90, opacity: 0, size: 0.3, speedMin: 0, speedMax: 0 },
-  light: { count: 3600, spread: 120, opacity: 0.92, size: 0.5, speedMin: 1.6, speedMax: 2.7 },
-  moderate: { count: 5600, spread: 125, opacity: 0.98, size: 0.62, speedMin: 2.1, speedMax: 3.3 },
-  heavy: { count: 8200, spread: 130, opacity: 1, size: 0.78, speedMin: 2.7, speedMax: 4.4 },
+  light: { count: 3600, spread: 120, opacity: 0.92, size: 8, speedMin: 1.6, speedMax: 2.7 },
+  moderate: { count: 5600, spread: 125, opacity: 0.98, size: 12, speedMin: 2.1, speedMax: 3.3 },
+  heavy: { count: 8200, spread: 130, opacity: 1, size: 16, speedMin: 2.7, speedMax: 4.4 },
 }
 
 export class Snow {
@@ -95,6 +95,7 @@ export class Snow {
     this.material = new THREE.PointsMaterial({
       color: "#ffffff",
       size: config.size,
+      sizeAttenuation: false,
       transparent: true,
       opacity: config.opacity,
       depthWrite: false,

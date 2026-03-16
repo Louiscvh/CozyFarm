@@ -10,20 +10,31 @@ function smoothstep(edge0: number, edge1: number, x: number): number {
   return t * t * (3 - 2 * t)
 }
 
-const DAWN_START_T = 4 / 24
-const DAWN_END_T = 8 / 24
-const EVENING_T = 20 / 24
-const DAY_RAIN_CHANCE = 0.45
+const DAY_RAIN_CHANCE = 0.30
 const CONTINUE_NEXT_DAY_CHANCE = 0.12
+const DAWN_WINDOW_START_H = 4
+const DAWN_WINDOW_END_H = 8
+const NIGHT_STOP_WINDOW_START_H = 22
+const NIGHT_STOP_WINDOW_END_H = 26 // 02:00 next day
 
 function weatherLog(message: string) {
   console.log(`[Weather] ${message}`)
 }
 
-function formatGameHour(dayT: number): string {
+function formatGameHourFromDayT(dayT: number): string {
   const hours = Math.floor(dayT * 24)
   const minutes = Math.floor((dayT * 24 * 60) % 60)
   return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}`
+}
+
+function formatAbsDayHour(absDayT: number): string {
+  const day = Math.floor(absDayT)
+  const dayT = absDayT - day
+  return `J${day} ${formatGameHourFromDayT(dayT)}`
+}
+
+function randInHours(startHour: number, endHour: number): number {
+  return (startHour + Math.random() * (endHour - startHour)) / 24
 }
 
 export class Weather {
@@ -48,11 +59,14 @@ export class Weather {
 
   private currentPrecipIntensity: RainIntensity = "none"
   private currentDayRainIntensity: Exclude<RainIntensity, "none"> = "moderate"
+
   private currentDayIndex = -1
-  private dawnProcessedDay = -1
-  private eveningProcessedDay = -1
   private plannedWetDay = false
   private carryWetToNextDay = false
+  private dawnDecisionDone = false
+  private stopDone = false
+  private dayRainStartAbs = 0
+  private dayRainStopAbs = 0
 
   private manualOverrideActive = false
   private manualOverrideIntensity: RainIntensity = "none"
@@ -69,8 +83,6 @@ export class Weather {
     this.rain = new Rain(scene)
     this.snow = new Snow(scene)
   }
-
-  // ─── Public API ──────────────────────────────────────────────────────────────
 
   setRain(intensity: RainIntensity) {
     this.manualOverrideActive = true
@@ -112,33 +124,51 @@ export class Weather {
   }
 
   private _updateDayPrecipitationPlan() {
-    const dayIndex = Math.floor(Time.elapsed / Time.cycleSeconds)
-    const dayT = Time.getLogicalDayT()
+    const absoluteDayT = Time.elapsed / Time.cycleSeconds
+    const dayIndex = Math.floor(absoluteDayT)
 
     if (dayIndex !== this.currentDayIndex) {
       this.currentDayIndex = dayIndex
-      this.dawnProcessedDay = -1
-      this.eveningProcessedDay = -1
+      this.dawnDecisionDone = false
+      this.stopDone = false
       this.plannedWetDay = this.carryWetToNextDay
       this.carryWetToNextDay = false
       this.currentDayRainIntensity = Math.random() < 0.6 ? "moderate" : "heavy"
+
+      if (this.plannedWetDay) {
+        // reconduction: on garde la journée humide dès minuit
+        this.dayRainStartAbs = dayIndex
+      } else {
+        this.dayRainStartAbs = dayIndex + randInHours(DAWN_WINDOW_START_H, DAWN_WINDOW_END_H)
+      }
+      this.dayRainStopAbs = dayIndex + randInHours(NIGHT_STOP_WINDOW_START_H, NIGHT_STOP_WINDOW_END_H)
+
+      weatherLog(
+        `Day setup J${dayIndex} | dawnWindow=${DAWN_WINDOW_START_H}:00-${DAWN_WINDOW_END_H}:00 trigger=${formatAbsDayHour(this.dayRainStartAbs)} | stopWindow=22:00-02:00 trigger=${formatAbsDayHour(this.dayRainStopAbs)} | rainChance=${Math.round(DAY_RAIN_CHANCE * 100)}% | continueChance=${Math.round(CONTINUE_NEXT_DAY_CHANCE * 100)}% | carryIn=${this.plannedWetDay}`,
+      )
     }
 
-    if (dayT >= DAWN_START_T && dayT <= DAWN_END_T && this.dawnProcessedDay !== dayIndex) {
-      this.dawnProcessedDay = dayIndex
+    // décision entre 04:00 et 08:00, à heure aléatoire
+    if (!this.dawnDecisionDone && absoluteDayT >= this.dayRainStartAbs) {
+      this.dawnDecisionDone = true
       if (!this.plannedWetDay) {
         this.plannedWetDay = Math.random() < DAY_RAIN_CHANCE
       }
       if (this.plannedWetDay) {
         this.currentDayRainIntensity = Math.random() < 0.65 ? "moderate" : "heavy"
       }
-      weatherLog(`Dawn window 04:00-08:00 | trigger=${formatGameHour(dayT)} | rainChance=${Math.round(DAY_RAIN_CHANCE*100)}% | continueChance=${Math.round(CONTINUE_NEXT_DAY_CHANCE*100)}% | day=${dayIndex} wet=${this.plannedWetDay} intensity=${this.currentDayRainIntensity}`)
+      weatherLog(
+        `Dawn decision trigger=${formatAbsDayHour(absoluteDayT)} | plannedWet=${this.plannedWetDay} | intensity=${this.currentDayRainIntensity} | rainChance=${Math.round(DAY_RAIN_CHANCE * 100)}% | continueChance=${Math.round(CONTINUE_NEXT_DAY_CHANCE * 100)}%`,
+      )
     }
 
-    if (dayT >= EVENING_T && this.eveningProcessedDay !== dayIndex) {
-      this.eveningProcessedDay = dayIndex
+    // arrêt aléatoire entre 22:00 et 02:00 (fenêtre traversant minuit)
+    if (!this.stopDone && absoluteDayT >= this.dayRainStopAbs) {
+      this.stopDone = true
       this.carryWetToNextDay = this.plannedWetDay && Math.random() < CONTINUE_NEXT_DAY_CHANCE
-      weatherLog(`Evening cutoff 20:00 | trigger=${formatGameHour(dayT)} | continueChance=${Math.round(CONTINUE_NEXT_DAY_CHANCE*100)}% | day=${dayIndex} carry=${this.carryWetToNextDay}`)
+      weatherLog(
+        `Night stop trigger=${formatAbsDayHour(absoluteDayT)} | carryNext=${this.carryWetToNextDay} | continueChance=${Math.round(CONTINUE_NEXT_DAY_CHANCE * 100)}%`,
+      )
       this.plannedWetDay = false
       this.manualOverrideActive = false
       this._applyPrecipitation("none")
@@ -150,7 +180,7 @@ export class Weather {
       return
     }
 
-    const shouldPrecipitate = dayT >= DAWN_END_T && dayT < EVENING_T && this.plannedWetDay
+    const shouldPrecipitate = this.plannedWetDay && absoluteDayT >= this.dayRainStartAbs && absoluteDayT < this.dayRainStopAbs
     this._applyPrecipitation(shouldPrecipitate ? this.currentDayRainIntensity : "none")
   }
 
@@ -163,13 +193,13 @@ export class Weather {
     if (isWinter) {
       this.rain.setIntensity("none")
       this.snow.setIntensity(intensity)
-      weatherLog(`Weather change at ${formatGameHour(Time.getLogicalDayT())} | 04:00-08:00 decision | rainChance=${Math.round(DAY_RAIN_CHANCE*100)}% | continueChance=${Math.round(CONTINUE_NEXT_DAY_CHANCE*100)}% | ${previous} -> ${intensity} (snow)`)
+      weatherLog(`Weather change at ${formatGameHourFromDayT(Time.getLogicalDayT())} | rainChance=${Math.round(DAY_RAIN_CHANCE * 100)}% | continueChance=${Math.round(CONTINUE_NEXT_DAY_CHANCE * 100)}% | ${previous} -> ${intensity} (snow)`)
       return
     }
 
     this.snow.setIntensity("none")
     this.rain.setIntensity(intensity)
-    weatherLog(`Weather change at ${formatGameHour(Time.getLogicalDayT())} | 04:00-08:00 decision | rainChance=${Math.round(DAY_RAIN_CHANCE*100)}% | continueChance=${Math.round(CONTINUE_NEXT_DAY_CHANCE*100)}% | ${previous} -> ${intensity} (rain)`)
+    weatherLog(`Weather change at ${formatGameHourFromDayT(Time.getLogicalDayT())} | rainChance=${Math.round(DAY_RAIN_CHANCE * 100)}% | continueChance=${Math.round(CONTINUE_NEXT_DAY_CHANCE * 100)}% | ${previous} -> ${intensity} (rain)`)
   }
 
   private _updateTemperature(deltaTime: number) {
@@ -198,8 +228,6 @@ export class Weather {
       deltaTime * 0.5,
     )
   }
-
-  // ─── Light setup ─────────────────────────────────────────────────────────────
 
   private _createSun(): THREE.DirectionalLight {
     const light = new THREE.DirectionalLight("#ffb347", 1)
@@ -242,13 +270,10 @@ export class Weather {
     return light
   }
 
-  // ─── Sun/Moon cycle ──────────────────────────────────────────────────────────
-
   private _updateSun() {
     const season = getSeasonState().season
     if (season.id !== this.seasonId) {
       this.seasonId = season.id
-      // Rebasculer le visuel des précipitations quand la saison change
       this._applyPrecipitation(this.currentPrecipIntensity)
     }
     this.seasonSky.lerp(new THREE.Color(season.skyColor), 0.015)
