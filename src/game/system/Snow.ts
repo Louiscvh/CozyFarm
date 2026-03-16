@@ -1,4 +1,21 @@
 import * as THREE from "three"
+import type { RainIntensity } from "./Rain"
+
+interface SnowConfig {
+  count: number
+  spread: number
+  opacity: number
+  size: number
+  speedMin: number
+  speedMax: number
+}
+
+const SNOW_CONFIGS: Record<RainIntensity, SnowConfig> = {
+  none: { count: 0, spread: 90, opacity: 0, size: 0.3, speedMin: 0, speedMax: 0 },
+  light: { count: 3200, spread: 100, opacity: 0.9, size: 0.34, speedMin: 1.6, speedMax: 2.7 },
+  moderate: { count: 5200, spread: 110, opacity: 0.95, size: 0.42, speedMin: 2.1, speedMax: 3.3 },
+  heavy: { count: 7600, spread: 120, opacity: 1, size: 0.52, speedMin: 2.7, speedMax: 4.4 },
+}
 
 export class Snow {
   private readonly scene: THREE.Scene
@@ -7,31 +24,42 @@ export class Snow {
   private material: THREE.PointsMaterial | null = null
   private flakes: Float32Array | null = null
   private velocity: Float32Array | null = null
-  private count = 3200
-  private spread = 90
+
+  private intensity: RainIntensity = "none"
+  private spread = SNOW_CONFIGS.none.spread
+  private count = 0
 
   constructor(scene: THREE.Scene) {
     this.scene = scene
   }
 
-  setEnabled(enabled: boolean) {
-    if (enabled && !this.points) this.create()
-    if (!enabled && this.points) this.destroy()
+  setIntensity(intensity: RainIntensity) {
+    if (intensity === this.intensity) return
+    this.intensity = intensity
+
+    if (intensity === "none") {
+      this.destroy()
+      return
+    }
+
+    this.rebuild(SNOW_CONFIGS[intensity])
   }
 
   update(dt: number, cameraPosition: THREE.Vector3) {
-    if (!this.geometry || !this.flakes || !this.velocity || !this.points) return
+    if (!this.geometry || !this.flakes || !this.velocity || !this.points || !this.material) return
 
     const arr = this.flakes
+    const now = performance.now()
+
     for (let i = 0; i < this.count; i++) {
       const idx = i * 3
-      arr[idx] += Math.sin((i * 13.37) + performance.now() * 0.00025) * dt * 0.2
-      arr[idx + 2] += Math.cos((i * 9.71) + performance.now() * 0.00021) * dt * 0.2
+      arr[idx] += Math.sin((i * 13.37) + now * 0.00025) * dt * 0.26
+      arr[idx + 2] += Math.cos((i * 9.71) + now * 0.00021) * dt * 0.26
       arr[idx + 1] -= this.velocity[i] * dt
 
       if (arr[idx + 1] < cameraPosition.y - 2) {
         arr[idx] = cameraPosition.x + (Math.random() - 0.5) * this.spread
-        arr[idx + 1] = cameraPosition.y + 20 + Math.random() * 10
+        arr[idx + 1] = cameraPosition.y + 24 + Math.random() * 14
         arr[idx + 2] = cameraPosition.z + (Math.random() - 0.5) * this.spread
       }
     }
@@ -45,16 +73,20 @@ export class Snow {
     this.destroy()
   }
 
-  private create() {
+  private rebuild(config: SnowConfig) {
+    this.destroy()
+
+    this.spread = config.spread
+    this.count = config.count
     this.flakes = new Float32Array(this.count * 3)
     this.velocity = new Float32Array(this.count)
 
     for (let i = 0; i < this.count; i++) {
       const idx = i * 3
       this.flakes[idx] = (Math.random() - 0.5) * this.spread
-      this.flakes[idx + 1] = 3 + Math.random() * 30
+      this.flakes[idx + 1] = 3 + Math.random() * 36
       this.flakes[idx + 2] = (Math.random() - 0.5) * this.spread
-      this.velocity[i] = 2.5 + Math.random() * 2.2
+      this.velocity[i] = config.speedMin + Math.random() * (config.speedMax - config.speedMin)
     }
 
     this.geometry = new THREE.BufferGeometry()
@@ -62,10 +94,11 @@ export class Snow {
 
     this.material = new THREE.PointsMaterial({
       color: "#ffffff",
-      size: 0.28,
+      size: config.size,
       transparent: true,
-      opacity: 0.9,
+      opacity: config.opacity,
       depthWrite: false,
+      blending: THREE.AdditiveBlending,
     })
 
     this.points = new THREE.Points(this.geometry, this.material)
@@ -83,5 +116,6 @@ export class Snow {
     this.material = null
     this.flakes = null
     this.velocity = null
+    this.count = 0
   }
 }
