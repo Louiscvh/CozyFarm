@@ -28,12 +28,20 @@
 
 .cycle-rotator,
 .season-cycle-rotator {
-  height: 40px;
-  width: 40px;
   border-radius: 50%;
   position: relative;
   transform-origin: center center;
   will-change: transform;
+}
+
+.cycle-rotator {
+  height: 40px;
+  width: 40px;
+}
+
+.season-cycle-rotator {
+  height: 34px;
+  width: 34px;
 }
 
 .cycle-rotator::before,
@@ -57,24 +65,32 @@
 }
 
 .season-cycle-rotator::before {
+  opacity: 0.55;
   background: conic-gradient(
-    #d59f72 0deg 90deg,
-    #d9ecff 90deg 180deg,
-    #8ccd7b 180deg 270deg,
-    #ffd39a 270deg 360deg
+    rgba(213, 159, 114, 0.8) 0deg 90deg,
+    rgba(217, 236, 255, 0.8) 90deg 180deg,
+    rgba(140, 205, 123, 0.8) 180deg 270deg,
+    rgba(255, 211, 154, 0.8) 270deg 360deg
   );
 }
 
 .sun, .moon,
 .season-icon {
   position: absolute;
-  font-size: 1.35rem;
   top: 50%;
   left: 50%;
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 2;
+}
+
+.sun, .moon {
+  font-size: 1.35rem;
+}
+
+.season-icon {
+  font-size: 1.52rem;
 }
 
 .moon {
@@ -86,17 +102,17 @@
 }
 
 .season-icon.autumn {
-  transform: translate(-50%, -50%) translateY(-20px);
+  transform: translate(-50%, -50%) translateY(-17px);
 }
 
 .season-icon.winter {
-  transform: translate(-50%, -50%) translateX(20px);
+  transform: translate(-50%, -50%) translateX(-17px);
 }
 
 .season-icon.spring {
-  transform: translate(-50%, -50%) translateY(20px);
+  transform: translate(-50%, -50%) translateY(17px);
 }
 
 .season-icon.summer {
-  transform: translate(-50%, -50%) translateX(-20px);
+  transform: translate(-50%, -50%) translateX(17px);
 }
