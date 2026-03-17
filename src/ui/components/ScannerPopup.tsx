@@ -7,6 +7,8 @@ import { scannerPopupStore } from "../store/ScannerPopupStore"
 import { placementStore } from "../store/PlacementStore"
 import "./ScannerPopup.css"
 
+const STAGE_BLOCKS = 4
+
 export function ScannerPopup() {
   const [version, setVersion] = useState(0)
 
@@ -64,9 +66,12 @@ export function ScannerPopup() {
   const phaseNumber = crop.phaseIndex + 1
   const phaseCount = crop.phaseCount
   const progressPct = Math.round(crop.phaseProgress * 100)
-  const remaining = Math.ceil(crop.phaseRemainingSeconds)
-  const isWatered = World.current?.tilesFactory.isWatered(crop.cellX, crop.cellZ) ?? false
+  const normalizedStageProgress = phaseCount <= 1
+    ? 1
+    : Math.max(0, Math.min(1, (crop.phaseIndex + crop.phaseProgress) / (phaseCount - 1)))
+
   const conditions = computeGrowthRate(World.current?.weather ?? null)
+  const isWatered = World.current?.tilesFactory.isWatered(crop.cellX, crop.cellZ) ?? false
   const growthBonus = conditions.breakdown.timePaused
     ? 0
     : conditions.breakdown.temperatureMult
@@ -86,10 +91,24 @@ export function ScannerPopup() {
       offsetY={0.35}
     >
       <div className="scanner-popup-title">🩺 {crop.def.label}</div>
+
       <div className="scanner-popup-line">Phase: {phaseNumber}/{phaseCount}</div>
+      <div className="scanner-popup-stage-grid" aria-hidden>
+        {Array.from({ length: STAGE_BLOCKS }, (_, index) => {
+          const blockFill = Math.max(0, Math.min(1, normalizedStageProgress * STAGE_BLOCKS - index))
+          return (
+            <div key={index} className="scanner-popup-stage-cell">
+              <div className="scanner-popup-stage-fill" style={{ transform: `scaleX(${blockFill})` }} />
+            </div>
+          )
+        })}
+      </div>
+
       <div className="scanner-popup-line">Progression: {progressPct}%</div>
-      <div className="scanner-popup-line">Temps restant: {crop.isReady ? "Prête" : `${remaining}s`}</div>
-      <div className="scanner-popup-line">Arrosée: {isWatered ? "Oui" : "Non"}</div>
+      <div className="scanner-popup-progress">
+        <div className="scanner-popup-progress-fill" style={{ width: `${progressPct}%` }} />
+      </div>
+
       <div className="scanner-popup-line">Coeff. pousse: {formatMult(growthBonus)}</div>
     </WorldPopup>
   )
