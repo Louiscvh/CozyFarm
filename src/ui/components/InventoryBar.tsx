@@ -40,6 +40,7 @@ import { OrangeItemDef } from "../../game/items/OrangeItem"
 import { StakeItemDef } from "../../game/items/StakeItem"
 import { toolLevelStore, type ToolId } from "../store/ToolLevelStore"
 import { ItemIcon } from "./ItemIcon"
+import { ScannerItemDef } from "../../game/items/ScannerItem"
 
 // ─── Tous les items (construction + farming) ──────────────────────────────────
 
@@ -48,6 +49,7 @@ const ALL_ITEMS: ItemDef[] = [
     ShovelItemDef,
     WateringCanItemDef,
     AxeItemDef,
+    ScannerItemDef,
     WoodItemDef,
 
     { id: "tree1", label: "Pin", icon: "🌲", usage: { kind: "placeable", entity: Tree1Entity } },
@@ -115,6 +117,7 @@ inventoryStore.register([
     { id: "shovel", maxQty: 1, infinite: true },
     { id: "watering_can", maxQty: 1, infinite: true },
     { id: "axe", maxQty: 1, infinite: true },
+    { id: "scanner", maxQty: 1, infinite: true },
     { id: "wood", maxQty: 64, initialQty: 24 },
 ])
 

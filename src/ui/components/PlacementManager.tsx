@@ -9,6 +9,7 @@ import { isPlaceable } from "../../game/entity/ItemDef"
 import { CursorItem } from "./CursorItem"
 import { ALL_CROPS } from "../../game/farming/CropDefinition"
 import { useWoodcutting } from "../hooks/useWoodcutting"
+import { useScanner } from "../hooks/useScanner"
 
 export function PlacementManager() {
     const r = Renderer.instance!
@@ -19,6 +20,7 @@ export function PlacementManager() {
     useItemAction({ camera, renderer })
     useFarming()
     useWoodcutting()
+    useScanner()
 
 
     useEffect(() => {

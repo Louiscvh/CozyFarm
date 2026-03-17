@@ -11,6 +11,7 @@ import { RollBackBar } from "./ui/components/RollBackBar"
 import { Temperature } from "./ui/components/Temperature"
 import { PlacementManager } from "./ui/components/PlacementManager"
 import { CursorItem } from "./ui/components/CursorItem"
+import { ScannerPopup } from "./ui/components/ScannerPopup"
 
 export const App = () => {
   return (
@@ -26,6 +27,7 @@ export const App = () => {
           <Temperature />
         </header>
         <EntityPopups />
+        <ScannerPopup />
         <CursorItem />
 
         <footer>

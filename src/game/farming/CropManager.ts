@@ -275,10 +275,10 @@ export class CropManager {
         return instance
     }
 
-    getMeshes(): THREE.Mesh[] {
+    getMeshes(): THREE.Object3D[] {
         return Array.from(this.crops.values())
             .map(c => c.mesh)
-            .filter((m): m is THREE.Mesh => m !== null)
+            .filter((m): m is THREE.Object3D => m !== null)
     }
 
     // ─── Boucle ────────────────────────────────────────────────────────────────
