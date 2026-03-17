@@ -24,13 +24,8 @@ export function EntityPopups() {
   const isOverPopup = useRef(false)
   const pendingEntityIdRef = useRef<string | null>(null)
   const pointerDownRef = useRef(false)
-  const outlinedEntityRef = useRef<THREE.Object3D | null>(null)
-  const pendingSwitchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const pendingSwitchEntityId = useRef<string | null>(null)
 
   const HOVER_OPEN_DELAY_MS = 250
-  const HOVER_SWITCH_DELAY_MS = 120
-  const HOVER_DISTANCE_STICKINESS_EPSILON = 0.05
 
   const cancelClose = () => {
     if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null }
@@ -69,16 +64,7 @@ export function EntityPopups() {
     const raycaster = new THREE.Raycaster()
     const mouse = new THREE.Vector2()
 
-    const cancelPendingSwitch = () => {
-      if (pendingSwitchTimer.current) {
-        clearTimeout(pendingSwitchTimer.current)
-        pendingSwitchTimer.current = null
-      }
-      pendingSwitchEntityId.current = null
-    }
-
     const applyHoverTarget = (target: THREE.Object3D | null) => {
-      outlinedEntityRef.current = target
       OutlineSystem.instance?.setHovered(target)
 
       if (!target) {
@@ -97,7 +83,7 @@ export function EntityPopups() {
     function onMouseMove(e: MouseEvent) {
       const w = World.current
       if (!w || !w.camera) return
-      if (placementStore.selectedItem) { cancelClose(); cancelOpen(); cancelPendingSwitch(); applyHoverTarget(null); setHoveredPopup(null); return }
+      if (placementStore.selectedItem) { cancelClose(); cancelOpen(); applyHoverTarget(null); setHoveredPopup(null); return }
       if (isOverPopup.current) { cancelClose(); return }
 
       mouse.x = (e.clientX / window.innerWidth) * 2 - 1
@@ -108,70 +94,27 @@ export function EntityPopups() {
         .map(entity => ({ entity, hitbox: entity.getObjectByName("__hitbox__") }))
         .filter((entry): entry is { entity: THREE.Object3D; hitbox: THREE.Object3D } => !!entry.hitbox)
 
-      const intersects = raycaster.intersectObjects(hitEntries.map(entry => entry.hitbox), true)
-
-      if (intersects.length === 0) {
-        if (pointerDownRef.current) return
-        cancelPendingSwitch()
-        applyHoverTarget(null)
-        return
-      }
-
-      const ownerByHitbox = new Map(hitEntries.map(entry => [entry.hitbox, entry.entity]))
-      const ownerDistances = new Map<THREE.Object3D, number>()
-
-      for (const intersection of intersects) {
-        let node: THREE.Object3D | null = intersection.object
-        while (node) {
-          const owner = ownerByHitbox.get(node)
-          if (owner) {
-            const prevDistance = ownerDistances.get(owner)
-            if (prevDistance === undefined || intersection.distance < prevDistance) {
-              ownerDistances.set(owner, intersection.distance)
-            }
-            break
+      const intersectedOwners = hitEntries
+        .map((entry) => {
+          const intersections = raycaster.intersectObject(entry.hitbox, true)
+          if (intersections.length === 0) return null
+          return {
+            entity: entry.entity,
+            distance: intersections[0].distance,
           }
-          node = node.parent
-        }
-      }
+        })
+        .filter((value): value is { entity: THREE.Object3D; distance: number } => value !== null)
+        .sort((a, b) => a.distance - b.distance)
 
-      const rankedOwners = [...ownerDistances.entries()].sort((a, b) => a[1] - b[1])
-      const owner = rankedOwners[0]?.[0]
+      const owner = intersectedOwners[0]?.entity
 
       if (!owner) {
-        cancelPendingSwitch()
+        if (pointerDownRef.current) return
         applyHoverTarget(null)
         return
       }
 
-      const currentOutlined = outlinedEntityRef.current
-      if (currentOutlined?.uuid === owner.uuid) {
-        cancelPendingSwitch()
-        applyHoverTarget(owner)
-        return
-      }
-
-      if (currentOutlined && ownerDistances.has(currentOutlined)) {
-        const currentDistance = ownerDistances.get(currentOutlined) ?? Number.POSITIVE_INFINITY
-        const ownerDistance = ownerDistances.get(owner) ?? Number.POSITIVE_INFINITY
-        const shouldKeepCurrent = currentDistance <= ownerDistance + HOVER_DISTANCE_STICKINESS_EPSILON
-
-        if (shouldKeepCurrent) {
-          cancelPendingSwitch()
-          applyHoverTarget(currentOutlined)
-          return
-        }
-      }
-
-      if (pendingSwitchEntityId.current === owner.uuid && pendingSwitchTimer.current) return
-
-      cancelPendingSwitch()
-      pendingSwitchEntityId.current = owner.uuid
-      pendingSwitchTimer.current = setTimeout(() => {
-        applyHoverTarget(owner)
-        pendingSwitchTimer.current = null
-        pendingSwitchEntityId.current = null
-      }, HOVER_SWITCH_DELAY_MS)
+      applyHoverTarget(owner)
     }
 
     function onPointerDown() {
@@ -191,7 +134,6 @@ export function EntityPopups() {
       window.removeEventListener("mouseup", onPointerUp)
       cancelClose()
       cancelOpen()
-      cancelPendingSwitch()
       applyHoverTarget(null)
     }
   }, [])
