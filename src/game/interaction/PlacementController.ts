@@ -336,11 +336,8 @@ export class PlacementController {
         const root = await createEntity(entity, this.world.tileSize)
         if (this._ghostToken !== token) return
 
-        const info = this.world.instanceManager.getInfo(entity)
-        const groundSnap = info?.yOffset ?? (() => {
-            const box = new THREE.Box3().setFromObject(root)
-            return box.min.y < 0 ? -box.min.y : 0
-        })()
+        const box = new THREE.Box3().setFromObject(root)
+        const groundSnap = box.min.y < 0 ? -box.min.y : 0
         this.yOffset = groundSnap + (entity.yOffset ?? 0)
 
         applyGhostMaterials(root)
