@@ -66,27 +66,26 @@ export function ScannerPopup() {
   const progressPct = Math.round(crop.phaseProgress * 100)
 
   const phaseDurations = crop.def.phases.map(phase => Math.max(0, phase.durationSeconds))
+  const growthStageCount = Math.max(1, phaseDurations.length - 1)
+  const growthDurations = phaseDurations.slice(0, growthStageCount)
+
   const visualWeightsRaw = (() => {
-    const positive = phaseDurations.filter(value => value > 0)
-    const avgPositive = positive.length > 0 ? positive.reduce((acc, value) => acc + value, 0) / positive.length : 1
-    const minVisual = avgPositive * 0.2
-    return phaseDurations.map((value, index) => {
-      if (index === phaseDurations.length - 1 && value <= 0) return minVisual
-      return Math.max(value, 0)
-    })
+    const positive = growthDurations.filter(value => value > 0)
+    if (positive.length === 0) return growthDurations.map(() => 1)
+    return growthDurations.map(value => Math.max(value, 0))
   })()
 
-  const totalDuration = phaseDurations.reduce((acc, value) => acc + value, 0)
+  const totalDuration = growthDurations.reduce((acc, value) => acc + value, 0)
   const totalVisualWeight = visualWeightsRaw.reduce((acc, value) => acc + value, 0)
 
   const elapsedDuration = crop.isReady
     ? totalDuration
-    : phaseDurations
+    : growthDurations
       .slice(0, crop.phaseIndex)
-      .reduce((acc, value) => acc + value, 0) + (phaseDurations[crop.phaseIndex] ?? 0) * crop.phaseProgress
+      .reduce((acc, value) => acc + value, 0) + (growthDurations[crop.phaseIndex] ?? 0) * crop.phaseProgress
 
   const normalizedStageProgress = totalDuration <= 0
-    ? (crop.isReady ? 1 : 0)
+    ? (crop.isReady ? 1 : Math.max(0, Math.min(1, (crop.phaseIndex + crop.phaseProgress) / growthStageCount)))
     : Math.max(0, Math.min(1, elapsedDuration / totalDuration))
 
   const stageTiles = visualWeightsRaw.map((visualWeight, index) => {
