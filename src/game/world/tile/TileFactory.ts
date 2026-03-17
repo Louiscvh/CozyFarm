@@ -11,6 +11,7 @@ import {
 import { getFootprint } from "../../entity/Entity"
 import type { Entity } from "../../entity/Entity"
 import { FarmEntity } from "../../entity/entities/FarmEntity"
+import { MarketEntity } from "../../entity/entities/MarketEntity"
 import { Tree1Entity } from "../../entity/entities/Tree1"
 import { Tree2Entity } from "../../entity/entities/Tree2"
 import { Flower1Entity } from "../../entity/entities/Flower1"
@@ -28,6 +29,8 @@ import { getSeasonState, type SeasonId } from "../../system/Season"
 export interface DecorCategory { types: Entity[]; density: number }
 export interface FixedEntityDef { def: Entity; tileX: number; tileZ: number; size: number }
 
+let fixedEntitiesCache: FixedEntityDef[] | null = null
+
 export const DECOR_CATEGORIES: DecorCategory[] = [
     { types: [Tree1Entity, Tree2Entity, Tree3Entity, TreeOrangeEntity], density: 30 / 400 },
     { types: [Rock1Entity], density: 1.5 / 400 },
@@ -36,11 +39,21 @@ export const DECOR_CATEGORIES: DecorCategory[] = [
 ]
 
 export function getFixedEntities(worldCenter: number): FixedEntityDef[] {
+    if (fixedEntitiesCache) return fixedEntitiesCache
+
     const c = worldCenter
     const farmOffset = Math.floor(getFootprint(FarmEntity) / 2 / 2)
-    return [
+    const marketOffset = Math.floor(getFootprint(MarketEntity) / 2 / 2)
+    const radius = Math.max(8, Math.floor(c * 0.7))
+    const marketTileX = c + Math.floor((Math.random() * 2 - 1) * radius)
+    const marketTileZ = c + Math.floor((Math.random() * 2 - 1) * radius)
+
+    fixedEntitiesCache = [
         { def: FarmEntity, tileX: c - farmOffset, tileZ: c - farmOffset, size: getFootprint(FarmEntity) },
+        { def: MarketEntity, tileX: marketTileX - marketOffset, tileZ: marketTileZ - marketOffset, size: getFootprint(MarketEntity) },
     ]
+
+    return fixedEntitiesCache
 }
 
 const CORNER_OFFSETS: [number, number][] = [

@@ -1,6 +1,13 @@
-.ui-home-button {
+.ui-top-left-actions {
   position: absolute;
   z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ui-home-button {
+  position: relative;
 }
 
 .ui-home-icon {
@@ -9,3 +16,9 @@
   filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.18));
 }
 
+.ui-money-button {
+  min-width: 96px;
+  justify-content: space-between;
+  gap: 8px;
+  font-family: "JetBrains Mono", monospace;
+}

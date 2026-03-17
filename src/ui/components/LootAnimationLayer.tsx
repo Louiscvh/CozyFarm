@@ -77,10 +77,13 @@ export function LootAnimationLayer({ items }: LootAnimationLayerProps) {
 
         const unsubscribe = lootFeedbackStore.subscribe((event) => {
             const item = itemById.get(event.itemId)
-            if (!item) return
+            const icon = event.icon ?? item?.icon
+            if (!icon) return
 
             const from = getMouseStartPosition(mousePosRef.current, event.cellX, event.cellZ)
-            const targetAnchor = document.querySelector<HTMLElement>(`[data-inv-item-id="${event.itemId}"]`)
+            const targetAnchor = event.targetSelector
+                ? document.querySelector<HTMLElement>(event.targetSelector)
+                : document.querySelector<HTMLElement>(`[data-inv-item-id="${event.itemId}"]`)
             const targetSlot = targetAnchor?.closest<HTMLElement>(".inv-slot") ?? null
             const inventoryShell = document.querySelector<HTMLElement>("#inventory-slots")
             const inventoryExpandBtn = document.querySelector<HTMLElement>("#inventory-expand-btn")
@@ -94,7 +97,7 @@ export function LootAnimationLayer({ items }: LootAnimationLayerProps) {
             const clampedAmount = Math.max(1, Math.min(event.amount, 5))
             const newParticles: LootParticle[] = Array.from({ length: clampedAmount }).map((_, i) => ({
                 id: idSeed++,
-                icon: item.icon,
+                icon,
                 from,
                 to,
                 delayMs: i * 65,
