@@ -7,8 +7,6 @@ import { scannerPopupStore } from "../store/ScannerPopupStore"
 import { placementStore } from "../store/PlacementStore"
 import "./ScannerPopup.css"
 
-const STAGE_BLOCKS = 4
-
 export function ScannerPopup() {
   const [version, setVersion] = useState(0)
 
@@ -66,9 +64,38 @@ export function ScannerPopup() {
   const phaseNumber = crop.phaseIndex + 1
   const phaseCount = crop.phaseCount
   const progressPct = Math.round(crop.phaseProgress * 100)
-  const normalizedStageProgress = phaseCount <= 1
-    ? 1
-    : Math.max(0, Math.min(1, (crop.phaseIndex + crop.phaseProgress) / (phaseCount - 1)))
+
+  const phaseDurations = crop.def.phases.map(phase => Math.max(0, phase.durationSeconds))
+  const totalDuration = phaseDurations.reduce((acc, value) => acc + value, 0)
+
+  const elapsedDuration = crop.isReady
+    ? totalDuration
+    : phaseDurations
+      .slice(0, crop.phaseIndex)
+      .reduce((acc, value) => acc + value, 0) + (phaseDurations[crop.phaseIndex] ?? 0) * crop.phaseProgress
+
+  const normalizedStageProgress = totalDuration <= 0
+    ? (crop.isReady ? 1 : 0)
+    : Math.max(0, Math.min(1, elapsedDuration / totalDuration))
+
+  const stageTiles = phaseDurations.map((duration, index) => {
+    const weight = totalDuration <= 0 ? 1 / Math.max(1, phaseDurations.length) : duration / totalDuration
+    const start = totalDuration <= 0
+      ? index / Math.max(1, phaseDurations.length)
+      : phaseDurations.slice(0, index).reduce((acc, value) => acc + value, 0) / totalDuration
+    const end = totalDuration <= 0
+      ? (index + 1) / Math.max(1, phaseDurations.length)
+      : start + weight
+
+    const fill = end - start <= 0
+      ? (normalizedStageProgress >= end ? 1 : 0)
+      : Math.max(0, Math.min(1, (normalizedStageProgress - start) / (end - start)))
+
+    return {
+      widthPct: Math.max(0, weight * 100),
+      fill,
+    }
+  })
 
   const conditions = computeGrowthRate(World.current?.weather ?? null)
   const isWatered = World.current?.tilesFactory.isWatered(crop.cellX, crop.cellZ) ?? false
@@ -94,14 +121,11 @@ export function ScannerPopup() {
 
       <div className="scanner-popup-line">Phase: {phaseNumber}/{phaseCount}</div>
       <div className="scanner-popup-stage-grid" aria-hidden>
-        {Array.from({ length: STAGE_BLOCKS }, (_, index) => {
-          const blockFill = Math.max(0, Math.min(1, normalizedStageProgress * STAGE_BLOCKS - index))
-          return (
-            <div key={index} className="scanner-popup-stage-cell">
-              <div className="scanner-popup-stage-fill" style={{ transform: `scaleX(${blockFill})` }} />
-            </div>
-          )
-        })}
+        {stageTiles.map((tile, index) => (
+          <div key={index} className="scanner-popup-stage-cell" style={{ width: `${tile.widthPct}%` }}>
+            <div className="scanner-popup-stage-fill" style={{ transform: `scaleX(${tile.fill})` }} />
+          </div>
+        ))}
       </div>
 
       <div className="scanner-popup-line">Progression: {progressPct}%</div>
