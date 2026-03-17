@@ -66,7 +66,18 @@ export function ScannerPopup() {
   const progressPct = Math.round(crop.phaseProgress * 100)
 
   const phaseDurations = crop.def.phases.map(phase => Math.max(0, phase.durationSeconds))
+  const visualWeightsRaw = (() => {
+    const positive = phaseDurations.filter(value => value > 0)
+    const avgPositive = positive.length > 0 ? positive.reduce((acc, value) => acc + value, 0) / positive.length : 1
+    const minVisual = avgPositive * 0.2
+    return phaseDurations.map((value, index) => {
+      if (index === phaseDurations.length - 1 && value <= 0) return minVisual
+      return Math.max(value, 0)
+    })
+  })()
+
   const totalDuration = phaseDurations.reduce((acc, value) => acc + value, 0)
+  const totalVisualWeight = visualWeightsRaw.reduce((acc, value) => acc + value, 0)
 
   const elapsedDuration = crop.isReady
     ? totalDuration
@@ -78,21 +89,21 @@ export function ScannerPopup() {
     ? (crop.isReady ? 1 : 0)
     : Math.max(0, Math.min(1, elapsedDuration / totalDuration))
 
-  const stageTiles = phaseDurations.map((duration, index) => {
-    const weight = totalDuration <= 0 ? 1 / Math.max(1, phaseDurations.length) : duration / totalDuration
-    const start = totalDuration <= 0
-      ? index / Math.max(1, phaseDurations.length)
-      : phaseDurations.slice(0, index).reduce((acc, value) => acc + value, 0) / totalDuration
-    const end = totalDuration <= 0
-      ? (index + 1) / Math.max(1, phaseDurations.length)
-      : start + weight
+  const stageTiles = visualWeightsRaw.map((visualWeight, index) => {
+    const widthWeight = totalVisualWeight <= 0 ? 1 / Math.max(1, visualWeightsRaw.length) : visualWeight / totalVisualWeight
+    const start = totalVisualWeight <= 0
+      ? index / Math.max(1, visualWeightsRaw.length)
+      : visualWeightsRaw.slice(0, index).reduce((acc, value) => acc + value, 0) / totalVisualWeight
+    const end = totalVisualWeight <= 0
+      ? (index + 1) / Math.max(1, visualWeightsRaw.length)
+      : start + widthWeight
 
     const fill = end - start <= 0
       ? (normalizedStageProgress >= end ? 1 : 0)
       : Math.max(0, Math.min(1, (normalizedStageProgress - start) / (end - start)))
 
     return {
-      widthPct: Math.max(0, weight * 100),
+      widthPct: Math.max(0, widthWeight * 100),
       fill,
     }
   })
