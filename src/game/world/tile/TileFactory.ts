@@ -23,6 +23,7 @@ import { WaterSplashParticles } from "../../system/WaterSplashParticles"
 import { TillParticles } from "../../system/TillParticles"
 import { FoliageParticles } from "../../system/FoliageParticles"
 import { WoodChipParticles } from "../../system/WoodChipParticles"
+import { getSeasonState, type SeasonId } from "../../system/Season"
 
 export interface DecorCategory { types: Entity[]; density: number }
 export interface FixedEntityDef { def: Entity; tileX: number; tileZ: number; size: number }
@@ -90,6 +91,14 @@ export class TileFactory {
     private soilHighWater = 0
     private readonly SOIL_MAX = 2000
 
+    private snowMesh!: THREE.InstancedMesh
+    private snowSlots = new Map<string, number>()
+    private snowFreeSlots: number[] = []
+    private snowHighWater = 0
+    private readonly SNOW_MAX = 3000
+    private winterSnowBudget = 0
+    private thawMeltBudget = 0
+
     private wateredCells = new Set<string>()
     private readonly SOIL_COLOR_DRY = new THREE.Color(1, 1, 1)
     private readonly SOIL_COLOR_WATERED = new THREE.Color(0xB07A56)
@@ -107,6 +116,8 @@ export class TileFactory {
     private readonly tillParticles: TillParticles
     private readonly foliageParticles: FoliageParticles
     private readonly woodChipParticles: WoodChipParticles
+    private seasonId: SeasonId = "autumn"
+    private currentTerrainTint = new THREE.Color("#d59f72")
 
     constructor(scene: THREE.Scene, worldSize: number, tileSize: number) {
         this.scene = scene
@@ -116,10 +127,153 @@ export class TileFactory {
         this.worldSizeInCells = worldSize * 2
         this.generateGrid()
         this.initSoilMesh()
+        this.initSnowMesh()
         this.waterSplashParticles = new WaterSplashParticles(this.scene, this.cellSize, this.worldSizeInCells)
         this.tillParticles = new TillParticles(this.scene, this.cellSize, this.worldSizeInCells)
         this.foliageParticles = new FoliageParticles(this.scene, this.cellSize, this.worldSizeInCells)
         this.woodChipParticles = new WoodChipParticles(this.scene, this.cellSize, this.worldSizeInCells)
+    }
+
+    private initSnowMesh(): void {
+        const geo = new THREE.BoxGeometry(this.cellSize, 0.05, this.cellSize)
+        const mat = new THREE.MeshStandardMaterial({
+            color: "#f4f8ff",
+            roughness: 0.96,
+            metalness: 0,
+        })
+        const mesh = new THREE.InstancedMesh(geo, mat, this.SNOW_MAX)
+        mesh.castShadow = false
+        mesh.receiveShadow = false
+        mesh.frustumCulled = false
+        mesh.count = 0
+        for (let i = 0; i < this.SNOW_MAX; i++) mesh.setMatrixAt(i, _zero)
+        mesh.instanceMatrix.needsUpdate = true
+        this.snowMesh = mesh
+        this.scene.add(mesh)
+    }
+
+    private canHaveSnow(cellX: number, cellZ: number): boolean {
+        const key = this.cellKey(cellX, cellZ)
+        if (this.soilSlots.has(key)) return false
+        if (!this.canSpawn(cellX, cellZ, 1)) return false
+        return this.getCornerTypeAtCell(cellX, cellZ) !== "water"
+    }
+
+    private addSnowCell(cellX: number, cellZ: number): boolean {
+        const key = this.cellKey(cellX, cellZ)
+        if (this.snowSlots.has(key)) return false
+        if (!this.canHaveSnow(cellX, cellZ)) return false
+
+        let slot: number
+        if (this.snowFreeSlots.length > 0) {
+            slot = this.snowFreeSlots.pop()!
+        } else {
+            if (this.snowHighWater >= this.SNOW_MAX) return false
+            slot = this.snowHighWater
+            this.snowHighWater += 1
+        }
+
+        this.snowSlots.set(key, slot)
+        this.snowMesh.count = Math.min(this.SNOW_MAX, Math.max(this.snowMesh.count, this.snowHighWater))
+
+        const half = this.worldSizeInCells / 2
+        _dummy.position.set(
+            (cellX - half + 0.5) * this.cellSize,
+            0.025,
+            (cellZ - half + 0.5) * this.cellSize,
+        )
+        _dummy.rotation.set(0, 0, 0)
+        _dummy.scale.set(1, 1, 1)
+        _dummy.updateMatrix()
+
+        this.snowMesh.setMatrixAt(slot, _dummy.matrix)
+        this.snowMesh.instanceMatrix.needsUpdate = true
+        return true
+    }
+
+    private populateSnow(maxAdds = 40): void {
+        let added = 0
+        let tries = 0
+        while (added < maxAdds && tries < maxAdds * 40) {
+            tries++
+            const cx = Math.floor(Math.random() * this.worldSizeInCells)
+            const cz = Math.floor(Math.random() * this.worldSizeInCells)
+            if (this.addSnowCell(cx, cz)) added++
+        }
+    }
+
+    hasSnowAtCell(cellX: number, cellZ: number): boolean {
+        return this.snowSlots.has(this.cellKey(cellX, cellZ))
+    }
+
+    clearSnowCell(cellX: number, cellZ: number): boolean {
+        const key = this.cellKey(cellX, cellZ)
+        const slot = this.snowSlots.get(key)
+        if (slot === undefined) return false
+
+        this.snowSlots.delete(key)
+        this.snowMesh.setMatrixAt(slot, _zero)
+        this.snowMesh.instanceMatrix.needsUpdate = true
+        this.snowFreeSlots.push(slot)
+
+        while (this.snowHighWater > 0 && this.snowFreeSlots.includes(this.snowHighWater - 1)) {
+            const top = this.snowHighWater - 1
+            const idx = this.snowFreeSlots.indexOf(top)
+            if (idx >= 0) this.snowFreeSlots.splice(idx, 1)
+            this.snowHighWater -= 1
+        }
+        this.snowMesh.count = Math.max(0, Math.min(this.SNOW_MAX, this.snowHighWater))
+        return true
+    }
+
+    private meltSnowStep(maxRemove: number): number {
+        const keys = Array.from(this.snowSlots.keys())
+        if (keys.length === 0) return 0
+
+        let removed = 0
+        for (let i = 0; i < maxRemove && keys.length > 0; i++) {
+            const idx = Math.floor(Math.random() * keys.length)
+            const key = keys.splice(idx, 1)[0]
+            const [x, z] = key.split("|").map(Number)
+            if (this.clearSnowCell(x, z)) removed++
+        }
+        return removed
+    }
+
+    updateSeasonVisuals(): void {
+        const season = getSeasonState().season
+        if (season.id !== this.seasonId) {
+            const wasWinter = this.seasonId === "winter"
+            this.seasonId = season.id
+            if (!wasWinter && this.seasonId === "winter") {
+                this.winterSnowBudget = 1800
+                this.thawMeltBudget = 0
+            }
+            if (wasWinter && this.seasonId !== "winter") {
+                this.winterSnowBudget = 0
+                this.thawMeltBudget = this.snowSlots.size
+            }
+        }
+
+        if (this.seasonId === "winter") {
+            if (this.winterSnowBudget > 0) {
+                const step = Math.min(14, this.winterSnowBudget)
+                this.populateSnow(step)
+                this.winterSnowBudget -= step
+            }
+            this.populateSnow(2)
+        } else if (this.snowSlots.size > 0) {
+            const meltStep = this.seasonId === "spring" ? 12 : 9
+            const removed = this.meltSnowStep(meltStep)
+            this.thawMeltBudget = Math.max(0, this.thawMeltBudget - removed)
+        }
+
+        this.currentTerrainTint.lerp(new THREE.Color(season.terrainTint), 0.02)
+        for (const mesh of this.instancedMeshes.values()) {
+            const material = mesh.material
+            if (!(material instanceof THREE.MeshStandardMaterial)) continue
+            material.color.copy(this.currentTerrainTint)
+        }
     }
 
     waterCell(cellX: number, cellZ: number): boolean {
@@ -750,6 +904,7 @@ export class TileFactory {
         for (let dx = 0; dx < sizeInCells; dx++)
             for (let dz = 0; dz < sizeInCells; dz++) {
                 this.occupiedCells.add(`${cellX + dx}|${cellZ + dz}`)
+                this.clearSnowCell(cellX + dx, cellZ + dz)
                 this.createDebugMarker(cellX + dx, cellZ + dz)
             }
     }

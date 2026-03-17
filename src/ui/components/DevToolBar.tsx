@@ -7,6 +7,7 @@ import "./DevToolBar.css"
 import { toggleDebugHitbox } from "../../game/entity/EntityFactory"
 import { PerfMonitor } from "./PerfMonitor"
 import { toggleDebugGrid } from "../../game/system/Grid"
+import { getSeasonState, shiftSeason } from "../../game/system/Season"
 
 export const DevToolBar = () => {
   const [visible, setVisible]                   = useState(false)
@@ -17,6 +18,7 @@ export const DevToolBar = () => {
   const [hitboxVisible, setHitboxVisible]       = useState(false)
   const [gridVisible, setGridVisible]           = useState(false)
   const [perfOpen, setPerfOpen]                 = useState(false)
+  const [isWinterIcon, setIsWinterIcon]         = useState(getSeasonState().season.id === "winter")
 
   const toggleHitbox = () => {
     toggleDebugHitbox()
@@ -50,6 +52,16 @@ export const DevToolBar = () => {
     return () => window.removeEventListener("keydown", onKey)
   }, [])
 
+  useEffect(() => {
+    const id = setInterval(() => {
+      const weather = World.current?.weather
+      if (!weather) return
+      setIsRaining(weather.getRainIntensity() !== "none")
+      setIsWinterIcon(getSeasonState().season.id === "winter")
+    }, 250)
+    return () => clearInterval(id)
+  }, [])
+
   const toggleDebugMarkers = () => {
     World.current?.tilesFactory.toggleDebugMarkers()
     setFootprintVisible(v => !v)
@@ -63,6 +75,7 @@ export const DevToolBar = () => {
   }
 
   const isPaused = Time.timeScale === 0
+  const isWinter = isWinterIcon
 
   return (
     <>
@@ -82,7 +95,7 @@ export const DevToolBar = () => {
           <section>
             <UIButton onClick={goDay}>🌞</UIButton>
             <UIButton onClick={goNight}>🌙</UIButton>
-            <UIButton onClick={toggleRain} className={isRaining ? "selected" : ""}>☔️</UIButton>
+            <UIButton onClick={toggleRain} className={isRaining ? "selected" : ""}>{isWinter ? "❄️" : "☔️"}</UIButton>
           </section>
         </div>
 
@@ -93,7 +106,12 @@ export const DevToolBar = () => {
             <UIButton onClick={handleToggleGrid} className={gridVisible ? "selected" : ""} title="Afficher grille complète">🔲</UIButton>
             <UIButton onClick={() => setPerfOpen(v => !v)} className={perfOpen ? "selected" : ""} title="Moniteur performances">📊</UIButton>
           </section>
+
+          <section>
+            <UIButton onClick={() => shiftSeason(1)} title="Saison suivante">⏭️</UIButton>
+          </section>
         </div>
+
       </div>
 
       {perfOpen && <PerfMonitor onClose={() => setPerfOpen(false)} />}

@@ -42,11 +42,11 @@ const VERT = /* glsl */`
     float x = uCamPos.x + (r1 - 0.5) * uSpread;
     float z = uCamPos.z + (r2 - 0.5) * uSpread;
 
-    float height = 35.0;
+    float height = 90.0;
     float phase  = r4 * height;
     float y = mod(height - uLocalTime * uSpeed * (0.8 + r3 * 0.4) + phase, height);
 
-    float finalY = uCamPos.y + y - aEnd * uDropLength;
+    float finalY = uCamPos.y + y - (height * 0.5) - aEnd * uDropLength;
 
     gl_Position = projectionMatrix * modelViewMatrix * vec4(x, finalY, z, 1.0);
   }

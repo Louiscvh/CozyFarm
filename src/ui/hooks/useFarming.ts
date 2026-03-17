@@ -55,6 +55,10 @@ export function useFarming() {
         itemActionRegistry.registerTileAction("farming:uproot_or_untill", (ctx) => {
             const world = World.current
             if (!world) return false
+
+            // La neige se retire uniquement sur la cellule ciblée (pas en zone).
+            if (world.tilesFactory.clearSnowCell(ctx.cellX, ctx.cellZ)) return true
+
             const level = toolLevelStore.getLevel("shovel")
             let changed = false
 
