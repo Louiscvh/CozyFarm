@@ -80,7 +80,6 @@ export class PlacementController {
     private targetRotY = 0
     private currentRotY = 0
     private ghostRaf = 0
-    private ghostStartTime = 0
     private _ghostToken = 0   // annule les builds async en cours
 
     // ── Hover state ───────────────────────────────────────────────────────────
@@ -276,8 +275,6 @@ export class PlacementController {
     }
 
     private startGhostAnimation(): void {
-        this.ghostStartTime = performance.now()
-
         const animate = () => {
             this.ghostRaf = requestAnimationFrame(animate)
 
@@ -294,12 +291,9 @@ export class PlacementController {
 
             this.currentPos.lerp(this.targetPos, 0.35)
 
-            const t = (performance.now() - this.ghostStartTime) / 1000
-            const floatY = Math.sin(t * 2) * 0.04
-
             this.ghost.position.set(
                 this.currentPos.x,
-                this.yOffset + floatY,
+                this.yOffset,
                 this.currentPos.z,
             )
 
