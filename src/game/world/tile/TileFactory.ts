@@ -68,6 +68,13 @@ interface SoilWaterColorTransition {
     duration: number
 }
 
+interface SnowTransition {
+    slot: number
+    cellX: number
+    cellZ: number
+    progress: number
+    onDone?: () => void
+}
 
 export class TileFactory {
     private scene: THREE.Scene
@@ -98,6 +105,7 @@ export class TileFactory {
     private readonly SNOW_MAX = 3000
     private winterSnowBudget = 0
     private thawMeltBudget = 0
+    private snowTransitions = new Map<string, SnowTransition>()
 
     private wateredCells = new Set<string>()
     private readonly SOIL_COLOR_DRY = new THREE.Color(1, 1, 1)
@@ -176,18 +184,7 @@ export class TileFactory {
         this.snowSlots.set(key, slot)
         this.snowMesh.count = Math.min(this.SNOW_MAX, Math.max(this.snowMesh.count, this.snowHighWater))
 
-        const half = this.worldSizeInCells / 2
-        _dummy.position.set(
-            (cellX - half + 0.5) * this.cellSize,
-            0.025,
-            (cellZ - half + 0.5) * this.cellSize,
-        )
-        _dummy.rotation.set(0, 0, 0)
-        _dummy.scale.set(1, 1, 1)
-        _dummy.updateMatrix()
-
-        this.snowMesh.setMatrixAt(slot, _dummy.matrix)
-        this.snowMesh.instanceMatrix.needsUpdate = true
+        this.setSnowMatrix(slot, cellX, cellZ, this.SNOW_Y_VISIBLE)
         return true
     }
 
@@ -210,21 +207,31 @@ export class TileFactory {
         const key = this.cellKey(cellX, cellZ)
         const slot = this.snowSlots.get(key)
         if (slot === undefined) return false
+        if (this.snowTransitions.has(key)) return false
 
         this.tillParticles.spawnAtCell(cellX, cellZ, "snow")
 
-        this.snowSlots.delete(key)
-        this.snowMesh.setMatrixAt(slot, _zero)
-        this.snowMesh.instanceMatrix.needsUpdate = true
-        this.snowFreeSlots.push(slot)
+        this.snowTransitions.set(key, {
+            slot,
+            cellX,
+            cellZ,
+            progress: 0,
+            onDone: () => {
+                this.snowSlots.delete(key)
+                this.snowMesh.setMatrixAt(slot, _zero)
+                this.snowMesh.instanceMatrix.needsUpdate = true
+                this.snowFreeSlots.push(slot)
 
-        while (this.snowHighWater > 0 && this.snowFreeSlots.includes(this.snowHighWater - 1)) {
-            const top = this.snowHighWater - 1
-            const idx = this.snowFreeSlots.indexOf(top)
-            if (idx >= 0) this.snowFreeSlots.splice(idx, 1)
-            this.snowHighWater -= 1
-        }
-        this.snowMesh.count = Math.max(0, Math.min(this.SNOW_MAX, this.snowHighWater))
+                while (this.snowHighWater > 0 && this.snowFreeSlots.includes(this.snowHighWater - 1)) {
+                    const top = this.snowHighWater - 1
+                    const idx = this.snowFreeSlots.indexOf(top)
+                    if (idx >= 0) this.snowFreeSlots.splice(idx, 1)
+                    this.snowHighWater -= 1
+                }
+                this.snowMesh.count = Math.max(0, Math.min(this.SNOW_MAX, this.snowHighWater))
+            },
+        })
+
         return true
     }
 
@@ -524,6 +531,8 @@ export class TileFactory {
     private readonly TERRAIN_Y_VISIBLE: number = 0.0
     private readonly TERRAIN_Y_HIDDEN: number = -0.45
     private readonly TERRAIN_Y_UNTILL_START: number = -0.05 // juste sous le soil
+    private readonly SNOW_Y_VISIBLE: number = 0.025
+    private readonly SNOW_Y_HIDDEN: number = -0.06
 
     private updateSoilWaterColorTransitions(deltaTime: number): void {
         if (this.soilWaterColorTransitions.size === 0) return
@@ -553,7 +562,7 @@ export class TileFactory {
         this.woodChipParticles.update(deltaTime)
         this.updateSoilWaterColorTransitions(deltaTime)
 
-        if (this.transitions.size === 0) return
+        if (this.transitions.size === 0 && this.snowTransitions.size === 0) return
 
         for (const [k, t] of this.transitions) {
             t.progress = Math.min(1, t.progress + deltaTime * this.TRANSITION_SPEED)
@@ -573,6 +582,17 @@ export class TileFactory {
             if (t.progress >= 1) {
                 t.onDone?.()
                 this.transitions.delete(k)
+            }
+        }
+
+        for (const [k, t] of this.snowTransitions) {
+            t.progress = Math.min(1, t.progress + deltaTime * this.TRANSITION_SPEED)
+            const posY = this.SNOW_Y_VISIBLE + (this.SNOW_Y_HIDDEN - this.SNOW_Y_VISIBLE) * t.progress
+            this.setSnowMatrix(t.slot, t.cellX, t.cellZ, posY)
+
+            if (t.progress >= 1) {
+                t.onDone?.()
+                this.snowTransitions.delete(k)
             }
         }
     }
@@ -598,6 +618,20 @@ export class TileFactory {
         this._matrix.compose(this._pos, this._quat, this._scale)
         mesh.setMatrixAt(entry.index, this._matrix)
         mesh.instanceMatrix.needsUpdate = true
+    }
+
+    private setSnowMatrix(slot: number, cellX: number, cellZ: number, posY: number): void {
+        const half = this.worldSizeInCells / 2
+        _dummy.position.set(
+            (cellX - half + 0.5) * this.cellSize,
+            posY,
+            (cellZ - half + 0.5) * this.cellSize,
+        )
+        _dummy.rotation.set(0, 0, 0)
+        _dummy.scale.set(1, 1, 1)
+        _dummy.updateMatrix()
+        this.snowMesh.setMatrixAt(slot, _dummy.matrix)
+        this.snowMesh.instanceMatrix.needsUpdate = true
     }
 
     // ─── API Soil ─────────────────────────────────────────────────
