@@ -6,7 +6,7 @@ import { historyStore, animateAppear } from "../store/HistoryStore"
 import { placementStore } from "../store/PlacementStore"
 import { animateChop } from "../../game/entity/animations/ChopAnimation"
 import { World } from "../../game/world/World"
-import { TREE_ENTITY_IDS } from "../../game/items/AxeItem"
+import { TREE_ENTITY_IDS, TREE_MIN_AXE_LEVEL } from "../../game/items/AxeItem"
 import { toolLevelStore } from "../store/ToolLevelStore"
 
 const WOOD_BY_TREE: Record<string, number> = {
@@ -14,13 +14,6 @@ const WOOD_BY_TREE: Record<string, number> = {
     tree2: 3,
     tree3: 2,
     tree_orange: 1,
-}
-
-const TREE_MIN_LEVEL: Record<string, number> = {
-    tree_orange: 1,
-    tree1: 1,
-    tree3: 2,
-    tree2: 3,
 }
 
 const AXE_LEVEL_WOOD_BONUS = [0, 0, 1, 2, 4]
@@ -35,7 +28,7 @@ export function useWoodcutting() {
             if (!world) return false
 
             const axeLevel = toolLevelStore.getLevel("axe")
-            if (axeLevel < (TREE_MIN_LEVEL[targetEntityId] ?? 1)) return false
+            if (axeLevel < (TREE_MIN_AXE_LEVEL[targetEntityId as keyof typeof TREE_MIN_AXE_LEVEL] ?? 1)) return false
 
             const entity = world.entities.find(e =>
                 e.userData.id === targetEntityId &&
