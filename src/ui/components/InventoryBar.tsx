@@ -32,7 +32,7 @@ import { LettuceItemDef } from "../../game/items/LettuceItem"
 import { ShovelItemDef } from "../../game/items/ShovelItem"
 import { WateringCanItemDef } from "../../game/items/WateringCanItem"
 import { TulipEntity } from "../../game/entity/entities/Tulip"
-import { AxeItemDef } from "../../game/items/AxeItem"
+import { AxeItemDef, getBestTreeLabelForAxeLevel } from "../../game/items/AxeItem"
 import { WoodItemDef } from "../../game/items/WoodItem"
 import { LootAnimationLayer } from "./LootAnimationLayer"
 import { OrangeSaplingItemDef } from "../../game/items/OrangeSaplingItem"
@@ -443,6 +443,12 @@ export function InventoryBar() {
                     {showLevel && (
                         <>
                             Niveau {level}/3
+                            {item.id === "axe" && (
+                                <>
+                                    <span className="hint-sep">·</span>
+                                    Arbre max: {getBestTreeLabelForAxeLevel(level)}
+                                </>
+                            )}
                             <span className="hint-sep">·</span>
                             <span className="hint-key">↑</span>/<span className="hint-key">↓</span>
                             Ajuster
