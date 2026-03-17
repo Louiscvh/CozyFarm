@@ -28,8 +28,24 @@ type MarketPopupProps = {
 
 export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
   const [revision, setRevision] = useState(0)
+  const [sellQtyById, setSellQtyById] = useState<Record<SellableItem["id"], number>>({
+    carrot: 1,
+    lettuce: 1,
+    orange: 1,
+  })
 
   useEffect(() => inventoryStore.subscribe(() => setRevision(v => v + 1)), [])
+
+  useEffect(() => {
+    setSellQtyById((prev) => {
+      const next = { ...prev }
+      for (const item of SELLABLE_ITEMS) {
+        const stock = inventoryStore.getQty(item.id)
+        next[item.id] = Math.max(1, Math.min(prev[item.id] ?? 1, stock || 1))
+      }
+      return next
+    })
+  }, [revision])
 
   const totalStockValue = useMemo(
     () => SELLABLE_ITEMS.reduce((sum, item) => sum + inventoryStore.getQty(item.id) * item.unitPrice, 0),
@@ -38,10 +54,17 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
 
   if (!open) return null
 
-  const sellItem = (item: SellableItem) => {
-    const qty = inventoryStore.getQty(item.id)
-    if (qty <= 0) return
+  const updateSellQty = (itemId: SellableItem["id"], nextQty: number) => {
+    const stock = inventoryStore.getQty(itemId)
+    const clamped = Math.max(1, Math.min(nextQty, stock || 1))
+    setSellQtyById((prev) => ({ ...prev, [itemId]: clamped }))
+  }
 
+  const sellItem = (item: SellableItem) => {
+    const stock = inventoryStore.getQty(item.id)
+    if (stock <= 0) return
+
+    const qty = Math.max(1, Math.min(sellQtyById[item.id] ?? 1, stock))
     inventoryStore.consume(item.id, qty)
     const earned = qty * item.unitPrice
     moneyStore.add(earned)
@@ -63,10 +86,6 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
     setRevision(v => v + 1)
   }
 
-  const sellAll = () => {
-    SELLABLE_ITEMS.forEach(sellItem)
-  }
-
   return (
     <WorldPopup
       open={open}
@@ -78,27 +97,41 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
     >
       <div>
         <h3>🛒 Marché</h3>
-        <p>Vends tes légumes pour gagner de l'argent.</p>
+        <p>Choisis la quantité à vendre pour chaque produit.</p>
 
         <div className="market-popup-list">
           {SELLABLE_ITEMS.map(item => {
-            const qty = inventoryStore.getQty(item.id)
-            const total = qty * item.unitPrice
+            const stock = inventoryStore.getQty(item.id)
+            const sellQty = Math.max(1, Math.min(sellQtyById[item.id] ?? 1, stock || 1))
+            const total = sellQty * item.unitPrice
+
             return (
               <div key={item.id} className="market-popup-row">
                 <span>{item.icon} {item.label}</span>
-                <span>x{qty}</span>
+                <span className="market-popup-stock">stock: {stock}</span>
+                <div className="market-popup-qty">
+                  <UIButton onClick={() => updateSellQty(item.id, sellQty - 1)} disabled={stock <= 0 || sellQty <= 1}>−</UIButton>
+                  <input
+                    className="market-popup-qty-input"
+                    type="number"
+                    min={1}
+                    max={Math.max(1, stock)}
+                    value={sellQty}
+                    onChange={(e) => updateSellQty(item.id, Number(e.target.value || 1))}
+                    disabled={stock <= 0}
+                  />
+                  <UIButton onClick={() => updateSellQty(item.id, sellQty + 1)} disabled={stock <= 0 || sellQty >= stock}>+</UIButton>
+                </div>
                 <span>{total} 💰</span>
-                <UIButton onClick={() => sellItem(item)} disabled={qty <= 0}>Vendre</UIButton>
+                <UIButton onClick={() => sellItem(item)} disabled={stock <= 0}>Vendre</UIButton>
               </div>
             )
           })}
         </div>
 
         <div className="market-popup-footer">
-          <strong>Total possible: {totalStockValue} 💰</strong>
+          <strong>Total stock: {totalStockValue} 💰</strong>
           <div className="market-popup-actions">
-            <UIButton onClick={sellAll}>Tout vendre</UIButton>
             <UIButton onClick={onClose}>Fermer</UIButton>
           </div>
         </div>

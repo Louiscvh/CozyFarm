@@ -103,7 +103,7 @@ export function EntityPopups() {
       }
 
       if (owner.entity.userData.id === "market") {
-        OutlineSystem.instance?.setHovered(null)
+        OutlineSystem.instance?.setHovered(owner.entity)
         cancelOpen(); scheduleClose(); return
       }
 
