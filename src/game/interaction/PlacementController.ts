@@ -61,6 +61,7 @@ hoverCellMesh.frustumCulled = false
 
 const SOIL_SURFACE_Y = -0.05
 const HOVER_SURFACE_OFFSET_Y = 0.005
+const GHOST_SCALE_FACTOR = 0.99999
 
 // ─── Controller ───────────────────────────────────────────────────────────────
 
@@ -79,7 +80,6 @@ export class PlacementController {
     private targetRotY = 0
     private currentRotY = 0
     private ghostRaf = 0
-    private ghostStartTime = 0
     private _ghostToken = 0   // annule les builds async en cours
 
     // ── Hover state ───────────────────────────────────────────────────────────
@@ -275,8 +275,6 @@ export class PlacementController {
     }
 
     private startGhostAnimation(): void {
-        this.ghostStartTime = performance.now()
-
         const animate = () => {
             this.ghostRaf = requestAnimationFrame(animate)
 
@@ -293,12 +291,9 @@ export class PlacementController {
 
             this.currentPos.lerp(this.targetPos, 0.35)
 
-            const t = (performance.now() - this.ghostStartTime) / 1000
-            const floatY = Math.sin(t * 2) * 0.04
-
             this.ghost.position.set(
                 this.currentPos.x,
-                this.yOffset + floatY,
+                this.yOffset,
                 this.currentPos.z,
             )
 
@@ -349,6 +344,7 @@ export class PlacementController {
         this.yOffset = groundSnap
 
         applyGhostMaterials(root)
+        root.scale.multiplyScalar(GHOST_SCALE_FACTOR)
         root.rotation.y = targetRotRad
         this.currentRotY = targetRotRad
         this.targetRotY = targetRotRad
@@ -390,6 +386,7 @@ export class PlacementController {
             new THREE.CylinderGeometry(this.world.cellSize * 0.025, this.world.cellSize * 0.03, this.world.cellSize * 0.9, 8),
             ghostMat,
         )
+        root.scale.setScalar(GHOST_SCALE_FACTOR)
         root.castShadow = true
         root.userData.isStakeGhost = true
 
@@ -453,7 +450,7 @@ export class PlacementController {
         if (this._ghostToken !== token) return
 
         const scale = cropDef.ghostModelScale ?? lastPhase.modelScale ?? 1
-        root.scale.setScalar(scale)
+        root.scale.setScalar(scale * GHOST_SCALE_FACTOR)
 
         const box = new THREE.Box3().setFromObject(root)
         const phaseYOffset = lastPhase.yOffset ?? cropDef.yOffset ?? 0
@@ -722,6 +719,9 @@ export class PlacementController {
         const spawnedEntity = await this.world.spawnEntitySafe(entity, placeCellX, placeCellZ, footprint)
         if (!spawnedEntity) { soundManager.playError(); return }
 
+        const finalScale = spawnedEntity.scale.clone()
+        spawnedEntity.scale.set(0, 0, 0)
+
         spawnedEntity.userData.cellX = placeCellX
         spawnedEntity.userData.cellZ = placeCellZ
         spawnedEntity.userData.sizeInCells = footprint
@@ -746,9 +746,44 @@ export class PlacementController {
             cellZ: placeCellZ,
             sizeInCells: footprint,
             originalY: spawnedEntity.position.y,
-            originalScale: spawnedEntity.scale.clone(),
+            originalScale: finalScale.clone(),
             originalRotation: spawnedEntity.rotation.clone(),
         })
+
+        const animStart = performance.now()
+        const durationMs = 300
+        const zeroScale = new THREE.Vector3(0, 0, 0)
+        const animateSpawn = (now: number) => {
+            const t = Math.min((now - animStart) / durationMs, 1)
+            const ease = 1 - Math.pow(1 - t, 3)
+            spawnedEntity.scale.lerpVectors(zeroScale, finalScale, ease)
+
+            if (spawnedEntity.userData.isInstanced) {
+                this.world.instanceManager.setTransform(
+                    spawnedEntity.userData.def as any,
+                    spawnedEntity.userData.instanceSlot,
+                    spawnedEntity.position,
+                    spawnedEntity.userData.rotY ?? spawnedEntity.rotation.y,
+                    spawnedEntity.scale.x,
+                )
+            }
+
+            if (t < 1) {
+                requestAnimationFrame(animateSpawn)
+            } else {
+                spawnedEntity.scale.copy(finalScale)
+                if (spawnedEntity.userData.isInstanced) {
+                    this.world.instanceManager.setTransform(
+                        spawnedEntity.userData.def as any,
+                        spawnedEntity.userData.instanceSlot,
+                        spawnedEntity.position,
+                        spawnedEntity.userData.rotY ?? spawnedEntity.rotation.y,
+                        finalScale.x,
+                    )
+                }
+            }
+        }
+        requestAnimationFrame(animateSpawn)
 
         soundManager.playSuccess()
     }
