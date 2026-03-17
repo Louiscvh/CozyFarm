@@ -9,8 +9,11 @@ export const ghostMat = new THREE.MeshBasicMaterial({
     color: 0x00ff00,
     transparent: true,
     opacity: 0.45,
-    depthWrite: true,
+    depthWrite: false,
     depthTest: true,
+    polygonOffset: true,
+    polygonOffsetFactor: 1,
+    polygonOffsetUnits: 1,
 })
 
 export function applyGhostMaterials(root: THREE.Object3D): void {
@@ -24,5 +27,8 @@ export function applyGhostMaterials(root: THREE.Object3D): void {
     })
 
     toRemove.forEach(o => o.parent?.remove(o))
-    toReMat.forEach(m => m.material = ghostMat)
+    toReMat.forEach(m => {
+        m.material = ghostMat
+        m.renderOrder = -1
+    })
 }
