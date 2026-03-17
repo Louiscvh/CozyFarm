@@ -73,10 +73,11 @@ export function EntityPopups() {
       mouse.y = -(e.clientY / window.innerHeight) * 2 + 1
       raycaster.setFromCamera(mouse, w.camera)
 
-      const hitboxes = w.entities
-        .map(en => en.getObjectByName("__hitbox__"))
-        .filter(Boolean) as THREE.Object3D[]
-      const intersects = raycaster.intersectObjects(hitboxes, false)
+      const hitEntries = w.entities
+        .map(entity => ({ entity, hitbox: entity.getObjectByName("__hitbox__") }))
+        .filter((entry): entry is { entity: THREE.Object3D; hitbox: THREE.Object3D } => !!entry.hitbox)
+
+      const intersects = raycaster.intersectObjects(hitEntries.map(entry => entry.hitbox), true)
 
       if (intersects.length === 0) {
         if (pointerDownRef.current) return
@@ -84,13 +85,27 @@ export function EntityPopups() {
         cancelOpen(); scheduleClose(); return
       }
 
-      const entity = intersects[0].object.parent!
-      OutlineSystem.instance?.setHovered(entity)
+      const hitObject = intersects[0].object
+      const owner = hitEntries.find(entry => {
+        let node: THREE.Object3D | null = hitObject
+        while (node) {
+          if (node === entry.hitbox) return true
+          node = node.parent
+        }
+        return false
+      })
+
+      if (!owner) {
+        OutlineSystem.instance?.setHovered(null)
+        cancelOpen(); scheduleClose(); return
+      }
+
+      OutlineSystem.instance?.setHovered(owner.entity)
 
       cancelClose()
       scheduleOpen({
-        entityObject: entity,
-        id: entity.uuid,
+        entityObject: owner.entity,
+        id: owner.entity.uuid,
       })
     }
 

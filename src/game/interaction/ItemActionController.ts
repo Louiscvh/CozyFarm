@@ -369,9 +369,36 @@ export class ItemActionController {
 
     private handleUseOnTile(item: ItemDef): void {
         if (!isUsableOnTile(item)) return
-        if (!placementStore.hoveredCell) return
 
-        const { cellX, cellZ } = placementStore.hoveredCell
+        let targetCell = placementStore.hoveredCell
+
+        if (item.usage.actionId === "scanner:inspect") {
+            const cropMeshes = this.world.cropManager.getMeshes()
+            const cropIntersects = this.raycaster.intersectObjects(cropMeshes, true)
+            const hit = cropIntersects.find(intersection => {
+                let node: THREE.Object3D | null = intersection.object
+                while (node) {
+                    if (node.userData.isCrop && typeof node.userData.cellX === "number" && typeof node.userData.cellZ === "number") return true
+                    node = node.parent
+                }
+                return false
+            })
+
+            if (hit) {
+                let node: THREE.Object3D | null = hit.object
+                while (node) {
+                    if (node.userData.isCrop && typeof node.userData.cellX === "number" && typeof node.userData.cellZ === "number") {
+                        targetCell = { cellX: node.userData.cellX as number, cellZ: node.userData.cellZ as number }
+                        break
+                    }
+                    node = node.parent
+                }
+            }
+        }
+
+        if (!targetCell) return
+
+        const { cellX, cellZ } = targetCell
         const canUse = this.getToolOffsets(item).some(offset =>
             this.canUseOnTileCell(item, cellX + offset.x, cellZ + offset.z)
         )
