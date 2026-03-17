@@ -61,7 +61,8 @@ hoverCellMesh.frustumCulled = false
 
 const SOIL_SURFACE_Y = -0.05
 const HOVER_SURFACE_OFFSET_Y = 0.005
-const GHOST_SCALE_FACTOR = 0.94
+const GHOST_INSET_WORLD_UNITS = 0.03
+const SEED_AND_STAKE_GHOST_SCALE_FACTOR = 0.98
 
 // ─── Controller ───────────────────────────────────────────────────────────────
 
@@ -251,6 +252,18 @@ export class PlacementController {
 
     // ─── Ghost ────────────────────────────────────────────────────────────────
 
+
+    private shrinkGhostByFixedInset(root: THREE.Object3D): void {
+        const box = new THREE.Box3().setFromObject(root)
+        const size = box.getSize(new THREE.Vector3())
+        const inset = GHOST_INSET_WORLD_UNITS
+
+        const fx = size.x > 1e-4 ? Math.max(0.01, (size.x - inset * 2) / size.x) : 1
+        const fz = size.z > 1e-4 ? Math.max(0.01, (size.z - inset * 2) / size.z) : 1
+
+        root.scale.set(root.scale.x * fx, root.scale.y, root.scale.z * fz)
+    }
+
     private removeGhost(keepGrid = false): void {
         this._ghostToken++
         cancelAnimationFrame(this.ghostRaf)
@@ -344,7 +357,7 @@ export class PlacementController {
         this.yOffset = groundSnap
 
         applyGhostMaterials(root)
-        root.scale.multiplyScalar(GHOST_SCALE_FACTOR)
+        this.shrinkGhostByFixedInset(root)
         root.rotation.y = targetRotRad
         this.currentRotY = targetRotRad
         this.targetRotY = targetRotRad
@@ -386,7 +399,7 @@ export class PlacementController {
             new THREE.CylinderGeometry(this.world.cellSize * 0.025, this.world.cellSize * 0.03, this.world.cellSize * 0.9, 8),
             ghostMat,
         )
-        root.scale.setScalar(GHOST_SCALE_FACTOR)
+        root.scale.setScalar(SEED_AND_STAKE_GHOST_SCALE_FACTOR)
         root.castShadow = true
         root.userData.isStakeGhost = true
 
@@ -450,7 +463,7 @@ export class PlacementController {
         if (this._ghostToken !== token) return
 
         const scale = cropDef.ghostModelScale ?? lastPhase.modelScale ?? 1
-        root.scale.setScalar(scale * GHOST_SCALE_FACTOR)
+        root.scale.setScalar(scale * SEED_AND_STAKE_GHOST_SCALE_FACTOR)
 
         const box = new THREE.Box3().setFromObject(root)
         const phaseYOffset = lastPhase.yOffset ?? cropDef.yOffset ?? 0
