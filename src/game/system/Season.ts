@@ -21,7 +21,7 @@ export interface SeasonState {
   nextSeasonLabel: string
 }
 
-const DAYS_PER_SEASON = 6
+export const DAYS_PER_SEASON = 30
 const SEASONS: SeasonConfig[] = [
   { id: "autumn", label: "Automne", shortLabel: "🍂", skyColor: "#f4b184", lightTint: "#ffd2b0", terrainTint: "#d59f72", temperatureOffset: -2, growthMultiplier: 0.9 },
   { id: "winter", label: "Hiver", shortLabel: "❄️", skyColor: "#cfe4ff", lightTint: "#e6f1ff", terrainTint: "#e5edf7", temperatureOffset: -8, growthMultiplier: 0.55 },

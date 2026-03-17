@@ -3,21 +3,17 @@ import { useEffect, useRef, useState } from "react"
 import { Renderer } from "../../render/Renderer"
 import { UIButton } from "./UIButton"
 import { Time } from "../../game/core/Time"
-import { getSeasonState } from "../../game/system/Season"
+import { DAYS_PER_SEASON, getSeasonState } from "../../game/system/Season"
 
 export const Temperature = () => {
   const [temperature, setTemperature] = useState(20)
+  const [calendarDay, setCalendarDay] = useState(1)
+  const [calendarMonth, setCalendarMonth] = useState(getSeasonState().season.label)
 
   const dayRotatorRef = useRef<HTMLDivElement>(null)
-  const seasonRotatorRef = useRef<HTMLDivElement>(null)
 
   const prevDayT = useRef(Time.getVisualDayT())
   const totalDayAngle = useRef(Time.getVisualDayT() * 360)
-
-  const prevYearT = useRef(getSeasonState().yearProgress)
-  const totalSeasonAngle = useRef(getSeasonState().yearProgress * 360)
-  const seasonTargetAngle = useRef(totalSeasonAngle.current)
-  const seasonDisplayAngle = useRef(totalSeasonAngle.current)
 
   const rafRef = useRef<number>(0)
 
@@ -37,27 +33,6 @@ export const Temperature = () => {
         }
       }
 
-      const yearT = getSeasonState().yearProgress
-      let yearDelta = yearT - prevYearT.current
-      if (yearDelta > 0.5) yearDelta -= 1
-      if (yearDelta < -0.5) yearDelta += 1
-
-      if (Math.abs(yearDelta) > 0.0001) {
-        totalSeasonAngle.current += yearDelta * 360
-        seasonTargetAngle.current = totalSeasonAngle.current
-        prevYearT.current = yearT
-      }
-
-      const seasonSmoothing = 0.16
-      const seasonAngleDiff = seasonTargetAngle.current - seasonDisplayAngle.current
-      if (Math.abs(seasonAngleDiff) > 0.01) {
-        seasonDisplayAngle.current += seasonAngleDiff * seasonSmoothing
-        if (seasonRotatorRef.current) {
-          seasonRotatorRef.current.style.transform =
-            `translateY(50%) rotate(${seasonDisplayAngle.current}deg)`
-        }
-      }
-
       rafRef.current = requestAnimationFrame(loop)
     }
 
@@ -66,14 +41,6 @@ export const Temperature = () => {
         cancelAnimationFrame(rafRef.current)
       } else {
         prevDayT.current = Time.getVisualDayT()
-        prevYearT.current = getSeasonState().yearProgress
-        totalSeasonAngle.current = prevYearT.current * 360
-        seasonTargetAngle.current = totalSeasonAngle.current
-        seasonDisplayAngle.current = totalSeasonAngle.current
-        if (seasonRotatorRef.current) {
-          seasonRotatorRef.current.style.transform =
-            `translateY(50%) rotate(${seasonDisplayAngle.current}deg)`
-        }
         rafRef.current = requestAnimationFrame(loop)
       }
     }
@@ -82,11 +49,6 @@ export const Temperature = () => {
       dayRotatorRef.current.style.transform =
         `translateY(50%) rotate(${totalDayAngle.current}deg)`
     }
-    if (seasonRotatorRef.current) {
-      seasonRotatorRef.current.style.transform =
-        `translateY(50%) rotate(${seasonDisplayAngle.current}deg)`
-    }
-
     document.addEventListener("visibilitychange", onVisibility)
     rafRef.current = requestAnimationFrame(loop)
 
@@ -101,7 +63,13 @@ export const Temperature = () => {
       if (document.hidden) return
       const weather = Renderer.instance?.world?.weather
       if (!weather) return
+
+      const seasonState = getSeasonState()
+      const currentDay = Math.floor(seasonState.seasonProgress * DAYS_PER_SEASON) + 1
+
       setTemperature(Math.round(weather.getTemperature()))
+      setCalendarDay(currentDay)
+      setCalendarMonth(seasonState.season.label)
     }, 300)
     return () => clearInterval(id)
   }, [])
@@ -121,15 +89,9 @@ export const Temperature = () => {
         {temperature}°C
       </UIButton>
 
-      <UIButton className="season-cycle-widget static">
-        <div className="cycle-mask">
-          <div ref={seasonRotatorRef} className="season-cycle-rotator">
-            <div className="season-icon autumn">🍂</div>
-            <div className="season-icon winter">❄️</div>
-            <div className="season-icon spring">🌸</div>
-            <div className="season-icon summer">🌻</div>
-          </div>
-        </div>
+      <UIButton className="calendar-widget" aria-label={`Date: ${calendarDay} ${calendarMonth}`}>
+        <div className="calendar-day">{calendarDay}</div>
+        <div className="calendar-month">{calendarMonth}</div>
       </UIButton>
     </div>
   )

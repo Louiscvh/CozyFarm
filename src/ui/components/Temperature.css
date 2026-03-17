@@ -26,6 +26,38 @@
   overflow: hidden;
 }
 
+.calendar-widget {
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  padding: 0;
+}
+
+.calendar-day {
+  font-family: "JetBrains Mono", monospace;
+  font-size: 1.12rem;
+  font-weight: 700;
+  line-height: 1;
+  margin-top: 1px;
+}
+
+.calendar-month {
+  max-width: 100%;
+  font-size: 0.42rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  text-transform: uppercase;
+  opacity: 0.85;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0 4px 2px;
+}
+
 .cycle-rotator,
 .season-cycle-rotator {
   border-radius: 50%;
