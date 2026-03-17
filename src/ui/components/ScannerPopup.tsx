@@ -67,8 +67,12 @@ export function ScannerPopup() {
   const remaining = Math.ceil(crop.phaseRemainingSeconds)
   const isWatered = World.current?.tilesFactory.isWatered(crop.cellX, crop.cellZ) ?? false
   const conditions = computeGrowthRate(World.current?.weather ?? null)
-  const baseGrowth = conditions.growthRate
-  const effectiveGrowth = isWatered ? baseGrowth * conditions.wateredMult : baseGrowth
+  const growthBonus = conditions.breakdown.timePaused
+    ? 0
+    : conditions.breakdown.temperatureMult
+      * conditions.breakdown.rainMult
+      * conditions.breakdown.seasonMult
+      * (isWatered ? conditions.wateredMult : 1)
 
   const formatMult = (value: number) => `x${value.toFixed(2)}`
 
@@ -86,9 +90,7 @@ export function ScannerPopup() {
       <div className="scanner-popup-line">Progression: {progressPct}%</div>
       <div className="scanner-popup-line">Temps restant: {crop.isReady ? "Prête" : `${remaining}s`}</div>
       <div className="scanner-popup-line">Arrosée: {isWatered ? "Oui" : "Non"}</div>
-      <div className="scanner-popup-line">Coeff. pousse: {formatMult(effectiveGrowth)}{conditions.breakdown.timePaused ? " (pause)" : ""}</div>
-      <div className="scanner-popup-line scanner-popup-line--muted">Base {formatMult(baseGrowth)} · Arrosage {formatMult(conditions.wateredMult)}</div>
-      <div className="scanner-popup-line scanner-popup-line--muted">Temp {formatMult(conditions.breakdown.temperatureMult)} · Pluie {formatMult(conditions.breakdown.rainMult)} · Vitesse {formatMult(conditions.breakdown.timeSpeedMult)} · Saison {formatMult(conditions.breakdown.seasonMult)}</div>
+      <div className="scanner-popup-line">Coeff. pousse: {formatMult(growthBonus)}</div>
     </WorldPopup>
   )
 }

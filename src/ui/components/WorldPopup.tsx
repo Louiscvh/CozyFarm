@@ -1,6 +1,7 @@
 import { type CSSProperties, type MouseEventHandler, type ReactNode, useEffect, useRef } from "react"
 import * as THREE from "three"
 import { World } from "../../game/world/World"
+import "./WorldPopup.css"
 
 interface WorldPopupProps {
   readonly open: boolean
@@ -102,7 +103,7 @@ export function WorldPopup({
 
   return (
     <div
-      className={className}
+      className={["world-popup", className].filter(Boolean).join(" ")}
       ref={popupRef}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}

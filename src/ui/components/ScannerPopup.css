@@ -1,17 +1,7 @@
 .scanner-popup {
   z-index: 11;
-  min-width: 220px;
-  pointer-events: none;
+  min-width: 210px;
   padding: 10px 12px;
-  border-radius: 10px;
-  color: rgba(255, 255, 255, 0.9);
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
 .scanner-popup-title {
@@ -23,10 +13,4 @@
   font-size: 12px;
   line-height: 1.35;
   opacity: 0.95;
-}
-
-.scanner-popup-line--muted {
-  margin-top: 2px;
-  font-size: 11px;
-  opacity: 0.72;
 }

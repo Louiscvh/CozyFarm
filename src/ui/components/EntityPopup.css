@@ -1,21 +1,6 @@
 /* src/ui/components/EntityPopup.css */
 .entity-popup {
-  pointer-events: auto;
   z-index: 10;
-  opacity: 0;
-
-  padding: 6px;
-  border-radius: 12px;
-  background: rgba(10, 10, 15, 0.72);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
-
-  transform: translate(-50%, -50%);
-  animation: popupFadeIn 120ms ease-out forwards;
-  will-change: left, top;
 }
 
 .entity-popup-bridge {
@@ -29,13 +14,4 @@
   outline: transparent;
   pointer-events: auto;
   clip-path: polygon(0% 0%, 100% 0%, 50% 100%);
-}
-
-@keyframes popupFadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
 }
