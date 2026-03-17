@@ -4,7 +4,8 @@ import { World } from "../../game/world/World"
 
 interface WorldPopupProps {
   readonly open: boolean
-  readonly anchorObject: THREE.Object3D | null
+  readonly anchorObject?: THREE.Object3D | null
+  readonly anchorWorldPosition?: THREE.Vector3 | null
   readonly onClose?: () => void
   readonly anchorResolver?: (anchorObject: THREE.Object3D) => THREE.Object3D | null
   readonly offsetY?: number
@@ -17,7 +18,8 @@ interface WorldPopupProps {
 
 export function WorldPopup({
   open,
-  anchorObject,
+  anchorObject = null,
+  anchorWorldPosition = null,
   onClose,
   anchorResolver,
   offsetY = 0.3,
@@ -39,24 +41,36 @@ export function WorldPopup({
 
     const updatePopupPosition = () => {
       const w = World.current
-      if (!w || !anchorObject) {
+      if (!w) {
         rafRef.current = requestAnimationFrame(updatePopupPosition)
         return
       }
 
-      const anchor = anchorResolver ? anchorResolver(anchorObject) : anchorObject
-      if (!anchor) {
+      let worldAnchor: THREE.Vector3 | null = null
+
+      if (anchorObject) {
+        const anchor = anchorResolver ? anchorResolver(anchorObject) : anchorObject
+        if (anchor) {
+          const box = new THREE.Box3().setFromObject(anchor)
+          worldAnchor = new THREE.Vector3(
+            (box.min.x + box.max.x) / 2,
+            box.max.y + offsetY,
+            (box.min.z + box.max.z) / 2,
+          )
+        }
+      }
+
+      if (!worldAnchor && anchorWorldPosition) {
+        worldAnchor = anchorWorldPosition.clone()
+      }
+
+      if (!worldAnchor) {
         onClose?.()
         rafRef.current = requestAnimationFrame(updatePopupPosition)
         return
       }
 
-      const box = new THREE.Box3().setFromObject(anchor)
-      const topCenter = new THREE.Vector3(
-        (box.min.x + box.max.x) / 2,
-        box.max.y + offsetY,
-        (box.min.z + box.max.z) / 2,
-      ).project(w.camera)
+      const topCenter = worldAnchor.project(w.camera)
 
       targetPosRef.current = {
         x: (topCenter.x + 1) / 2 * window.innerWidth,
@@ -82,9 +96,9 @@ export function WorldPopup({
 
     rafRef.current = requestAnimationFrame(updatePopupPosition)
     return () => cancelAnimationFrame(rafRef.current)
-  }, [anchorObject, anchorResolver, offsetY, onClose, open])
+  }, [anchorObject, anchorResolver, anchorWorldPosition, offsetY, onClose, open])
 
-  if (!open || !anchorObject) return null
+  if (!open || (!anchorObject && !anchorWorldPosition)) return null
 
   return (
     <div

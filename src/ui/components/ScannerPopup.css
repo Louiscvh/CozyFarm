@@ -1,4 +1,5 @@
 .scanner-popup {
+  z-index: 11;
   min-width: 170px;
   pointer-events: none;
   padding: 8px 10px;

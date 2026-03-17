@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react"
+import * as THREE from "three"
 import { World } from "../../game/world/World"
 import { WorldPopup } from "./WorldPopup"
 import { scannerPopupStore } from "../store/ScannerPopupStore"
@@ -33,6 +34,29 @@ export function ScannerPopup() {
     return world.cropManager.getCrop(snapshot.cellX, snapshot.cellZ) ?? null
   }, [snapshot, version])
 
+  const anchorWorldPosition = useMemo(() => {
+    if (!snapshot.open) return null
+
+    const world = World.current
+    if (!world) return null
+
+    if (crop?.mesh) {
+      const box = new THREE.Box3().setFromObject(crop.mesh)
+      return new THREE.Vector3(
+        (box.min.x + box.max.x) / 2,
+        box.max.y + 0.35,
+        (box.min.z + box.max.z) / 2,
+      )
+    }
+
+    const half = world.sizeInCells / 2
+    return new THREE.Vector3(
+      (snapshot.cellX - half + 0.5) * world.cellSize,
+      world.cellSize * 0.75,
+      (snapshot.cellZ - half + 0.5) * world.cellSize,
+    )
+  }, [crop, snapshot, version])
+
   if (snapshot.open && !crop) scannerPopupStore.close()
   if (!snapshot.open || !crop) return null
 
@@ -45,7 +69,8 @@ export function ScannerPopup() {
   return (
     <WorldPopup
       open={snapshot.open}
-      anchorObject={crop.mesh}
+      anchorObject={crop.mesh ?? null}
+      anchorWorldPosition={anchorWorldPosition}
       onClose={() => scannerPopupStore.close()}
       className="scanner-popup"
       offsetY={0.35}
