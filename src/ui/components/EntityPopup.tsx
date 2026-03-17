@@ -30,6 +30,7 @@ export function EntityPopups() {
 
   const HOVER_OPEN_DELAY_MS = 250
   const HOVER_SWITCH_DELAY_MS = 120
+  const HOVER_DISTANCE_STICKINESS_EPSILON = 0.05
 
   const cancelClose = () => {
     if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null }
@@ -117,21 +118,25 @@ export function EntityPopups() {
       }
 
       const ownerByHitbox = new Map(hitEntries.map(entry => [entry.hitbox, entry.entity]))
-      const intersectedOwners: THREE.Object3D[] = []
+      const ownerDistances = new Map<THREE.Object3D, number>()
 
       for (const intersection of intersects) {
         let node: THREE.Object3D | null = intersection.object
         while (node) {
           const owner = ownerByHitbox.get(node)
           if (owner) {
-            if (!intersectedOwners.includes(owner)) intersectedOwners.push(owner)
+            const prevDistance = ownerDistances.get(owner)
+            if (prevDistance === undefined || intersection.distance < prevDistance) {
+              ownerDistances.set(owner, intersection.distance)
+            }
             break
           }
           node = node.parent
         }
       }
 
-      const owner = intersectedOwners[0]
+      const rankedOwners = [...ownerDistances.entries()].sort((a, b) => a[1] - b[1])
+      const owner = rankedOwners[0]?.[0]
 
       if (!owner) {
         cancelPendingSwitch()
@@ -140,16 +145,22 @@ export function EntityPopups() {
       }
 
       const currentOutlined = outlinedEntityRef.current
-      if (currentOutlined && intersectedOwners.includes(currentOutlined)) {
-        cancelPendingSwitch()
-        applyHoverTarget(currentOutlined)
-        return
-      }
-
       if (currentOutlined?.uuid === owner.uuid) {
         cancelPendingSwitch()
         applyHoverTarget(owner)
         return
+      }
+
+      if (currentOutlined && ownerDistances.has(currentOutlined)) {
+        const currentDistance = ownerDistances.get(currentOutlined) ?? Number.POSITIVE_INFINITY
+        const ownerDistance = ownerDistances.get(owner) ?? Number.POSITIVE_INFINITY
+        const shouldKeepCurrent = currentDistance <= ownerDistance + HOVER_DISTANCE_STICKINESS_EPSILON
+
+        if (shouldKeepCurrent) {
+          cancelPendingSwitch()
+          applyHoverTarget(currentOutlined)
+          return
+        }
       }
 
       if (pendingSwitchEntityId.current === owner.uuid && pendingSwitchTimer.current) return
