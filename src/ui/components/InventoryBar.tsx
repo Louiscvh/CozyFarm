@@ -432,6 +432,20 @@ export function InventoryBar() {
         if (isUsableOnEntity(item) || isUsableOnTile(item)) {
             const showLevel = isLevelableTool(item.id)
             const level = showLevel ? toolLevelStore.getLevel(item.id) : 1
+
+            if (item.id === "axe") {
+                return (
+                    <div id="placement-hint">
+                        Clique pour couper un arbre - Niveau {level}/3 - Max: {getBestTreeLabelForAxeLevel(level)}
+                        <span className="hint-sep">·</span>
+                        <span className="hint-key">↑</span>/<span className="hint-key">↓</span>
+                        Ajuster
+                        <span className="hint-sep">·</span>
+                        {renderEscapeHint()}
+                    </div>
+                )
+            }
+
             return (
                 <div id="placement-hint">
                     {item.usageHint && (
@@ -443,12 +457,6 @@ export function InventoryBar() {
                     {showLevel && (
                         <>
                             Niveau {level}/3
-                            {item.id === "axe" && (
-                                <>
-                                    <span className="hint-sep">·</span>
-                                    Arbre max: {getBestTreeLabelForAxeLevel(level)}
-                                </>
-                            )}
                             <span className="hint-sep">·</span>
                             <span className="hint-key">↑</span>/<span className="hint-key">↓</span>
                             Ajuster
