@@ -341,7 +341,7 @@ export class PlacementController {
             const box = new THREE.Box3().setFromObject(root)
             return box.min.y < 0 ? -box.min.y : 0
         })()
-        this.yOffset = groundSnap
+        this.yOffset = groundSnap + (entity.yOffset ?? 0)
 
         applyGhostMaterials(root)
         root.rotation.y = targetRotRad
@@ -726,13 +726,16 @@ export class PlacementController {
         if (!spawnedEntity) { soundManager.playError(); return }
 
         const finalScale = spawnedEntity.scale.clone()
-        spawnedEntity.scale.set(0, 0, 0)
+        const isInstanced = !!spawnedEntity.userData.isInstanced
+        if (!isInstanced) {
+            spawnedEntity.scale.set(0, 0, 0)
+        }
 
         spawnedEntity.userData.cellX = placeCellX
         spawnedEntity.userData.cellZ = placeCellZ
         spawnedEntity.userData.sizeInCells = footprint
 
-        if (spawnedEntity.userData.isInstanced) {
+        if (isInstanced) {
             spawnedEntity.userData.rotY = this.targetRotY
             spawnedEntity.rotation.y = this.targetRotY
             this.world.instanceManager.setTransform(
@@ -756,45 +759,28 @@ export class PlacementController {
             originalRotation: spawnedEntity.rotation.clone(),
         })
 
-        const animStart = performance.now()
-        const durationMs = 360
-        const animateSpawn = (now: number) => {
-            const t = Math.min((now - animStart) / durationMs, 1)
-            const ease = 1 - Math.pow(1 - t, 3)
-            const bump = 1 + Math.sin(Math.PI * t) * 0.08
-            const scaleFactor = Math.min(1.08, ease * bump)
-            spawnedEntity.scale.set(
-                finalScale.x * scaleFactor,
-                finalScale.y * scaleFactor,
-                finalScale.z * scaleFactor,
-            )
-
-            if (spawnedEntity.userData.isInstanced) {
-                this.world.instanceManager.setTransform(
-                    spawnedEntity.userData.def as any,
-                    spawnedEntity.userData.instanceSlot,
-                    spawnedEntity.position,
-                    spawnedEntity.userData.rotY ?? spawnedEntity.rotation.y,
-                    spawnedEntity.scale.x,
+        if (!isInstanced) {
+            const animStart = performance.now()
+            const durationMs = 360
+            const animateSpawn = (now: number) => {
+                const t = Math.min((now - animStart) / durationMs, 1)
+                const ease = 1 - Math.pow(1 - t, 3)
+                const bump = 1 + Math.sin(Math.PI * t) * 0.08
+                const scaleFactor = Math.min(1.08, ease * bump)
+                spawnedEntity.scale.set(
+                    finalScale.x * scaleFactor,
+                    finalScale.y * scaleFactor,
+                    finalScale.z * scaleFactor,
                 )
-            }
 
-            if (t < 1) {
-                requestAnimationFrame(animateSpawn)
-            } else {
-                spawnedEntity.scale.copy(finalScale)
-                if (spawnedEntity.userData.isInstanced) {
-                    this.world.instanceManager.setTransform(
-                        spawnedEntity.userData.def as any,
-                        spawnedEntity.userData.instanceSlot,
-                        spawnedEntity.position,
-                        spawnedEntity.userData.rotY ?? spawnedEntity.rotation.y,
-                        finalScale.x,
-                    )
+                if (t < 1) {
+                    requestAnimationFrame(animateSpawn)
+                } else {
+                    spawnedEntity.scale.copy(finalScale)
                 }
             }
+            requestAnimationFrame(animateSpawn)
         }
-        requestAnimationFrame(animateSpawn)
 
         soundManager.playSuccess()
     }
