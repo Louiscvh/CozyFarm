@@ -105,22 +105,13 @@ export function EntityPopups() {
         .map(entity => ({ entity, hitbox: entity.getObjectByName("__hitbox__") }))
         .filter((entry): entry is { entity: THREE.Object3D; hitbox: THREE.Object3D } => !!entry.hitbox)
 
-      const ownerByHitbox = new Map(hitEntries.map(entry => [entry.hitbox, entry.entity]))
-      const intersections = raycaster.intersectObjects(hitEntries.map(entry => entry.hitbox), true)
+      const hitboxes = hitEntries.map(entry => entry.hitbox)
+      const ownerByHitbox = new Map(hitEntries.map(entry => [entry.hitbox.uuid, entry.entity]))
+      const intersections = raycaster.intersectObjects(hitboxes, false)
 
-      let owner: THREE.Object3D | null = null
-      for (const intersection of intersections) {
-        let node: THREE.Object3D | null = intersection.object
-        while (node) {
-          const found = ownerByHitbox.get(node)
-          if (found) {
-            owner = found
-            break
-          }
-          node = node.parent
-        }
-        if (owner) break
-      }
+      const owner = intersections.length > 0
+        ? ownerByHitbox.get(intersections[0].object.uuid) ?? null
+        : null
 
       if (!owner) {
         if (pointerDownRef.current) return
