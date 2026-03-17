@@ -24,8 +24,12 @@ export function EntityPopups() {
   const isOverPopup = useRef(false)
   const pendingEntityIdRef = useRef<string | null>(null)
   const pointerDownRef = useRef(false)
+  const outlinedEntityRef = useRef<THREE.Object3D | null>(null)
+  const pendingSwitchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const pendingSwitchEntityId = useRef<string | null>(null)
 
   const HOVER_OPEN_DELAY_MS = 250
+  const HOVER_SWITCH_DELAY_MS = 120
 
   const cancelClose = () => {
     if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null }
@@ -59,14 +63,40 @@ export function EntityPopups() {
     }, HOVER_OPEN_DELAY_MS)
   }
 
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     const raycaster = new THREE.Raycaster()
     const mouse = new THREE.Vector2()
 
+    const cancelPendingSwitch = () => {
+      if (pendingSwitchTimer.current) {
+        clearTimeout(pendingSwitchTimer.current)
+        pendingSwitchTimer.current = null
+      }
+      pendingSwitchEntityId.current = null
+    }
+
+    const applyHoverTarget = (target: THREE.Object3D | null) => {
+      outlinedEntityRef.current = target
+      OutlineSystem.instance?.setHovered(target)
+
+      if (!target) {
+        cancelOpen()
+        scheduleClose()
+        return
+      }
+
+      cancelClose()
+      scheduleOpen({
+        entityObject: target,
+        id: target.uuid,
+      })
+    }
+
     function onMouseMove(e: MouseEvent) {
       const w = World.current
       if (!w || !w.camera) return
-      if (placementStore.selectedItem) { cancelClose(); cancelOpen(); OutlineSystem.instance?.setHovered(null); setHoveredPopup(null); return }
+      if (placementStore.selectedItem) { cancelClose(); cancelOpen(); cancelPendingSwitch(); applyHoverTarget(null); setHoveredPopup(null); return }
       if (isOverPopup.current) { cancelClose(); return }
 
       mouse.x = (e.clientX / window.innerWidth) * 2 - 1
@@ -81,32 +111,56 @@ export function EntityPopups() {
 
       if (intersects.length === 0) {
         if (pointerDownRef.current) return
-        OutlineSystem.instance?.setHovered(null)
-        cancelOpen(); scheduleClose(); return
+        cancelPendingSwitch()
+        applyHoverTarget(null)
+        return
       }
 
-      const hitObject = intersects[0].object
-      const owner = hitEntries.find(entry => {
-        let node: THREE.Object3D | null = hitObject
+      const ownerByHitbox = new Map(hitEntries.map(entry => [entry.hitbox, entry.entity]))
+      const intersectedOwners: THREE.Object3D[] = []
+
+      for (const intersection of intersects) {
+        let node: THREE.Object3D | null = intersection.object
         while (node) {
-          if (node === entry.hitbox) return true
+          const owner = ownerByHitbox.get(node)
+          if (owner) {
+            if (!intersectedOwners.includes(owner)) intersectedOwners.push(owner)
+            break
+          }
           node = node.parent
         }
-        return false
-      })
-
-      if (!owner) {
-        OutlineSystem.instance?.setHovered(null)
-        cancelOpen(); scheduleClose(); return
       }
 
-      OutlineSystem.instance?.setHovered(owner.entity)
+      const owner = intersectedOwners[0]
 
-      cancelClose()
-      scheduleOpen({
-        entityObject: owner.entity,
-        id: owner.entity.uuid,
-      })
+      if (!owner) {
+        cancelPendingSwitch()
+        applyHoverTarget(null)
+        return
+      }
+
+      const currentOutlined = outlinedEntityRef.current
+      if (currentOutlined && intersectedOwners.includes(currentOutlined)) {
+        cancelPendingSwitch()
+        applyHoverTarget(currentOutlined)
+        return
+      }
+
+      if (currentOutlined?.uuid === owner.uuid) {
+        cancelPendingSwitch()
+        applyHoverTarget(owner)
+        return
+      }
+
+      if (pendingSwitchEntityId.current === owner.uuid && pendingSwitchTimer.current) return
+
+      cancelPendingSwitch()
+      pendingSwitchEntityId.current = owner.uuid
+      pendingSwitchTimer.current = setTimeout(() => {
+        applyHoverTarget(owner)
+        pendingSwitchTimer.current = null
+        pendingSwitchEntityId.current = null
+      }, HOVER_SWITCH_DELAY_MS)
     }
 
     function onPointerDown() {
@@ -126,9 +180,11 @@ export function EntityPopups() {
       window.removeEventListener("mouseup", onPointerUp)
       cancelClose()
       cancelOpen()
-      OutlineSystem.instance?.setHovered(null)
+      cancelPendingSwitch()
+      applyHoverTarget(null)
     }
   }, [])
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   const handleDelete = (popup: PopupInfo) => {
     cancelClose()
