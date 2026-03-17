@@ -498,6 +498,10 @@ export class PlacementController {
     // ─── Mouse move ───────────────────────────────────────────────────────────
 
     private getHoverShape(item: ItemDef | null): HoverShape {
+        if (item && this.isGhostItem(item)) {
+            return this.getHoverFootprint(item) > 1 ? "square" : "single"
+        }
+
         if (!item || !isUsableOnTile(item)) return "single"
         if (item.id !== "hoe" && item.id !== "watering_can" && item.id !== "shovel") return "single"
 
@@ -535,6 +539,11 @@ export class PlacementController {
     }
 
     private getHoverFootprint(item: ItemDef | null): number {
+        if (item && this.isGhostItem(item)) {
+            if (isPlaceable(item)) return getFootprint(getItemEntity(item))
+            return 1
+        }
+
         if (!item || !isUsableOnTile(item)) return 1
         if (item.id !== "hoe" && item.id !== "watering_can" && item.id !== "shovel") return 1
 
@@ -565,8 +574,7 @@ export class PlacementController {
     }
 
     private updatePlacementGhost(cellX: number, cellZ: number, item: ItemDef): void {
-        hoverCellMesh.visible = false
-        this.stopHoverAnim()
+        this.updateHoverCursor(cellX, cellZ, this.getHoverFootprint(item), this.getHoverShape(item))
 
         if (!this.ghost && (this.isSeedGhostItem(item) || this.isStakeGhostItem(item))) {
             this.buildGhost(item)
