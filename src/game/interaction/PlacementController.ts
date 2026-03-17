@@ -61,7 +61,7 @@ hoverCellMesh.frustumCulled = false
 
 const SOIL_SURFACE_Y = -0.05
 const HOVER_SURFACE_OFFSET_Y = 0.005
-const GHOST_SCALE_FACTOR = 0.99999
+const GHOST_SCALE_FACTOR = 0.94
 
 // ─── Controller ───────────────────────────────────────────────────────────────
 
@@ -759,12 +759,17 @@ export class PlacementController {
         })
 
         const animStart = performance.now()
-        const durationMs = 300
-        const zeroScale = new THREE.Vector3(0, 0, 0)
+        const durationMs = 360
         const animateSpawn = (now: number) => {
             const t = Math.min((now - animStart) / durationMs, 1)
             const ease = 1 - Math.pow(1 - t, 3)
-            spawnedEntity.scale.lerpVectors(zeroScale, finalScale, ease)
+            const bump = 1 + Math.sin(Math.PI * t) * 0.08
+            const scaleFactor = Math.min(1.08, ease * bump)
+            spawnedEntity.scale.set(
+                finalScale.x * scaleFactor,
+                finalScale.y * scaleFactor,
+                finalScale.z * scaleFactor,
+            )
 
             if (spawnedEntity.userData.isInstanced) {
                 this.world.instanceManager.setTransform(
