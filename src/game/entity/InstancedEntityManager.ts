@@ -89,8 +89,10 @@ export class InstancedEntityManager {
     const boxSz = new THREE.Vector3()
     box.getSize(boxSz)
   
-    // 2. Bake le yOffset dans le template
-    const yOffset = -box.min.y
+    // 2. Bake un snap sol "safe" dans le template.
+    // On ne corrige que si le mesh passe sous y=0 ;
+    // forcer aussi les min.y positifs vers le bas peut enterrer certains modèles.
+    const yOffset = box.min.y < 0 ? -box.min.y : 0
     tmpl.position.y = yOffset
     tmpl.updateMatrixWorld(true)
   
