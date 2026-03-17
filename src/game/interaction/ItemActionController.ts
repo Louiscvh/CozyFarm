@@ -399,6 +399,29 @@ export class ItemActionController {
         if (!targetCell) return
 
         const { cellX, cellZ } = targetCell
+
+        if (item.usage.actionId === "scanner:inspect") {
+            if (!this.world.cropManager.getCrop(cellX, cellZ)) {
+                soundManager.playError()
+                return
+            }
+
+            const tileType = this.getEffectiveTileType(cellX, cellZ) ?? "soil"
+            const success = itemActionRegistry.executeTileAction(item.usage.actionId, {
+                tileType,
+                cellX,
+                cellZ,
+                itemId: item.id,
+            })
+
+            if (success) {
+                this.playToolSuccessSound(item)
+            } else {
+                soundManager.playError()
+            }
+            return
+        }
+
         const canUse = this.getToolOffsets(item).some(offset =>
             this.canUseOnTileCell(item, cellX + offset.x, cellZ + offset.z)
         )
