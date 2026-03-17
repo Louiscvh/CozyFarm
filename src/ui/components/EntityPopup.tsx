@@ -18,7 +18,7 @@ interface PopupInfo {
 
 export function EntityPopups() {
   const [hoveredPopup, setHoveredPopup] = useState<PopupInfo | null>(null)
-  const [marketCell, setMarketCell] = useState<{ cellX: number; cellZ: number } | null>(null)
+  const [marketEntity, setMarketEntity] = useState<THREE.Object3D | null>(null)
   const targetRotY = useRef<number>(0)
   const rotRafRef = useRef<number>(0)
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -102,6 +102,11 @@ export function EntityPopups() {
         cancelOpen(); scheduleClose(); return
       }
 
+      if (owner.entity.userData.id === "market") {
+        OutlineSystem.instance?.setHovered(null)
+        cancelOpen(); scheduleClose(); return
+      }
+
       OutlineSystem.instance?.setHovered(owner.entity)
 
       cancelClose()
@@ -144,12 +149,12 @@ export function EntityPopups() {
         return false
       })
 
-      if (!owner || owner.entity.userData.id !== "market") return
+      if (!owner || owner.entity.userData.id !== "market") {
+        setMarketEntity(null)
+        return
+      }
 
-      setMarketCell({
-        cellX: owner.entity.userData.cellX as number,
-        cellZ: owner.entity.userData.cellZ as number,
-      })
+      setMarketEntity(owner.entity)
     }
 
     window.addEventListener("mousemove", onMouseMove)
@@ -271,9 +276,9 @@ export function EntityPopups() {
       </WorldPopup>
 
       <MarketPopup
-        open={!!marketCell}
-        marketCell={marketCell}
-        onClose={() => setMarketCell(null)}
+        open={!!marketEntity}
+        marketEntity={marketEntity}
+        onClose={() => setMarketEntity(null)}
       />
     </>
   )

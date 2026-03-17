@@ -88,11 +88,13 @@ export function LootAnimationLayer({ items }: LootAnimationLayerProps) {
             const inventoryShell = document.querySelector<HTMLElement>("#inventory-slots")
             const inventoryExpandBtn = document.querySelector<HTMLElement>("#inventory-expand-btn")
 
-            const to = targetSlot
-                ? centerOf(targetSlot)
-                : inventoryShell
-                    ? centerOf(inventoryShell)
-                    : { x: window.innerWidth / 2, y: window.innerHeight / 2 }
+            const to = targetAnchor
+                ? centerOf(targetAnchor)
+                : targetSlot
+                    ? centerOf(targetSlot)
+                    : inventoryShell
+                        ? centerOf(inventoryShell)
+                        : { x: window.innerWidth / 2, y: window.innerHeight / 2 }
 
             const clampedAmount = Math.max(1, Math.min(event.amount, 5))
             const newParticles: LootParticle[] = Array.from({ length: clampedAmount }).map((_, i) => ({
@@ -107,6 +109,11 @@ export function LootAnimationLayer({ items }: LootAnimationLayerProps) {
 
             const bumpDelay = LOOT_FLIGHT_DURATION_MS + (clampedAmount - 1) * 65
             window.setTimeout(() => {
+                if (targetAnchor) {
+                    bump(targetAnchor, "inventory-receive-bump")
+                    return
+                }
+
                 if (targetSlot) {
                     bump(targetSlot, "inv-slot-bump")
                     return

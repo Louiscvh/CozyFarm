@@ -1,9 +1,8 @@
 .ui-top-left-actions {
-  position: absolute;
-  z-index: 10000;
   display: flex;
   align-items: center;
   gap: 6px;
+  z-index: 10000;
 }
 
 .ui-home-button {
@@ -17,8 +16,9 @@
 }
 
 .ui-money-button {
-  min-width: 96px;
-  justify-content: space-between;
-  gap: 8px;
+  min-width: 64px;
+  padding-inline: 10px;
+  justify-content: center;
+  gap: 6px;
   font-family: "JetBrains Mono", monospace;
 }

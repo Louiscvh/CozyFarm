@@ -1,16 +1,7 @@
-.market-popup-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 12000;
-  background: rgba(0, 0, 0, 0.35);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
 .market-popup {
-  min-width: 420px;
-  max-width: 90vw;
+  z-index: 12000;
+  min-width: 360px;
+  max-width: min(90vw, 460px);
   background: rgba(18, 21, 26, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 14px;
@@ -48,4 +39,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
+}
+
+.market-popup-actions {
+  display: flex;
+  gap: 6px;
 }

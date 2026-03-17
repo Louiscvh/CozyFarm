@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from "react"
+import type { Object3D } from "three"
 import { inventoryStore } from "../store/InventoryStore"
 import { moneyStore } from "../store/MoneyStore"
 import { lootFeedbackStore } from "../store/LootFeedbackStore"
 import { UIButton } from "./UIButton"
+import { WorldPopup } from "./WorldPopup"
 import "./MarketPopup.css"
 
 type SellableItem = {
@@ -20,11 +22,11 @@ const SELLABLE_ITEMS: SellableItem[] = [
 
 type MarketPopupProps = {
   open: boolean
-  marketCell: { cellX: number; cellZ: number } | null
+  marketEntity: Object3D | null
   onClose: () => void
 }
 
-export function MarketPopup({ open, marketCell, onClose }: MarketPopupProps) {
+export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
   const [revision, setRevision] = useState(0)
 
   useEffect(() => inventoryStore.subscribe(() => setRevision(v => v + 1)), [])
@@ -44,14 +46,17 @@ export function MarketPopup({ open, marketCell, onClose }: MarketPopupProps) {
     const earned = qty * item.unitPrice
     moneyStore.add(earned)
 
-    if (marketCell) {
+    const cellX = marketEntity?.userData.cellX as number | undefined
+    const cellZ = marketEntity?.userData.cellZ as number | undefined
+
+    if (cellX !== undefined && cellZ !== undefined) {
       lootFeedbackStore.emit({
         itemId: "money",
         icon: "💰",
         targetSelector: "[data-money-counter='true']",
         amount: Math.min(earned, 8),
-        cellX: marketCell.cellX,
-        cellZ: marketCell.cellZ,
+        cellX,
+        cellZ,
       })
     }
 
@@ -63,8 +68,15 @@ export function MarketPopup({ open, marketCell, onClose }: MarketPopupProps) {
   }
 
   return (
-    <div className="market-popup-overlay" onClick={onClose}>
-      <div className="market-popup" onClick={(e) => e.stopPropagation()}>
+    <WorldPopup
+      open={open}
+      anchorObject={marketEntity}
+      onClose={onClose}
+      anchorResolver={(entityObject) => entityObject.getObjectByName("__hitbox__") ?? entityObject}
+      offsetY={0.38}
+      className="market-popup"
+    >
+      <div>
         <h3>🛒 Marché</h3>
         <p>Vends tes légumes pour gagner de l'argent.</p>
 
@@ -85,12 +97,12 @@ export function MarketPopup({ open, marketCell, onClose }: MarketPopupProps) {
 
         <div className="market-popup-footer">
           <strong>Total possible: {totalStockValue} 💰</strong>
-          <div style={{ display: "flex", gap: 6 }}>
+          <div className="market-popup-actions">
             <UIButton onClick={sellAll}>Tout vendre</UIButton>
             <UIButton onClick={onClose}>Fermer</UIButton>
           </div>
         </div>
       </div>
-    </div>
+    </WorldPopup>
   )
 }
