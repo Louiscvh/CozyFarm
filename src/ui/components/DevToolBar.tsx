@@ -85,7 +85,7 @@ export const DevToolBar = () => {
             <UIButton className={isPaused ? "selected" : ""} onClick={togglePause}>
               {isPaused ? "▶️" : "⏸️"}
             </UIButton>
-            {[1, 5, 10].map(v => (
+            {[1, 10, 50].map(v => (
               <UIButton key={v} className={Time.timeScale === v ? "selected" : ""} onClick={() => setSpeed(v)}>
                 x{v}
               </UIButton>

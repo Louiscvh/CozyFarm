@@ -12,19 +12,19 @@ function resetTime() {
 test("getSeasonState retourne la bonne saison selon le jour", () => {
   resetTime()
 
-  Time.elapsed = Time.cycleSeconds * 6
+  Time.elapsed = Time.cycleSeconds * 30
   assert.equal(getSeasonState().season.id, "winter")
 
-  Time.elapsed = Time.cycleSeconds * 12
+  Time.elapsed = Time.cycleSeconds * 60
   assert.equal(getSeasonState().season.id, "spring")
 
-  Time.elapsed = Time.cycleSeconds * 18
+  Time.elapsed = Time.cycleSeconds * 90
   assert.equal(getSeasonState().season.id, "summer")
 })
 
 test("shiftSeason conserve la progression journalière et ne descend pas sous 0", () => {
   resetTime()
-  Time.elapsed = Time.cycleSeconds * 6.25
+  Time.elapsed = Time.cycleSeconds * 30.25
 
   shiftSeason(1)
   assert.equal(getSeasonState().season.id, "spring")

@@ -211,6 +211,8 @@ export class TileFactory {
         const slot = this.snowSlots.get(key)
         if (slot === undefined) return false
 
+        this.tillParticles.spawnAtCell(cellX, cellZ, "snow")
+
         this.snowSlots.delete(key)
         this.snowMesh.setMatrixAt(slot, _zero)
         this.snowMesh.instanceMatrix.needsUpdate = true

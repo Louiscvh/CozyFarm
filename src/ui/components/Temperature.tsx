@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react"
 import { Renderer } from "../../render/Renderer"
 import { UIButton } from "./UIButton"
 import { Time } from "../../game/core/Time"
-import { getSeasonState } from "../../game/system/Season"
+import { DAYS_PER_SEASON, getSeasonState } from "../../game/system/Season"
 
 export const Temperature = () => {
   const [temperature, setTemperature] = useState(20)
@@ -65,7 +65,7 @@ export const Temperature = () => {
       if (!weather) return
 
       const seasonState = getSeasonState()
-      const currentDay = Math.floor(seasonState.seasonProgress * 6) + 1
+      const currentDay = Math.floor(seasonState.seasonProgress * DAYS_PER_SEASON) + 1
 
       setTemperature(Math.round(weather.getTemperature()))
       setCalendarDay(currentDay)

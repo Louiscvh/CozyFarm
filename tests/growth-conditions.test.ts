@@ -27,7 +27,7 @@ test("computeGrowthRate retourne 0 en pause", () => {
 
 test("computeGrowthRate combine température, pluie, vitesse et saison", () => {
   resetTime()
-  Time.elapsed = Time.cycleSeconds * 12
+  Time.elapsed = Time.cycleSeconds * 60
   Time.timeScale = 2
 
   const weather: MockWeather = {

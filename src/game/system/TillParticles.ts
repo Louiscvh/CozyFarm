@@ -1,5 +1,7 @@
 import * as THREE from "three"
 
+type SoilType = "dirt" | "snow"
+
 interface TillParticle {
     mesh: THREE.Mesh
     velocity: THREE.Vector3
@@ -25,11 +27,17 @@ export class TillParticles {
         this.smokeGeometry = new THREE.SphereGeometry(0.03, 6, 6)
     }
 
-    spawnAtCell(cellX: number, cellZ: number): void {
+    spawnAtCell(cellX: number, cellZ: number, soilType: SoilType = "dirt"): void {
         const halfCells = this.worldSizeInCells / 2
         const baseX = (cellX - halfCells + 0.5) * this.cellSize
         const baseZ = (cellZ - halfCells + 0.5) * this.cellSize
         const baseY = -0.03
+
+        if (soilType === "snow") {
+            this.spawnSnowBurst(baseX, baseY, baseZ)
+            this.spawnColdMistBurst(baseX, baseY, baseZ)
+            return
+        }
 
         this.spawnDirtBurst(baseX, baseY, baseZ)
         this.spawnSmokeBurst(baseX, baseY, baseZ)
@@ -91,6 +99,37 @@ export class TillParticles {
         }
     }
 
+    private spawnSnowBurst(baseX: number, baseY: number, baseZ: number): void {
+        for (let i = 0; i < 12; i++) {
+            const material = new THREE.MeshBasicMaterial({
+                color: 0xf2f7ff,
+                transparent: true,
+                opacity: 0.95,
+                toneMapped: false,
+            })
+            const mesh = new THREE.Mesh(this.dirtGeometry, material)
+            mesh.position.set(
+                baseX + (Math.random() - 0.5) * 0.24,
+                baseY + Math.random() * 0.04,
+                baseZ + (Math.random() - 0.5) * 0.24,
+            )
+            mesh.scale.setScalar(0.42 + Math.random() * 0.34)
+            this.scene.add(mesh)
+
+            this.particles.push({
+                mesh,
+                velocity: new THREE.Vector3(
+                    (Math.random() - 0.5) * 0.95,
+                    0.32 + Math.random() * 0.26,
+                    (Math.random() - 0.5) * 0.95,
+                ),
+                spin: (Math.random() - 0.5) * 4,
+                age: 0,
+                lifetime: 0.28 + Math.random() * 0.2,
+            })
+        }
+    }
+
     private spawnSmokeBurst(baseX: number, baseY: number, baseZ: number): void {
         for (let i = 0; i < 7; i++) {
             const material = new THREE.MeshBasicMaterial({
@@ -118,6 +157,37 @@ export class TillParticles {
                 spin: (Math.random() - 0.5) * 2,
                 age: 0,
                 lifetime: 0.36 + Math.random() * 0.22,
+            })
+        }
+    }
+
+    private spawnColdMistBurst(baseX: number, baseY: number, baseZ: number): void {
+        for (let i = 0; i < 8; i++) {
+            const material = new THREE.MeshBasicMaterial({
+                color: 0xdde7f7,
+                transparent: true,
+                opacity: 0.5,
+                toneMapped: false,
+            })
+            const mesh = new THREE.Mesh(this.smokeGeometry, material)
+            mesh.position.set(
+                baseX + (Math.random() - 0.5) * 0.22,
+                baseY + 0.02 + Math.random() * 0.05,
+                baseZ + (Math.random() - 0.5) * 0.22,
+            )
+            mesh.scale.setScalar(0.48 + Math.random() * 0.4)
+            this.scene.add(mesh)
+
+            this.particles.push({
+                mesh,
+                velocity: new THREE.Vector3(
+                    (Math.random() - 0.5) * 0.26,
+                    0.22 + Math.random() * 0.16,
+                    (Math.random() - 0.5) * 0.26,
+                ),
+                spin: (Math.random() - 0.5) * 1.5,
+                age: 0,
+                lifetime: 0.34 + Math.random() * 0.24,
             })
         }
     }
