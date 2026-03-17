@@ -8,6 +8,7 @@ import { animateRotate, pushDeleteAction, historyStore } from "../store/HistoryS
 import { getFootprint } from "../../game/entity/Entity"
 import type { Entity } from "../../game/entity/Entity"
 import { OutlineSystem } from "../../render/OutlineSystem"
+import { Renderer } from "../../render/Renderer"
 import { WorldPopup } from "./WorldPopup"
 
 interface PopupInfo {
@@ -86,27 +87,40 @@ export function EntityPopups() {
       if (placementStore.selectedItem) { cancelClose(); cancelOpen(); applyHoverTarget(null); setHoveredPopup(null); return }
       if (isOverPopup.current) { cancelClose(); return }
 
-      mouse.x = (e.clientX / window.innerWidth) * 2 - 1
-      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1
+      const renderer = Renderer.instance?.renderer
+      if (!renderer) return
+      const rect = renderer.domElement.getBoundingClientRect()
+      if (rect.width <= 0 || rect.height <= 0) return
+      if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) {
+        if (pointerDownRef.current) return
+        applyHoverTarget(null)
+        return
+      }
+
+      mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1
+      mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1
       raycaster.setFromCamera(mouse, w.camera)
 
       const hitEntries = w.entities
         .map(entity => ({ entity, hitbox: entity.getObjectByName("__hitbox__") }))
         .filter((entry): entry is { entity: THREE.Object3D; hitbox: THREE.Object3D } => !!entry.hitbox)
 
-      const intersectedOwners = hitEntries
-        .map((entry) => {
-          const intersections = raycaster.intersectObject(entry.hitbox, true)
-          if (intersections.length === 0) return null
-          return {
-            entity: entry.entity,
-            distance: intersections[0].distance,
-          }
-        })
-        .filter((value): value is { entity: THREE.Object3D; distance: number } => value !== null)
-        .sort((a, b) => a.distance - b.distance)
+      const ownerByHitbox = new Map(hitEntries.map(entry => [entry.hitbox, entry.entity]))
+      const intersections = raycaster.intersectObjects(hitEntries.map(entry => entry.hitbox), true)
 
-      const owner = intersectedOwners[0]?.entity
+      let owner: THREE.Object3D | null = null
+      for (const intersection of intersections) {
+        let node: THREE.Object3D | null = intersection.object
+        while (node) {
+          const found = ownerByHitbox.get(node)
+          if (found) {
+            owner = found
+            break
+          }
+          node = node.parent
+        }
+        if (owner) break
+      }
 
       if (!owner) {
         if (pointerDownRef.current) return
