@@ -9,6 +9,7 @@ import { soundManager } from "../system/SoundManager"
 import { ghostMat } from "../shared/GhostMaterial"
 import { ALL_CROPS } from "../farming/CropDefinition"
 import { getAreaOffsetsForLevel, toolLevelStore } from "../../ui/store/ToolLevelStore"
+import { TREE_MIN_AXE_LEVEL } from "../items/AxeItem"
 
 export class ItemActionController {
 
@@ -218,13 +219,23 @@ export class ItemActionController {
             ent.userData.cellZ <= cellZ && cellZ < ent.userData.cellZ + (ent.userData.sizeInCells ?? 1)
         )
 
-        if (entity) {
-            this.setHighlight(entity)
-            this.setCursor("pointer")
-        } else {
+        if (!entity) {
             this.setHighlight(null)
-            this.setCursor("not-allowed")   // ← était "default"
+            this.setCursor("not-allowed")
+            return
         }
+
+        this.setHighlight(entity)
+
+        const entityId = entity.userData.id as string
+        if (item.id === "axe") {
+            const requiredLevel = TREE_MIN_AXE_LEVEL[entityId as keyof typeof TREE_MIN_AXE_LEVEL] ?? 1
+            const axeLevel = toolLevelStore.getLevel("axe")
+            this.setCursor(axeLevel >= requiredLevel ? "pointer" : "not-allowed")
+            return
+        }
+
+        this.setCursor("pointer")
     }
 
     private updateCursorForTileHover(item: ItemDef): void {
