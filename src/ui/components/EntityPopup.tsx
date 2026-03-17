@@ -8,6 +8,7 @@ import { animateRotate, pushDeleteAction, historyStore } from "../store/HistoryS
 import { getFootprint } from "../../game/entity/Entity"
 import type { Entity } from "../../game/entity/Entity"
 import { OutlineSystem } from "../../render/OutlineSystem"
+import { Renderer } from "../../render/Renderer"
 import { WorldPopup } from "./WorldPopup"
 
 interface PopupInfo {
@@ -59,54 +60,66 @@ export function EntityPopups() {
     }, HOVER_OPEN_DELAY_MS)
   }
 
+  /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
     const raycaster = new THREE.Raycaster()
     const mouse = new THREE.Vector2()
 
+    const applyHoverTarget = (target: THREE.Object3D | null) => {
+      OutlineSystem.instance?.setHovered(target)
+
+      if (!target) {
+        cancelOpen()
+        scheduleClose()
+        return
+      }
+
+      cancelClose()
+      scheduleOpen({
+        entityObject: target,
+        id: target.uuid,
+      })
+    }
+
     function onMouseMove(e: MouseEvent) {
       const w = World.current
       if (!w || !w.camera) return
-      if (placementStore.selectedItem) { cancelClose(); cancelOpen(); OutlineSystem.instance?.setHovered(null); setHoveredPopup(null); return }
+      if (placementStore.selectedItem) { cancelClose(); cancelOpen(); applyHoverTarget(null); setHoveredPopup(null); return }
       if (isOverPopup.current) { cancelClose(); return }
 
-      mouse.x = (e.clientX / window.innerWidth) * 2 - 1
-      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1
+      const renderer = Renderer.instance?.renderer
+      if (!renderer) return
+      const rect = renderer.domElement.getBoundingClientRect()
+      if (rect.width <= 0 || rect.height <= 0) return
+      if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) {
+        if (pointerDownRef.current) return
+        applyHoverTarget(null)
+        return
+      }
+
+      mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1
+      mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1
       raycaster.setFromCamera(mouse, w.camera)
 
       const hitEntries = w.entities
         .map(entity => ({ entity, hitbox: entity.getObjectByName("__hitbox__") }))
         .filter((entry): entry is { entity: THREE.Object3D; hitbox: THREE.Object3D } => !!entry.hitbox)
 
-      const intersects = raycaster.intersectObjects(hitEntries.map(entry => entry.hitbox), true)
+      const hitboxes = hitEntries.map(entry => entry.hitbox)
+      const ownerByHitbox = new Map(hitEntries.map(entry => [entry.hitbox.uuid, entry.entity]))
+      const intersections = raycaster.intersectObjects(hitboxes, false)
 
-      if (intersects.length === 0) {
-        if (pointerDownRef.current) return
-        OutlineSystem.instance?.setHovered(null)
-        cancelOpen(); scheduleClose(); return
-      }
-
-      const hitObject = intersects[0].object
-      const owner = hitEntries.find(entry => {
-        let node: THREE.Object3D | null = hitObject
-        while (node) {
-          if (node === entry.hitbox) return true
-          node = node.parent
-        }
-        return false
-      })
+      const owner = intersections.length > 0
+        ? ownerByHitbox.get(intersections[0].object.uuid) ?? null
+        : null
 
       if (!owner) {
-        OutlineSystem.instance?.setHovered(null)
-        cancelOpen(); scheduleClose(); return
+        if (pointerDownRef.current) return
+        applyHoverTarget(null)
+        return
       }
 
-      OutlineSystem.instance?.setHovered(owner.entity)
-
-      cancelClose()
-      scheduleOpen({
-        entityObject: owner.entity,
-        id: owner.entity.uuid,
-      })
+      applyHoverTarget(owner)
     }
 
     function onPointerDown() {
@@ -126,9 +139,10 @@ export function EntityPopups() {
       window.removeEventListener("mouseup", onPointerUp)
       cancelClose()
       cancelOpen()
-      OutlineSystem.instance?.setHovered(null)
+      applyHoverTarget(null)
     }
   }, [])
+  /* eslint-enable react-hooks/exhaustive-deps */
 
   const handleDelete = (popup: PopupInfo) => {
     cancelClose()
