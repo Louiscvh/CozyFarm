@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "noEmit": false,
+    "outDir": ".test-dist",
+    "rootDir": ".",
+    "rewriteRelativeImportExtensions": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "types": ["node"]
+  },
+  "include": [
+    "tests/**/*.ts",
+    "src/game/core/Time.ts",
+    "src/game/system/Season.ts",
+    "src/game/farming/GrowthConditions.ts"
+  ]
+}

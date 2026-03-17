@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "npm run test:unit",
+    "test:unit": "node --loader ./tests/ts-extension-loader.mjs --test tests/**/*.test.ts"
   },
   "dependencies": {
     "react": "^19.2.0",
