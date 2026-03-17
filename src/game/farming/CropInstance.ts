@@ -47,6 +47,18 @@ export class CropInstance {
     get previousPhase(): GrowthPhase { return this.def.phases[this._prevPhase] }
     get isReady(): boolean { return this._phase >= this.phaseCount - 1 }
     get fruitsReady(): boolean { return !this.def.fruitRegrowSeconds || this._fruitsReady }
+    get elapsedInPhaseSeconds(): number { return this._elapsed }
+    get phaseDurationSeconds(): number { return this.currentPhase.durationSeconds }
+    get phaseProgress(): number {
+        if (this.isReady) return 1
+        const duration = this.currentPhase.durationSeconds
+        if (duration <= 0) return 1
+        return Math.max(0, Math.min(1, this._elapsed / duration))
+    }
+    get phaseRemainingSeconds(): number {
+        if (this.isReady) return 0
+        return Math.max(0, this.currentPhase.durationSeconds - this._elapsed)
+    }
 
     startTransition(
         type: TransitionType,

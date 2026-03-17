@@ -109,6 +109,11 @@ export class ItemActionController {
             return !!crop || hasLooseStake || canUntill || hasSnow
         }
 
+        if (item.usage.actionId === "scanner:inspect") {
+            const isValidTile = item.usage.targetTileTypes.includes(effectiveTileType)
+            return isValidTile && !!this.world.cropManager.getCrop(cellX, cellZ)
+        }
+
         const hasCrop = !!this.world.cropManager.getCrop(cellX, cellZ)
         const cropBlocks = hasCrop && !item.usage.allowOnCrop
         const blocked = (this.world.tilesFactory.isOccupied(cellX, cellZ) && effectiveTileType !== "soil") || cropBlocks

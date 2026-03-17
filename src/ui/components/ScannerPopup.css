@@ -1,0 +1,21 @@
+.scanner-popup {
+  min-width: 170px;
+  pointer-events: none;
+  padding: 8px 10px;
+  border-radius: 10px;
+  color: #f4f6ff;
+  background: rgba(8, 13, 22, 0.9);
+  border: 1px solid rgba(122, 210, 255, 0.42);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(3px);
+}
+
+.scanner-popup-title {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.scanner-popup-line {
+  font-size: 12px;
+  opacity: 0.95;
+}
