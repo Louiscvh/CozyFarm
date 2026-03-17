@@ -8,8 +8,12 @@ import { World } from "../../game/world/World"
 import { getAreaOffsetsForLevel, toolLevelStore } from "../store/ToolLevelStore"
 
 export function useFarming() {
+    useEffect(() => {
+        registerFarmingActions()
+    }, [])
+}
 
-    function registerPlantActions() {
+function registerPlantActions() {
         for (const def of ALL_CROPS) {
             itemActionRegistry.registerTileAction(
                 `farming:plant_${def.id}`,
@@ -30,8 +34,7 @@ export function useFarming() {
         }
     }
 
-    useEffect(() => {
-
+export function registerFarmingActions(): void {
         // ── Bêcher ────────────────────────────────────────────────────
         itemActionRegistry.registerTileAction("farming:till", (ctx) => {
             const world = World.current
@@ -124,5 +127,4 @@ export function useFarming() {
             }
         )
 
-    }, [])
 }
