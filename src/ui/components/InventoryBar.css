@@ -353,7 +353,8 @@ body.placing { cursor: crosshair; }
 
 
 #inventory-slots.inventory-receive-bump,
-#inventory-expand-btn.inventory-receive-bump {
+#inventory-expand-btn.inventory-receive-bump,
+[data-money-counter='true'].inventory-receive-bump {
   animation: inventoryReceiveBump 220ms cubic-bezier(0.33, 1, 0.68, 1);
 }
 

@@ -3,6 +3,8 @@ export interface LootFeedbackEvent {
     amount: number
     cellX: number
     cellZ: number
+    icon?: string
+    targetSelector?: string
 }
 
 class LootFeedbackStore {

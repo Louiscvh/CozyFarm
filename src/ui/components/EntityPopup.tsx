@@ -10,6 +10,7 @@ import type { Entity } from "../../game/entity/Entity"
 import { OutlineSystem } from "../../render/OutlineSystem"
 import { Renderer } from "../../render/Renderer"
 import { WorldPopup } from "./WorldPopup"
+import { MarketPopup } from "./MarketPopup"
 
 interface PopupInfo {
   entityObject: THREE.Object3D
@@ -18,6 +19,7 @@ interface PopupInfo {
 
 export function EntityPopups() {
   const [hoveredPopup, setHoveredPopup] = useState<PopupInfo | null>(null)
+  const [marketEntity, setMarketEntity] = useState<THREE.Object3D | null>(null)
   const targetRotY = useRef<number>(0)
   const rotRafRef = useRef<number>(0)
   const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -130,13 +132,48 @@ export function EntityPopups() {
       pointerDownRef.current = false
     }
 
+    function onClick(e: MouseEvent) {
+      const w = World.current
+      if (!w || !w.camera || placementStore.selectedItem) return
+
+      mouse.x = (e.clientX / window.innerWidth) * 2 - 1
+      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1
+      raycaster.setFromCamera(mouse, w.camera)
+
+      const hitEntries = w.entities
+        .map(entity => ({ entity, hitbox: entity.getObjectByName("__hitbox__") }))
+        .filter((entry): entry is { entity: THREE.Object3D; hitbox: THREE.Object3D } => !!entry.hitbox)
+
+      const intersects = raycaster.intersectObjects(hitEntries.map(entry => entry.hitbox), true)
+      if (intersects.length === 0) return
+
+      const hitObject = intersects[0].object
+      const owner = hitEntries.find(entry => {
+        let node: THREE.Object3D | null = hitObject
+        while (node) {
+          if (node === entry.hitbox) return true
+          node = node.parent
+        }
+        return false
+      })
+
+      if (!owner || owner.entity.userData.id !== "market") {
+        setMarketEntity(null)
+        return
+      }
+
+      setMarketEntity(owner.entity)
+    }
+
     window.addEventListener("mousemove", onMouseMove)
     window.addEventListener("mousedown", onPointerDown)
     window.addEventListener("mouseup", onPointerUp)
+    window.addEventListener("click", onClick)
     return () => {
       window.removeEventListener("mousemove", onMouseMove)
       window.removeEventListener("mousedown", onPointerDown)
       window.removeEventListener("mouseup", onPointerUp)
+      window.removeEventListener("click", onClick)
       cancelClose()
       cancelOpen()
       applyHoverTarget(null)
@@ -222,28 +259,36 @@ export function EntityPopups() {
   }
 
   return (
-    <WorldPopup
-      open={!!hoveredPopup}
-      anchorObject={hoveredPopup?.entityObject ?? null}
-      onClose={() => setHoveredPopup(null)}
-      anchorResolver={(entityObject) => {
-        const w = World.current
-        if (!w || !w.entities.includes(entityObject)) return null
-        return entityObject.getObjectByName("__hitbox__") ?? null
-      }}
-      className="entity-popup"
-      style={{ display: "flex", gap: "4px" }}
-      onMouseEnter={() => { isOverPopup.current = true; cancelClose() }}
-      onMouseLeave={() => { isOverPopup.current = false; scheduleClose() }}
-    >
-      {!!hoveredPopup && (
-        <>
-          <div className="entity-popup-bridge" />
-          <UIButton className="move-btn" onClick={() => handleMove(hoveredPopup)}>✥</UIButton>
-          <UIButton className="rotate-btn" onClick={() => handleRotate(hoveredPopup)}>↻</UIButton>
-          <UIButton className="delete-btn" onClick={() => handleDelete(hoveredPopup)}>🗑️</UIButton>
-        </>
-      )}
-    </WorldPopup>
+    <>
+      <WorldPopup
+        open={!!hoveredPopup}
+        anchorObject={hoveredPopup?.entityObject ?? null}
+        onClose={() => setHoveredPopup(null)}
+        anchorResolver={(entityObject) => {
+          const w = World.current
+          if (!w || !w.entities.includes(entityObject)) return null
+          return entityObject.getObjectByName("__hitbox__") ?? null
+        }}
+        className="entity-popup"
+        style={{ display: "flex", gap: "4px" }}
+        onMouseEnter={() => { isOverPopup.current = true; cancelClose() }}
+        onMouseLeave={() => { isOverPopup.current = false; scheduleClose() }}
+      >
+        {!!hoveredPopup && (
+          <>
+            <div className="entity-popup-bridge" />
+            <UIButton className="move-btn" onClick={() => handleMove(hoveredPopup)}>✥</UIButton>
+            <UIButton className="rotate-btn" onClick={() => handleRotate(hoveredPopup)}>↻</UIButton>
+            <UIButton className="delete-btn" onClick={() => handleDelete(hoveredPopup)}>🗑️</UIButton>
+          </>
+        )}
+      </WorldPopup>
+
+      <MarketPopup
+        open={!!marketEntity}
+        marketEntity={marketEntity}
+        onClose={() => setMarketEntity(null)}
+      />
+    </>
   )
 }
