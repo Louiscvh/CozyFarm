@@ -156,6 +156,44 @@ test("parcours joueur: bêcher -> planter -> arroser -> récolter", () => {
   }
 })
 
+
+
+test("pelle niveau 2: retire la neige en zone 2x2", () => {
+  toolLevelStore.setLevel("shovel", 2)
+
+  const snowCells = new Set<Cell>(["10|12", "9|12", "10|11", "9|11"])
+  const cleared: Cell[] = []
+
+  const { world } = createFakeWorld()
+  const originalClearSnow = world.tilesFactory.clearSnowCell
+  world.tilesFactory.clearSnowCell = ((cellX: number, cellZ: number) => {
+    const k = key(cellX, cellZ)
+    if (!snowCells.has(k)) return false
+    snowCells.delete(k)
+    cleared.push(k)
+    return true
+  }) as typeof originalClearSnow
+
+  World.current = world as never
+
+  try {
+    registerFarmingActions()
+
+    const ok = itemActionRegistry.executeTileAction("farming:uproot_or_untill", {
+      itemId: "shovel",
+      tileType: "grass",
+      cellX: 10,
+      cellZ: 12,
+    })
+
+    assert.equal(ok, true)
+    assert.deepEqual(cleared.sort(), ["10|12", "9|12", "10|11", "9|11"].sort())
+  } finally {
+    World.current = null
+    toolLevelStore.setLevel("shovel", 1)
+  }
+})
+
 test("parcours joueur: impossible de planter sans labour", () => {
   const { world } = createFakeWorld()
   World.current = world as never

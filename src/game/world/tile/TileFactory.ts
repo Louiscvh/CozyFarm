@@ -118,6 +118,7 @@ export class TileFactory {
     // ── Transitions ───────────────────────────────────────────────
     private transitions = new Map<string, SoilTransition>()
     private readonly TRANSITION_SPEED = 1   // ~125ms
+    private readonly SNOW_TRANSITION_SPEED = 2.4
 
     // ── Water particles ───────────────────────────────────────────
     private readonly waterSplashParticles: WaterSplashParticles
@@ -586,7 +587,7 @@ export class TileFactory {
         }
 
         for (const [k, t] of this.snowTransitions) {
-            t.progress = Math.min(1, t.progress + deltaTime * this.TRANSITION_SPEED)
+            t.progress = Math.min(1, t.progress + deltaTime * this.SNOW_TRANSITION_SPEED)
             const posY = this.SNOW_Y_VISIBLE + (this.SNOW_Y_HIDDEN - this.SNOW_Y_VISIBLE) * t.progress
             this.setSnowMatrix(t.slot, t.cellX, t.cellZ, posY)
 
@@ -641,6 +642,7 @@ export class TileFactory {
         if (this.soilSlots.has(k)) return false
         if (this.occupiedCells.has(k)) return false
         if (this.getTileTypeAtCell(cellX, cellZ) !== "grass") return false
+        if (this.hasSnowAtCell(cellX, cellZ)) return false
 
         this.markOccupied(cellX, cellZ, 1)
 
