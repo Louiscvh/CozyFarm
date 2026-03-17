@@ -127,6 +127,9 @@ export class TileFactory {
     private readonly woodChipParticles: WoodChipParticles
     private seasonId: SeasonId = "autumn"
     private currentTerrainTint = new THREE.Color("#d59f72")
+    private leafDriftAccumulator = 0
+    private readonly LEAF_DRIFT_INTERVAL = 0.09
+
 
     constructor(scene: THREE.Scene, worldSize: number, tileSize: number) {
         this.scene = scene
@@ -283,6 +286,29 @@ export class TileFactory {
             const material = mesh.material
             if (!(material instanceof THREE.MeshStandardMaterial)) continue
             material.color.copy(this.currentTerrainTint)
+        }
+    }
+
+    emitSeasonLeafDrift(trees: THREE.Object3D[], deltaTime: number): void {
+        if (this.seasonId !== "autumn" && this.seasonId !== "spring") {
+            this.leafDriftAccumulator = 0
+            return
+        }
+
+        this.leafDriftAccumulator += deltaTime
+        if (this.leafDriftAccumulator < this.LEAF_DRIFT_INTERVAL) return
+
+        const batches = Math.floor(this.leafDriftAccumulator / this.LEAF_DRIFT_INTERVAL)
+        this.leafDriftAccumulator -= batches * this.LEAF_DRIFT_INTERVAL
+        const candidateTrees = trees.filter(entity => ["tree1", "tree2", "tree3", "tree_orange"].includes(entity.userData.id))
+        if (candidateTrees.length === 0) return
+
+        for (let i = 0; i < batches; i++) {
+            const tree = candidateTrees[Math.floor(Math.random() * candidateTrees.length)]
+            const cellX = tree.userData.cellX
+            const cellZ = tree.userData.cellZ
+            if (typeof cellX !== "number" || typeof cellZ !== "number") continue
+            this.foliageParticles.spawnSeasonLeafDriftAtCell(cellX, cellZ, this.seasonId)
         }
     }
 
