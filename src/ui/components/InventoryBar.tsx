@@ -283,6 +283,13 @@ export function InventoryBar() {
             if (e.key === "Escape") { placementStore.cancel(); return }
             if (e.key === "e" || e.key === "E") { if (hasExtra) setExpanded(v => !v); return }
 
+            if ((e.key === "ArrowUp" || e.key === "ArrowDown") && isLevelableTool(selectedId)) {
+                e.preventDefault()
+                if (e.key === "ArrowUp") toolLevelStore.increase(selectedId)
+                else toolLevelStore.decrease(selectedId)
+                return
+            }
+
             const index = parseInt(e.code.replace("Digit", "")) - 1
             if (isNaN(index) || index < 0 || index >= HOTBAR_SIZE) return
 
@@ -428,11 +435,15 @@ export function InventoryBar() {
         if (isUsableOnEntity(item) || isUsableOnTile(item)) {
             const showLevel = isLevelableTool(item.id)
             const level = showLevel ? toolLevelStore.getLevel(item.id) : 1
+            const unlockedLevel = showLevel ? toolLevelStore.getUnlockedLevel(item.id) : 1
 
             if (item.id === "axe") {
                 return (
                     <div id="placement-hint">
-                        Clique pour couper un arbre - Niveau {level}/3 - Max: {getBestTreeLabelForAxeLevel(level)}
+                        Clique pour couper un arbre - Max: {getBestTreeLabelForAxeLevel(level)}
+                        <span className="hint-sep">·</span>
+                        <span className="hint-key">↑</span>/<span className="hint-key">↓</span>
+                        Ajuster ({unlockedLevel} pallier{unlockedLevel > 1 ? "s" : ""} débloqué{unlockedLevel > 1 ? "s" : ""})
                         <span className="hint-sep">·</span>
                         {renderEscapeHint()}
                     </div>
@@ -449,7 +460,8 @@ export function InventoryBar() {
                     )}
                     {showLevel && (
                         <>
-                            Niveau {level}/3
+                            <span className="hint-key">↑</span>/<span className="hint-key">↓</span>
+                            Ajuster ({unlockedLevel} pallier{unlockedLevel > 1 ? "s" : ""} débloqué{unlockedLevel > 1 ? "s" : ""})
                             <span className="hint-sep">·</span>
                         </>
                     )}
