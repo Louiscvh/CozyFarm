@@ -283,13 +283,6 @@ export function InventoryBar() {
             if (e.key === "Escape") { placementStore.cancel(); return }
             if (e.key === "e" || e.key === "E") { if (hasExtra) setExpanded(v => !v); return }
 
-            if ((e.key === "ArrowUp" || e.key === "ArrowDown") && isLevelableTool(selectedId)) {
-                e.preventDefault()
-                if (e.key === "ArrowUp") toolLevelStore.increase(selectedId)
-                else toolLevelStore.decrease(selectedId)
-                return
-            }
-
             const index = parseInt(e.code.replace("Digit", "")) - 1
             if (isNaN(index) || index < 0 || index >= HOTBAR_SIZE) return
 
@@ -441,9 +434,6 @@ export function InventoryBar() {
                     <div id="placement-hint">
                         Clique pour couper un arbre - Niveau {level}/3 - Max: {getBestTreeLabelForAxeLevel(level)}
                         <span className="hint-sep">·</span>
-                        <span className="hint-key">↑</span>/<span className="hint-key">↓</span>
-                        Ajuster
-                        <span className="hint-sep">·</span>
                         {renderEscapeHint()}
                     </div>
                 )
@@ -460,9 +450,6 @@ export function InventoryBar() {
                     {showLevel && (
                         <>
                             Niveau {level}/3
-                            <span className="hint-sep">·</span>
-                            <span className="hint-key">↑</span>/<span className="hint-key">↓</span>
-                            Ajuster
                             <span className="hint-sep">·</span>
                         </>
                     )}

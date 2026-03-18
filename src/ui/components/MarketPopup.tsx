@@ -184,8 +184,8 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
         <p>{mode === "buy" ? "Choisis ce que tu veux acheter." : "Choisis rapidement la quantité à vendre pour chaque produit."}</p>
 
         <div className="market-popup-tabs">
-          <UIButton className={mode === "buy" ? "market-popup-tab is-active" : "market-popup-tab"} onClick={() => setMode("buy")}>Acheter</UIButton>
-          <UIButton className={mode === "sell" ? "market-popup-tab is-active" : "market-popup-tab"} onClick={() => setMode("sell")}>Vendre</UIButton>
+          <UIButton playClickSound={false} className={mode === "buy" ? "market-popup-tab is-active" : "market-popup-tab"} onClick={() => setMode("buy")}>Acheter</UIButton>
+          <UIButton playClickSound={false} className={mode === "sell" ? "market-popup-tab is-active" : "market-popup-tab"} onClick={() => setMode("sell")}>Vendre</UIButton>
           <span className="market-popup-money">{money} 💵</span>
         </div>
 
@@ -212,7 +212,7 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
                     </div>
                   </div>
                   <div className="market-popup-buy-meta">
-                    <UIButton onClick={() => buyItem(item)} disabled={!canAfford || isMaxLevel}>{isMaxLevel ? "Max" : item.unitPrice + " 💵"}</UIButton>
+                    <UIButton playClickSound={false} onClick={() => buyItem(item)} disabled={!canAfford || isMaxLevel}>{isMaxLevel ? "Max" : item.unitPrice + " 💵"}</UIButton>
                   </div>
                 </div>
               )
@@ -240,7 +240,7 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
                         const label = step > 0 ? `+${step}` : `${step}`
 
                         return (
-                          <UIButton key={step} onClick={() => updateSellQty(item.id, nextQty)} disabled={isDisabled}>
+                          <UIButton playClickSound={false} key={step} onClick={() => updateSellQty(item.id, nextQty)} disabled={isDisabled}>
                             {label}
                           </UIButton>
                         )
@@ -248,7 +248,7 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
                     </div>
                   </div>
                   <span className="market-popup-total">{total} 💵</span>
-                  <UIButton onClick={() => sellItem(item)} disabled={stock <= 0}>💰</UIButton>
+                  <UIButton playClickSound={false} onClick={() => sellItem(item)} disabled={stock <= 0}>💰</UIButton>
                 </div>
               )
             })}
