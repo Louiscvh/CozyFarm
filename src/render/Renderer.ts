@@ -58,7 +58,8 @@ export class Renderer {
 
 
     // --- Ambiance sonore ---
-     soundManager.initAmbient()
+    soundManager.scheduleWarmup()
+    soundManager.initAmbient()
 
     // --- Input ---
     window.addEventListener("mousemove", e => {

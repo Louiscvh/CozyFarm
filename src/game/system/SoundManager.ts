@@ -1,4 +1,4 @@
-﻿// src/game/system/SoundManager.ts
+// src/game/system/SoundManager.ts
 
 // ─── Assets ───────────────────────────────────────────────────────────────────
 
@@ -12,15 +12,16 @@ const SFX = {
 } as const
 
 const AMBIENT_SRC = "/sounds/ambient.mp3"
+const AUDIO_PRELOAD_DELAY_MS = 1200
+
+type SfxKey = keyof typeof SFX
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function playSfx(src: string, volume: number): void {
-    try {
-        const audio = new Audio(src)
-        audio.volume = volume
-        audio.play().catch(() => { })
-    } catch { }
+function createAudio(src: string): HTMLAudioElement {
+    const audio = new Audio(src)
+    audio.preload = "auto"
+    return audio
 }
 
 // ─── SoundManager ─────────────────────────────────────────────────────────────
@@ -28,30 +29,67 @@ function playSfx(src: string, volume: number): void {
 export class SoundManager {
 
     private ambientAudio: HTMLAudioElement | null = null
+    private sfxPool = new Map<SfxKey, HTMLAudioElement>()
+    private ambientInitialized = false
+    private audioWarmupScheduled = false
 
     // ── SFX ───────────────────────────────────────────────────────────────────
 
-    playSuccess(): void { playSfx(SFX.success, 0.6) }
-    playError(): void { playSfx(SFX.error, 0.4) }
-    playCrop(): void { playSfx(SFX.crop, 0.55) }
-    playWateringCan(): void { playSfx(SFX.wateringCan, 0.55) }
-    playAxe(): void { playSfx(SFX.axe, 0.55) }
-    playMoneyPickup(): void { playSfx(SFX.moneyPickup, 0.65) }
+    private playSfx(key: SfxKey, volume: number): void {
+        try {
+            const baseAudio = this.sfxPool.get(key) ?? createAudio(SFX[key])
+            if (!this.sfxPool.has(key)) this.sfxPool.set(key, baseAudio)
+
+            const audio = baseAudio.paused ? baseAudio : baseAudio.cloneNode(true) as HTMLAudioElement
+            audio.volume = volume
+            audio.currentTime = 0
+            audio.play().catch(() => { })
+        } catch { }
+    }
+
+    playSuccess(): void { this.playSfx("success", 0.6) }
+    playError(): void { this.playSfx("error", 0.4) }
+    playCrop(): void { this.playSfx("crop", 0.55) }
+    playWateringCan(): void { this.playSfx("wateringCan", 0.55) }
+    playAxe(): void { this.playSfx("axe", 0.55) }
+    playMoneyPickup(): void { this.playSfx("moneyPickup", 0.65) }
+
+    scheduleWarmup(): void {
+        if (this.audioWarmupScheduled || typeof window === "undefined") return
+        this.audioWarmupScheduled = true
+
+        window.setTimeout(() => {
+            for (const key of Object.keys(SFX) as SfxKey[]) {
+                if (this.sfxPool.has(key)) continue
+                const audio = createAudio(SFX[key])
+                audio.load()
+                this.sfxPool.set(key, audio)
+            }
+        }, AUDIO_PRELOAD_DELAY_MS)
+    }
 
     // ── Ambient ───────────────────────────────────────────────────────────────
 
     initAmbient(): void {
-        const audio = new Audio(AMBIENT_SRC)
-        audio.loop = true
-        audio.volume = 0.5
-        this.ambientAudio = audio
+        if (this.ambientInitialized || typeof window === "undefined") return
+        this.ambientInitialized = true
 
-        const startOnce = () => audio.play().catch(() => { })
-        const opts: AddEventListenerOptions = { once: true }
+        const activateAmbient = () => {
+            if (!this.ambientAudio) {
+                const audio = createAudio(AMBIENT_SRC)
+                audio.loop = true
+                audio.volume = 0.5
+                this.ambientAudio = audio
+            }
 
-        window.addEventListener("pointerdown", startOnce, opts)
-        window.addEventListener("keydown", startOnce, opts)
-        window.addEventListener("touchstart", startOnce, opts)
+            this.ambientAudio.play().catch(() => { })
+        }
+
+        const opts: AddEventListenerOptions = { once: true, passive: true }
+
+        window.addEventListener("pointerdown", activateAmbient, opts)
+        window.addEventListener("keydown", activateAmbient, { once: true })
+        window.addEventListener("touchstart", activateAmbient, opts)
     }
 
     setAmbientVolume(v: number): void { if (this.ambientAudio) this.ambientAudio.volume = v }
@@ -63,6 +101,7 @@ export class SoundManager {
         this.ambientAudio.pause()
         this.ambientAudio.src = ""
         this.ambientAudio = null
+        this.ambientInitialized = false
     }
 }
 

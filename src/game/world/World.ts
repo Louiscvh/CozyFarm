@@ -11,6 +11,7 @@ import { debugHitboxEnabled } from "../entity/EntityFactory"
 import { CropManager } from "../farming/CropManager"
 import { computeGrowthRate } from "../farming/GrowthConditions"
 import { FireLightManager } from "../system/FireLightManager"
+import { assetManager } from "../../render/AssetManager"
 
 export class World {
   static current: World | null = null
@@ -231,9 +232,9 @@ export class World {
 
   /** Pre-warm instanced pools for a list of entity definitions. */
   async preparePoolsForEntities(defs: { entity: Entity; maxQty: number }[]) {
-    for (const { entity, maxQty } of defs) {
-      await this.instanceManager.preparePool(entity, this.tileSize, maxQty)
-    }
+    await Promise.all(
+      defs.map(({ entity, maxQty }) => this.instanceManager.preparePool(entity, this.tileSize, maxQty))
+    )
   }
 
   // ─── Instanced proxy (shared by decor + user-placed entities) ───────────────
@@ -319,28 +320,30 @@ export class World {
 
   private async populateDecor() {
     const totalCells = this.sizeInCells * this.sizeInCells
+    const fixedEntities = getFixedEntities(this.size / 2)
+    const randomDecorDefs = DECOR_CATEGORIES.flatMap((cat) => {
+      const maxPerType = Math.round(totalCells * cat.density / 4) + 16
+      return cat.types.map((entity) => ({ entity, maxQty: maxPerType }))
+    })
 
-    // 1. Pre-warm instanced pools for fixed entities (small count, maxCount = 4 is enough)
-    for (const e of getFixedEntities(this.size / 2)) {
-      await this.instanceManager.preparePool(e.def, this.tileSize, 4)
-    }
+    await assetManager.preloadGLTF([
+      ...fixedEntities.map(({ def }) => def.model),
+      ...randomDecorDefs.map(({ entity }) => entity.model),
+    ])
 
-    // 2. Pre-warm instanced pools for every random-decor type.
-    //    maxCount = the full quota for that category (worst-case: all the same type).
-    for (const cat of DECOR_CATEGORIES) {
-      const maxPerType = Math.round(totalCells * cat.density / 4) + 16   // +16 safety margin
-      for (const type of cat.types) {
-        await this.instanceManager.preparePool(type, this.tileSize, maxPerType)
-      }
-    }
+    // 1. Pre-warm instanced pools in parallel once the shared GLTFs are cached.
+    await Promise.all([
+      ...fixedEntities.map((entry) => this.instanceManager.preparePool(entry.def, this.tileSize, 4)),
+      ...randomDecorDefs.map(({ entity, maxQty }) => this.instanceManager.preparePool(entity, this.tileSize, maxQty)),
+    ])
 
-    // 3. Fixed / hand-placed entities — now instanced too.
-    for (const e of getFixedEntities(this.size / 2)) {
+    // 2. Fixed / hand-placed entities — now instanced too.
+    for (const e of fixedEntities) {
       const { cellX, cellZ } = this.tileToCell(e.tileX, e.tileZ)
       await this.spawnDecorInstanced(e.def, cellX, cellZ, e.size)
     }
 
-    // 4. Random ambient decor — instanced.
+    // 3. Random ambient decor — instanced.
     for (const cat of DECOR_CATEGORIES) {
       const count       = Math.round(totalCells * cat.density / 4)
       let   placed      = 0

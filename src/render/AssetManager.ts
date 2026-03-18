@@ -4,15 +4,37 @@ import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js"
 export class AssetManager {
     private loader = new GLTFLoader()
     private cache = new Map<string, GLTF>()
-  
+    private inFlight = new Map<string, Promise<GLTF>>()
+
     async loadGLTF(path: string): Promise<GLTF> {
-      if (this.cache.has(path)) {
-        return this.cache.get(path)!
+      const cached = this.cache.get(path)
+      if (cached) {
+        return cached
       }
-  
-      const gltf = await this.loader.loadAsync(path)
-      this.cache.set(path, gltf)
-      return gltf
+
+      const pending = this.inFlight.get(path)
+      if (pending) {
+        return pending
+      }
+
+      const request = this.loader.loadAsync(path)
+        .then((gltf) => {
+          this.cache.set(path, gltf)
+          this.inFlight.delete(path)
+          return gltf
+        })
+        .catch((error) => {
+          this.inFlight.delete(path)
+          throw error
+        })
+
+      this.inFlight.set(path, request)
+      return request
+    }
+
+    preloadGLTF(paths: string[]): Promise<GLTF[]> {
+      const uniquePaths = [...new Set(paths)]
+      return Promise.all(uniquePaths.map((path) => this.loadGLTF(path)))
     }
   }
 
