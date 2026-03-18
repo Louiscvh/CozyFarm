@@ -1,3 +1,6 @@
+import { placementStore } from "../ui/store/PlacementStore"
+import { World } from "../game/world/World"
+
 export class MouseDrag {
   dragging = false
   lastX = 0
@@ -15,6 +18,15 @@ export class MouseDrag {
 
     // Souris (desktop)
     window.addEventListener("mousedown", e => {
+      if (e.button !== 0) return
+      if ((e.target as HTMLElement | null)?.closest?.("#ui-root")) return
+
+      const hoveredCell = placementStore.hoveredCell
+      const selectedItem = placementStore.selectedItem
+      const hoveredCrop = hoveredCell ? World.current?.cropManager.getCrop(hoveredCell.cellX, hoveredCell.cellZ) : null
+      const blocksCameraDrag = !!selectedItem || !!hoveredCrop?.isReady
+      if (blocksCameraDrag) return
+
       e.preventDefault()
       this.dragging = true
       this.lastX = e.clientX

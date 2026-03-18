@@ -8,8 +8,9 @@ import { World } from "../world/World"
 import { soundManager } from "../system/SoundManager"
 import { ghostMat } from "../shared/GhostMaterial"
 import { ALL_CROPS } from "../farming/CropDefinition"
-import { getAreaOffsetsForLevel, toolLevelStore } from "../../ui/store/ToolLevelStore"
+import { getAreaOffsetsForLevel, getAreaOffsetsForTool, toolLevelStore } from "../../ui/store/ToolLevelStore"
 import { TREE_MIN_AXE_LEVEL } from "../items/AxeItem"
+import { PlanterItemDef } from "../items/PlanterItem"
 
 export class ItemActionController {
 
@@ -22,6 +23,9 @@ export class ItemActionController {
 
     // ── Drag detection ────────────────────────────────────────────────────────
     private mouseDownPos = { x: 0, y: 0 }
+    private isPointerDown = false
+    private suppressNextClick = false
+    private lastHoldActionKey: string | null = null
 
     // ── Store subscription ────────────────────────────────────────────────────
     private unsubscribeStore: (() => void) | null = null
@@ -30,6 +34,7 @@ export class ItemActionController {
     private readonly _onMouseDown = this.onMouseDown.bind(this)
     private readonly _onMouseMove = this.onMouseMove.bind(this)
     private readonly _onClick = this.onClick.bind(this)
+    private readonly _onMouseUp = this.onMouseUp.bind(this)
 
     // ── Injected dependencies ─────────────────────────────────────────────────
     private readonly camera: THREE.Camera
@@ -48,6 +53,7 @@ export class ItemActionController {
         window.addEventListener("mousedown", this._onMouseDown)
         window.addEventListener("mousemove", this._onMouseMove)
         window.addEventListener("click", this._onClick)
+        window.addEventListener("mouseup", this._onMouseUp)
         this.unsubscribeStore = placementStore.subscribe(() => this.onStoreChange())
     }
 
@@ -58,6 +64,7 @@ export class ItemActionController {
         window.removeEventListener("mousedown", this._onMouseDown)
         window.removeEventListener("mousemove", this._onMouseMove)
         window.removeEventListener("click", this._onClick)
+        window.removeEventListener("mouseup", this._onMouseUp)
     }
 
     // ─── Helpers généraux ─────────────────────────────────────────────────────
@@ -88,7 +95,8 @@ export class ItemActionController {
 
     private getToolOffsets(item: ItemDef): Array<{ x: number; z: number }> {
         if (!isUsableOnTile(item)) return [{ x: 0, z: 0 }]
-        if (item.id !== "hoe" && item.id !== "watering_can" && item.id !== "shovel") return [{ x: 0, z: 0 }]
+        if (item.id !== "hoe" && item.id !== "watering_can" && item.id !== "shovel" && item.id !== "planter") return [{ x: 0, z: 0 }]
+        if (item.id === "planter") return getAreaOffsetsForTool("planter", toolLevelStore.getLevel("planter"))
         return getAreaOffsetsForLevel(toolLevelStore.getLevel(item.id))
     }
 
@@ -112,6 +120,22 @@ export class ItemActionController {
         if (item.usage.actionId === "scanner:inspect") {
             const isValidTile = item.usage.targetTileTypes.includes(effectiveTileType)
             return isValidTile && !!this.world.cropManager.getCrop(cellX, cellZ)
+        }
+
+        if (item.usage.actionId === "farming:bulk_plant_or_harvest") {
+            const crop = this.world.cropManager.getCrop(cellX, cellZ)
+            if (crop?.isReady) return true
+            if (crop) return false
+
+            const preferredSeedId = placementStore.preferredBulkSeedId
+            return ALL_CROPS.some(def =>
+                (def.seedItemId === preferredSeedId || preferredSeedId === null)
+                && inventoryStore.getQty(def.seedItemId) > 0
+                && (def.plantTileTypes ?? ["soil"]).includes(effectiveTileType)
+            ) || ALL_CROPS.some(def =>
+                inventoryStore.getQty(def.seedItemId) > 0
+                && (def.plantTileTypes ?? ["soil"]).includes(effectiveTileType)
+            )
         }
 
         const hasCrop = !!this.world.cropManager.getCrop(cellX, cellZ)
@@ -260,11 +284,20 @@ export class ItemActionController {
 
     private onMouseDown(e: MouseEvent): void {
         this.mouseDownPos = { x: e.clientX, y: e.clientY }
+        this.isPointerDown = e.button === 0
+        this.lastHoldActionKey = null
+        if (e.button !== 0 || (e.target as HTMLElement).closest("#ui-root")) return
+        const acted = this.tryPointerAction()
+        this.suppressNextClick = acted
     }
 
-    private onMouseMove(): void {
+    private onMouseMove(e: MouseEvent): void {
         const item = placementStore.selectedItem
         const hoveredCell = placementStore.hoveredCell
+
+        if (this.isPointerDown && hoveredCell && (e.buttons & 1) === 1) {
+            this.tryPointerAction()
+        }
 
         // Ghost item (plaçable ou graine) — cursor géré par PlacementController
         if (item && (isPlaceable(item) || !!ALL_CROPS.find(c => c.seedItemId === item.id)?.usePlacementGhost)) {
@@ -291,10 +324,19 @@ export class ItemActionController {
         this.setCursor("default")
     }
 
+    private onMouseUp(): void {
+        this.isPointerDown = false
+        this.lastHoldActionKey = null
+    }
+
     // ─── Click ────────────────────────────────────────────────────────────────
 
     private onClick(e: MouseEvent): void {
         if ((e.target as HTMLElement).closest("#ui-root")) return
+        if (this.suppressNextClick) {
+            this.suppressNextClick = false
+            return
+        }
         if (this.isDrag(e)) return
 
         this.mouse.copy(this.toNDC(e))
@@ -307,6 +349,27 @@ export class ItemActionController {
 
         if (isUsableOnEntity(item)) { this.handleUseOnEntity(item); return }
         if (isUsableOnTile(item)) { this.handleUseOnTile(item); return }
+    }
+
+    private tryPointerAction(): boolean {
+        const hoveredCell = placementStore.hoveredCell
+        if (!hoveredCell) return false
+
+        const item = placementStore.selectedItem ?? (this.world.cropManager.getCrop(hoveredCell.cellX, hoveredCell.cellZ)?.isReady ? PlanterItemDef : null)
+        if (!item) return false
+
+        const actionKey = `${item.id}:${hoveredCell.cellX}:${hoveredCell.cellZ}`
+        if (this.lastHoldActionKey === actionKey) return false
+
+        let success = false
+        if (!placementStore.selectedItem && item.id === "planter") {
+            success = this.tryHarvestCrop()
+        } else if (isUsableOnTile(item)) {
+            success = this.handleUseOnTile(item, true)
+        }
+
+        if (success) this.lastHoldActionKey = actionKey
+        return success
     }
 
     // ─── Harvest ──────────────────────────────────────────────────────────────
@@ -367,8 +430,8 @@ export class ItemActionController {
 
     // ─── Use on tile ──────────────────────────────────────────────────────────
 
-    private handleUseOnTile(item: ItemDef): void {
-        if (!isUsableOnTile(item)) return
+    private handleUseOnTile(item: ItemDef, silentError = false): boolean {
+        if (!isUsableOnTile(item)) return false
 
         let targetCell = placementStore.hoveredCell
 
@@ -396,14 +459,14 @@ export class ItemActionController {
             }
         }
 
-        if (!targetCell) return
+        if (!targetCell) return false
 
         const { cellX, cellZ } = targetCell
 
         if (item.usage.actionId === "scanner:inspect") {
             if (!this.world.cropManager.getCrop(cellX, cellZ)) {
-                soundManager.playError()
-                return
+                if (!silentError) soundManager.playError()
+                return false
             }
 
             const tileType = this.getEffectiveTileType(cellX, cellZ) ?? "soil"
@@ -417,9 +480,9 @@ export class ItemActionController {
             if (success) {
                 this.playToolSuccessSound(item)
             } else {
-                soundManager.playError()
+                if (!silentError) soundManager.playError()
             }
-            return
+            return success
         }
 
         const canUse = this.getToolOffsets(item).some(offset =>
@@ -427,12 +490,15 @@ export class ItemActionController {
         )
 
         if (!canUse) {
-            soundManager.playError()
-            return
+            if (!silentError) soundManager.playError()
+            return false
         }
         const effectiveTileType = this.getEffectiveTileType(cellX, cellZ) ?? item.usage.targetTileTypes[0]
 
-        if (inventoryStore.getQty(item.id) <= 0) { soundManager.playError(); return }
+        if (inventoryStore.getQty(item.id) <= 0) {
+            if (!silentError) soundManager.playError()
+            return false
+        }
 
         const success = itemActionRegistry.executeTileAction(item.usage.actionId, {
             tileType: effectiveTileType,
@@ -447,8 +513,9 @@ export class ItemActionController {
 
             this.playToolSuccessSound(item)
         } else {
-            soundManager.playError()
+            if (!silentError) soundManager.playError()
         }
+        return success
     }
 
     private playToolSuccessSound(item: ItemDef): void {

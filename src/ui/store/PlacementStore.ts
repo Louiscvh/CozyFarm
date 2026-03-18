@@ -14,6 +14,7 @@ interface MoveOrigin {
 
 class PlacementStore {
     selectedItem: ItemDef | null = null
+    preferredBulkSeedId: string | null = null
     hoveredCell: { cellX: number; cellZ: number } | null = null
     canPlace: boolean = false
     rotation: number = 0
@@ -39,6 +40,9 @@ class PlacementStore {
 
     select(item: ItemDef): void {
         this.selectedItem = item
+        if (item.id === "carrot_seed" || item.id === "lettuce_seed" || item.id === "orange_sapling") {
+            this.preferredBulkSeedId = item.id
+        }
         this.rotation = 0
         this.notify()
     }
