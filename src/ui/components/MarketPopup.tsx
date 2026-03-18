@@ -1,11 +1,23 @@
-import { useEffect, useState } from "react"
+import { type WheelEvent, useEffect, useState } from "react"
 import type { Object3D } from "three"
+import { soundManager } from "../../game/system/SoundManager"
+import { toolLevelStore } from "../store/ToolLevelStore"
 import { inventoryStore } from "../store/InventoryStore"
 import { moneyStore } from "../store/MoneyStore"
 import { lootFeedbackStore } from "../store/LootFeedbackStore"
 import { UIButton } from "./UIButton"
+import { ItemIcon } from "./ItemIcon"
 import { WorldPopup } from "./WorldPopup"
 import "./MarketPopup.css"
+
+type BuyableItem = {
+  id: string
+  icon: string
+  unitPrice: number
+  label: string
+  description: string
+  kind: "stock" | "tool_upgrade"
+}
 
 type SellableItem = {
   id: "carrot" | "lettuce" | "orange"
@@ -13,13 +25,39 @@ type SellableItem = {
   unitPrice: number
 }
 
+type MarketMode = "buy" | "sell"
+
 const SELLABLE_QTY_STEPS = [-1, 5, 10] as const
+
+const BUYABLE_ITEMS: BuyableItem[] = [
+  { id: "carrot_seed", icon: "🌱", unitPrice: 2, label: "Graine carotte", description: "Pour lancer une culture rentable.", kind: "stock" },
+  { id: "lettuce_seed", icon: "🌱", unitPrice: 2, label: "Graine salade", description: "Parfait pour remplir les champs vite.", kind: "stock" },
+  { id: "orange_sapling", icon: "🌱", unitPrice: 12, label: "Pousse d'oranger", description: "Investissement long terme pour des oranges.", kind: "stock" },
+  { id: "stake", icon: "🪵", unitPrice: 4, label: "Tuteur", description: "Un support utile pour tes plantations.", kind: "stock" },
+  { id: "axe", icon: "🪓", unitPrice: 140, label: "Amélioration hache", description: "Fait grimper le niveau de la hache jusqu'à 3.", kind: "tool_upgrade" },
+  { id: "shovel", icon: "🛠️", unitPrice: 125, label: "Amélioration pelle", description: "Creuse et nettoie plus efficacement.", kind: "tool_upgrade" },
+  { id: "watering_can", icon: "/images/icons/items/watering_can.png", unitPrice: 150, label: "Amélioration arrosoir", description: "Arrose une zone plus large après achat.", kind: "tool_upgrade" },
+  { id: "hoe", icon: "⛏️", unitPrice: 110, label: "Amélioration houe", description: "Augmente la zone de labour.", kind: "tool_upgrade" },
+  { id: "bench", icon: "🪑", unitPrice: 18, label: "Banc", description: "Une petite déco pour aménager la ferme.", kind: "stock" },
+  { id: "flower1", icon: "🌸", unitPrice: 6, label: "Fleur", description: "Ajoute de la couleur au jardin.", kind: "stock" },
+  { id: "tulip", icon: "🌷", unitPrice: 7, label: "Tulipe", description: "Une déco florale élégante.", kind: "stock" },
+  { id: "torch", icon: "🔥", unitPrice: 10, label: "Torche", description: "Éclaire joliment tes allées.", kind: "stock" },
+  { id: "campfire", icon: "🏕️", unitPrice: 24, label: "Feu de camp", description: "Pour une ambiance cosy le soir.", kind: "stock" },
+  { id: "wood_fence", icon: "🪜", unitPrice: 8, label: "Barrière", description: "Délimite les espaces avec style.", kind: "stock" },
+  { id: "grass", icon: "🌱", unitPrice: 3, label: "Herbe", description: "Cache les zones vides avec un tapis vert.", kind: "stock" },
+]
 
 const SELLABLE_ITEMS: SellableItem[] = [
   { id: "carrot", icon: "🥕", unitPrice: 3 },
   { id: "lettuce", icon: "🥬", unitPrice: 4 },
   { id: "orange", icon: "🍊", unitPrice: 5 },
 ]
+
+const DEFAULT_SELL_QTY: Record<SellableItem["id"], number> = {
+  carrot: 1,
+  lettuce: 1,
+  orange: 1,
+}
 
 type MarketPopupProps = {
   open: boolean
@@ -29,13 +67,32 @@ type MarketPopupProps = {
 
 export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
   const [, forceRefresh] = useState(0)
-  const [sellQtyById, setSellQtyById] = useState<Record<SellableItem["id"], number>>({
-    carrot: 1,
-    lettuce: 1,
-    orange: 1,
-  })
+  const [mode, setMode] = useState<MarketMode>("buy")
+  const [sellQtyById, setSellQtyById] = useState<Record<SellableItem["id"], number>>(DEFAULT_SELL_QTY)
 
   useEffect(() => inventoryStore.subscribe(() => forceRefresh(v => v + 1)), [])
+  useEffect(() => moneyStore.subscribe(() => forceRefresh(v => v + 1)), [])
+  useEffect(() => toolLevelStore.subscribe(() => forceRefresh(v => v + 1)), [])
+
+  const emitPurchaseFeedback = (itemId: string, icon?: string) => {
+    const cellX = marketEntity?.userData.cellX as number | undefined
+    const cellZ = marketEntity?.userData.cellZ as number | undefined
+    if (cellX === undefined || cellZ === undefined) return
+
+    lootFeedbackStore.emit({
+      itemId,
+      icon,
+      amount: 1,
+      cellX,
+      cellZ,
+    })
+  }
+
+  const handleClose = () => {
+    setMode("buy")
+    setSellQtyById(DEFAULT_SELL_QTY)
+    onClose()
+  }
 
   if (!open) return null
 
@@ -45,14 +102,46 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
     setSellQtyById((prev) => ({ ...prev, [itemId]: clamped }))
   }
 
+  const buyItem = (item: BuyableItem) => {
+    const success = moneyStore.spend(item.unitPrice)
+    if (!success) {
+      soundManager.playError()
+      return
+    }
+
+    if (item.kind === "tool_upgrade") {
+      const currentLevel = toolLevelStore.getLevel(item.id)
+      if (currentLevel >= 3) {
+        moneyStore.add(item.unitPrice)
+        soundManager.playError()
+        return
+      }
+
+      toolLevelStore.increase(item.id)
+      emitPurchaseFeedback(item.id, item.icon)
+      soundManager.playSuccess()
+      forceRefresh(v => v + 1)
+      return
+    }
+
+    inventoryStore.grant(item.id, 1)
+    emitPurchaseFeedback(item.id, item.icon)
+    soundManager.playSuccess()
+    forceRefresh(v => v + 1)
+  }
+
   const sellItem = (item: SellableItem) => {
     const stock = inventoryStore.getQty(item.id)
-    if (stock <= 0) return
+    if (stock <= 0) {
+      soundManager.playError()
+      return
+    }
 
     const qty = Math.max(1, Math.min(sellQtyById[item.id] ?? 1, stock))
     inventoryStore.consume(item.id, qty)
     const earned = qty * item.unitPrice
     moneyStore.add(earned)
+    soundManager.playSuccess()
 
     const cellX = marketEntity?.userData.cellX as number | undefined
     const cellZ = marketEntity?.userData.cellZ as number | undefined
@@ -71,54 +160,98 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
     forceRefresh(v => v + 1)
   }
 
+  const money = moneyStore.getAmount()
+
+  const handlePopupWheel = (e: WheelEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    e.currentTarget.scrollTop += e.deltaY
+  }
+
   return (
     <WorldPopup
       open={open}
       anchorObject={marketEntity}
-      onClose={onClose}
+      onClose={handleClose}
       anchorResolver={(entityObject) => entityObject.getObjectByName("__hitbox__") ?? entityObject}
       offsetY={0.38}
       className="market-popup"
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
-      <div>
+      <div className="market-popup-content" onWheel={handlePopupWheel}>
         <h3>🛒 Marché</h3>
-        <p>Choisis rapidement la quantité à vendre pour chaque produit.</p>
+        <p>{mode === "buy" ? "Choisis ce que tu veux acheter." : "Choisis rapidement la quantité à vendre pour chaque produit."}</p>
 
-        <div className="market-popup-list">
-          {SELLABLE_ITEMS.map(item => {
-            const stock = inventoryStore.getQty(item.id)
-            const sellQty = Math.max(1, Math.min(sellQtyById[item.id] ?? 1, stock || 1))
-            const total = sellQty * item.unitPrice
+        <div className="market-popup-tabs">
+          <UIButton className={mode === "buy" ? "market-popup-tab is-active" : "market-popup-tab"} onClick={() => setMode("buy")}>Acheter</UIButton>
+          <UIButton className={mode === "sell" ? "market-popup-tab is-active" : "market-popup-tab"} onClick={() => setMode("sell")}>Vendre</UIButton>
+          <span className="market-popup-money">{money} 💵</span>
+        </div>
 
-            return (
-              <div key={item.id} className="market-popup-row">
-                <div className="market-popup-icon" aria-label={item.id}>{item.icon}
-                  <span>{stock}</span>
-                </div>
-                <div className="market-popup-qty">
-                  <span className="market-popup-qty-value">x{sellQty}</span>
-                  <div className="market-popup-step-buttons">
-                    {SELLABLE_QTY_STEPS.map(step => {
-                      const nextQty = sellQty + step
-                      const isDisabled = stock <= 0 || nextQty < 1 || nextQty > stock
-                      const label = step > 0 ? `+${step}` : `${step}`
+        {mode === "buy" ? (
+          <div className="market-popup-list">
+            {BUYABLE_ITEMS.map(item => {
+              const stock = inventoryStore.getQty(item.id)
+              const canAfford = money >= item.unitPrice
+              const toolLevel = item.kind === "tool_upgrade" ? toolLevelStore.getLevel(item.id) : null
+              const isMaxLevel = toolLevel !== null && toolLevel >= 3
+              const stockLabel = toolLevel !== null ? `niv. ${toolLevel}/3` : `stock ${stock}`
 
-                      return (
-                        <UIButton key={step} onClick={() => updateSellQty(item.id, nextQty)} disabled={isDisabled}>
-                          {label}
-                        </UIButton>
-                      )
-                    })}
+              return (
+                <div key={item.id} className="market-popup-row market-popup-buy-row">
+                  <div className="market-popup-item">
+                    <div className="market-popup-icon" aria-label={item.id}><ItemIcon icon={item.icon} alt={item.label} className="market-popup-icon-asset" />
+                      <span>{stockLabel}</span>
+                    </div>
+                    <div className="market-popup-labels">
+                      <strong>{item.label}</strong>
+                      <span>{item.description}</span>
+                    </div>
+                  </div>
+                  <div className="market-popup-buy-meta">
+                    <span className="market-popup-total">{item.unitPrice} 💵</span>
+                    <UIButton onClick={() => buyItem(item)} disabled={!canAfford || isMaxLevel}>{isMaxLevel ? "Max" : "Acheter"}</UIButton>
                   </div>
                 </div>
-                <span className="market-popup-total">{total} 💵</span>
-                <UIButton onClick={() => sellItem(item)} disabled={stock <= 0}>💰</UIButton>
-              </div>
-            )
-          })}
-        </div>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="market-popup-list">
+            {SELLABLE_ITEMS.map(item => {
+              const stock = inventoryStore.getQty(item.id)
+              const sellQty = Math.max(1, Math.min(sellQtyById[item.id] ?? 1, stock || 1))
+              const total = sellQty * item.unitPrice
+
+              return (
+                <div key={item.id} className="market-popup-row">
+                  <div className="market-popup-icon" aria-label={item.id}><ItemIcon icon={item.icon} alt={item.id} className="market-popup-icon-asset" />
+                    <span>{stock}</span>
+                  </div>
+                  <div className="market-popup-qty">
+                    <span className="market-popup-qty-value">x{sellQty}</span>
+                    <div className="market-popup-step-buttons">
+                      {SELLABLE_QTY_STEPS.map(step => {
+                        const nextQty = sellQty + step
+                        const isDisabled = stock <= 0 || nextQty < 1 || nextQty > stock
+                        const label = step > 0 ? `+${step}` : `${step}`
+
+                        return (
+                          <UIButton key={step} onClick={() => updateSellQty(item.id, nextQty)} disabled={isDisabled}>
+                            {label}
+                          </UIButton>
+                        )
+                      })}
+                    </div>
+                  </div>
+                  <span className="market-popup-total">{total} 💵</span>
+                  <UIButton onClick={() => sellItem(item)} disabled={stock <= 0}>💰</UIButton>
+                </div>
+              )
+            })}
+          </div>
+        )}
       </div>
     </WorldPopup>
   )

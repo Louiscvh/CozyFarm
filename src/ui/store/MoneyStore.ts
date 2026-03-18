@@ -12,6 +12,14 @@ class MoneyStore {
     this.listeners.forEach(listener => listener(this.amount))
   }
 
+  spend(amount: number) {
+    if (amount <= 0) return true
+    if (this.amount < amount) return false
+    this.amount -= amount
+    this.listeners.forEach(listener => listener(this.amount))
+    return true
+  }
+
   subscribe(listener: (amount: number) => void) {
     this.listeners.push(listener)
     return () => {
