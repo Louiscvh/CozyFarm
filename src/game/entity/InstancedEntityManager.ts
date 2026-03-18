@@ -22,6 +22,7 @@ export interface PoolInfo {
 
 interface SubMeshEntry {
   mesh: THREE.InstancedMesh
+  sourceName: string
   /**
    * The sub-mesh's world matrix when the template root is at world origin
    * (i.e. with entity-definition scale + rotation already applied).
@@ -126,7 +127,7 @@ export class InstancedEntityManager {
   
       this.scene.add(im)
       // localMat inclut maintenant le yOffset — y=0 sera toujours correct à l'usage
-      entries.push({ mesh: im, localMat: src.matrixWorld.clone() })
+      entries.push({ mesh: im, sourceName: src.name, localMat: src.matrixWorld.clone() })
     })
   
     this.pools.set(k, {
@@ -145,12 +146,12 @@ export class InstancedEntityManager {
   }
 
 
-  forEachMaterial(def: Entity, visitor: (material: THREE.Material) => void): void {
+  forEachMaterial(def: Entity, visitor: (material: THREE.Material, sourceName: string) => void): void {
     const pool = this.pools.get(InstancedEntityManager.key(def))
     if (!pool) return
     for (const entry of pool.entries) {
       const materials = Array.isArray(entry.mesh.material) ? entry.mesh.material : [entry.mesh.material]
-      for (const material of materials) visitor(material)
+      for (const material of materials) visitor(material, entry.sourceName)
     }
   }
 
