@@ -56,6 +56,28 @@ export function getFixedEntities(worldCenter: number): FixedEntityDef[] {
     return fixedEntitiesCache
 }
 
+function clamp(value: number, min: number, max: number): number {
+    return Math.max(min, Math.min(max, value))
+}
+
+export function reserveFixedEntityTerrainGrid(typeGrid: TileType[][], worldSize: number): void {
+    const fixedEntities = getFixedEntities(Math.floor(worldSize / 2))
+
+    for (const entity of fixedEntities) {
+        const sizeInTiles = Math.max(1, Math.ceil(entity.size / 2))
+        const startX = clamp(entity.tileX, 0, worldSize - 1)
+        const startZ = clamp(entity.tileZ, 0, worldSize - 1)
+        const endX = clamp(entity.tileX + sizeInTiles - 1, 0, worldSize - 1)
+        const endZ = clamp(entity.tileZ + sizeInTiles - 1, 0, worldSize - 1)
+
+        for (let x = startX; x <= endX; x++) {
+            for (let z = startZ; z <= endZ; z++) {
+                if (typeGrid[x][z] === "water") typeGrid[x][z] = "grass"
+            }
+        }
+    }
+}
+
 const CORNER_OFFSETS: [number, number][] = [
     [-0.25, -0.25],
     [0.25, -0.25],
@@ -779,6 +801,7 @@ export class TileFactory {
         return this.getCornerTypeAtCell(cellX, cellZ)
     }
 
+
     // ─── Grid generation ──────────────────────────────────────────
 
     generateGrid(): Tile[] {
@@ -791,6 +814,8 @@ export class TileFactory {
                 typeGrid[x][z] = tileTypeAt(x, z)
             }
         }
+
+        reserveFixedEntityTerrainGrid(typeGrid, this.worldSize)
 
         const cornersGrid = computeAllCorners(typeGrid, this.worldSize)
         const countPerType: Record<string, number> = { grass: 0, water: 0, sand: 0, stone: 0 }
