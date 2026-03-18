@@ -1,6 +1,6 @@
 .market-popup {
   z-index: 12000;
-  min-width: 360px;
+  min-width: 500px;
   max-width: min(90vw, 500px);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 14px;
@@ -13,9 +13,6 @@
 }
 
 .market-popup-content {
-  max-height: min(68vh, 520px);
-  overflow-y: auto;
-  overscroll-behavior: contain;
   padding-right: 4px;
 }
 
@@ -61,6 +58,9 @@
 .market-popup-list {
   display: flex;
   flex-direction: column;
+  max-height: min(68vh, 300px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   gap: 8px;
 }
 
@@ -97,10 +97,10 @@
 }
 
 .market-popup-icon {
-  font-size: 1.4rem;
+  font-size: 2rem;
   line-height: 1;
   position: relative;
-  margin: 0 1rem;
+  margin-left: 1rem;
   display: flex;
   gap: 8px;
   align-items: center;
@@ -113,12 +113,16 @@
   align-items: center;
   justify-content: center;
   object-fit: contain;
+  font-size: 1.2rem;
 }
 
-.market-popup-icon span {
-  font-family: "JetBrains Mono", monospace;
-  font-size: 0.8rem;
+.market-popup-icon-count {
   color: rgba(255, 255, 255, 0.703);
+  font-size: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0 0.4rem;
 }
 
 .market-popup-qty {

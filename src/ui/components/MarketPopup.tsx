@@ -192,17 +192,19 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
         {mode === "buy" ? (
           <div className="market-popup-list">
             {BUYABLE_ITEMS.map(item => {
-              const stock = inventoryStore.getQty(item.id)
               const canAfford = money >= item.unitPrice
               const toolLevel = item.kind === "tool_upgrade" ? toolLevelStore.getLevel(item.id) : null
               const isMaxLevel = toolLevel !== null && toolLevel >= 3
-              const stockLabel = toolLevel !== null ? `niv. ${toolLevel}/3` : `stock ${stock}`
 
               return (
                 <div key={item.id} className="market-popup-row market-popup-buy-row">
                   <div className="market-popup-item">
                     <div className="market-popup-icon" aria-label={item.id}><ItemIcon icon={item.icon} alt={item.label} className="market-popup-icon-asset" />
-                      <span>{stockLabel}</span>
+                      {toolLevel !== null  && <span className="market-popup-icon-count">
+                        <span>Niv.</span>
+                        <span>{`${toolLevel + 1}`}</span>
+                      </span>}
+                      
                     </div>
                     <div className="market-popup-labels">
                       <strong>{item.label}</strong>
@@ -210,8 +212,7 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
                     </div>
                   </div>
                   <div className="market-popup-buy-meta">
-                    <span className="market-popup-total">{item.unitPrice} 💵</span>
-                    <UIButton onClick={() => buyItem(item)} disabled={!canAfford || isMaxLevel}>{isMaxLevel ? "Max" : "Acheter"}</UIButton>
+                    <UIButton onClick={() => buyItem(item)} disabled={!canAfford || isMaxLevel}>{isMaxLevel ? "Max" : item.unitPrice + " 💵"}</UIButton>
                   </div>
                 </div>
               )
@@ -226,8 +227,9 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
 
               return (
                 <div key={item.id} className="market-popup-row">
-                  <div className="market-popup-icon" aria-label={item.id}><ItemIcon icon={item.icon} alt={item.id} className="market-popup-icon-asset" />
-                    <span>{stock}</span>
+                  <div className="market-popup-icon" aria-label={item.id}>
+                    <ItemIcon icon={item.icon} alt={item.id} className="market-popup-icon-asset" />
+                    <span className="market-popup-icon-count">{stock}</span>
                   </div>
                   <div className="market-popup-qty">
                     <span className="market-popup-qty-value">x{sellQty}</span>
