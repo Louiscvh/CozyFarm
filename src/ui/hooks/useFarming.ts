@@ -109,21 +109,28 @@ export function registerFarmingActions(): void {
             if (!world) return false
 
             const offsets = getAreaOffsetsForTool("planter", toolLevelStore.getLevel("planter"))
+            const readyCells = offsets
+                .map(offset => ({ cellX: ctx.cellX + offset.x, cellZ: ctx.cellZ + offset.z }))
+                .filter(({ cellX, cellZ }) => world.cropManager.getCrop(cellX, cellZ)?.isReady)
+
             let changed = false
 
-            for (const offset of offsets) {
-                const cellX = ctx.cellX + offset.x
-                const cellZ = ctx.cellZ + offset.z
-                const crop = world.cropManager.getCrop(cellX, cellZ)
-
-                if (crop?.isReady) {
+            if (readyCells.length > 0) {
+                for (const { cellX, cellZ } of readyCells) {
                     const harvested = world.cropManager.harvest(cellX, cellZ)
                     if (!harvested) continue
                     inventoryStore.produce(harvested.def.harvestItemId, harvested.def.harvestQty, { cellX, cellZ })
                     inventoryStore.produce(harvested.def.harvestItemId, harvested.def.harvestQty)
                     changed = true
-                    continue
                 }
+
+                return changed
+            }
+
+            for (const offset of offsets) {
+                const cellX = ctx.cellX + offset.x
+                const cellZ = ctx.cellZ + offset.z
+                const crop = world.cropManager.getCrop(cellX, cellZ)
 
                 if (crop) continue
 

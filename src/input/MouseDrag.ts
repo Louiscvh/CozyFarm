@@ -1,5 +1,4 @@
 import { placementStore } from "../ui/store/PlacementStore"
-import { World } from "../game/world/World"
 
 export class MouseDrag {
   dragging = false
@@ -21,10 +20,8 @@ export class MouseDrag {
       if (e.button !== 0) return
       if ((e.target as HTMLElement | null)?.closest?.("#ui-root")) return
 
-      const hoveredCell = placementStore.hoveredCell
       const selectedItem = placementStore.selectedItem
-      const hoveredCrop = hoveredCell ? World.current?.cropManager.getCrop(hoveredCell.cellX, hoveredCell.cellZ) : null
-      const blocksCameraDrag = !!selectedItem || !!hoveredCrop?.isReady
+      const blocksCameraDrag = selectedItem?.id === "planter"
       if (blocksCameraDrag) return
 
       e.preventDefault()
