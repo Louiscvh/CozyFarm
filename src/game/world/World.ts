@@ -95,13 +95,13 @@ export class World {
 
         this.fireLightManager.update(this.entities, this.camera ?? null, torchIntensity)
 
-        this.applySeasonalTreeColors()
+        this.applySeasonalTreeColors(deltaTime)
         this.applyTreeWind(now)
     }
 
 
 
-  private applySeasonalTreeColors() {
+  private applySeasonalTreeColors(deltaTime: number) {
     const { yearProgress, season } = getSeasonState()
     const targetColor = getBlendedSeasonValue(
       yearProgress,
@@ -115,8 +115,8 @@ export class World {
     )
 
     for (const treeDef of Object.values(World.TREE_DEFS)) {
-      this.instanceManager.forEachMaterial(treeDef, material => {
-        this.tintTreeMaterial(material, targetColor, emissiveIntensity, season.id)
+      this.instanceManager.forEachMaterial(treeDef, (material, sourceName) => {
+        this.tintTreeMaterial(material, sourceName, targetColor, emissiveIntensity, season.id, deltaTime)
       })
     }
 
@@ -129,7 +129,7 @@ export class World {
         const mesh = obj as THREE.Mesh
         const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
         for (const material of materials) {
-          this.tintTreeMaterial(material, targetColor, emissiveIntensity, season.id)
+          this.tintTreeMaterial(material, mesh.name, targetColor, emissiveIntensity, season.id, deltaTime)
         }
       })
     }
@@ -137,11 +137,14 @@ export class World {
 
   private tintTreeMaterial(
     material: THREE.Material,
+    sourceName: string,
     targetColor: THREE.Color,
     emissiveIntensity: number,
     seasonId: string,
+    deltaTime: number,
   ) {
     if (!(material instanceof THREE.MeshStandardMaterial)) return
+    if (this.isTreeTrunkMaterial(material, sourceName)) return
 
     if (!material.userData.seasonalTreeMaterial) {
       material.userData.seasonalTreeMaterial = true
@@ -151,7 +154,8 @@ export class World {
     }
 
     const currentColor = new THREE.Color(`#${material.userData.currentSeasonColor ?? material.color.getHexString()}`)
-    currentColor.lerp(targetColor, 0.22)
+    const transitionAlpha = 1 - Math.exp(-deltaTime * 2.1)
+    currentColor.lerp(targetColor, transitionAlpha)
     material.color.copy(currentColor)
     material.emissive.copy(targetColor).multiplyScalar(seasonId === "winter" ? 1 : 0.35)
     material.emissiveIntensity = emissiveIntensity
@@ -161,6 +165,14 @@ export class World {
   }
 
 
+  private isTreeTrunkMaterial(material: THREE.MeshStandardMaterial, sourceName: string): boolean {
+    const label = `${sourceName} ${material.name}`.toLowerCase()
+    if (/(trunk|bark|wood|branch|stem|log)/.test(label)) return true
+
+    const hsl = { h: 0, s: 0, l: 0 }
+    material.color.getHSL(hsl)
+    return hsl.h > 0.03 && hsl.h < 0.14 && hsl.s > 0.12 && hsl.l < 0.45
+  }
 
   private applyTreeWind(now: number) {
     const baseFrequency = 0.75
