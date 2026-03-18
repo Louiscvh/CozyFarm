@@ -89,7 +89,7 @@ export const Temperature = () => {
         {temperature}°C
       </UIButton>
 
-      <UIButton className="calendar-widget" aria-label={`Date: ${calendarDay} ${calendarMonth}`}>
+      <UIButton className="calendar-widget static" aria-label={`Date: ${calendarDay} ${calendarMonth}`}>
         <div className="calendar-day">{calendarDay}</div>
         <div className="calendar-month">{calendarMonth}</div>
       </UIButton>

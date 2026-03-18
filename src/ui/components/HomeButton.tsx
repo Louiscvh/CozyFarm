@@ -43,7 +43,7 @@ export const HomeButton = () => {
       </UIButton>
 
       <UIButton className="ui-money-button static" data-money-counter="true" aria-label="Argent">
-        <span>💰</span>
+        <span>💵</span>
         <span>{money}</span>
       </UIButton>
     </div>

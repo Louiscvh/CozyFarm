@@ -9,6 +9,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  font-family: "JetBrains Mono", "Fira Code", monospace;
   cursor: pointer;
   pointer-events: auto;
   transition:

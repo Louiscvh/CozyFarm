@@ -112,7 +112,7 @@ inventoryStore.register([
     { id: "bench", maxQty: 8 },
     { id: "dirt_soil", maxQty: 24 },
     { id: "carrot", maxQty: 99, initialQty: 0 },
-    { id: "lettuce", maxQty: 99, initialQty: 0 },      // ← farming
+    { id: "lettuce", maxQty: 99, initialQty: 64 },      // ← farming
     { id: "orange", maxQty: 99, initialQty: 0 },
     { id: "shovel", maxQty: 1, infinite: true },
     { id: "watering_can", maxQty: 1, infinite: true },

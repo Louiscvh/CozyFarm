@@ -2,7 +2,6 @@
   z-index: 12000;
   min-width: 360px;
   max-width: min(90vw, 460px);
-  background: rgba(18, 21, 26, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 14px;
   padding: 14px;
@@ -16,6 +15,8 @@
 .market-popup p {
   margin: 0 0 10px;
   opacity: 0.85;
+  font-size: 0.8rem;
+  margin-bottom: 1rem;
 }
 
 .market-popup-list {
@@ -46,7 +47,6 @@
 }
 
 .market-popup-qty-input {
-  width: 44px;
   border-radius: 8px;
   border: 1px solid rgba(255, 255, 255, 0.22);
   background: rgba(0, 0, 0, 0.2);

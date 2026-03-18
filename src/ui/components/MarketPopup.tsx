@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import type { Object3D } from "three"
 import { inventoryStore } from "../store/InventoryStore"
 import { moneyStore } from "../store/MoneyStore"
@@ -46,11 +46,6 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
       return next
     })
   }, [revision])
-
-  const totalStockValue = useMemo(
-    () => SELLABLE_ITEMS.reduce((sum, item) => sum + inventoryStore.getQty(item.id) * item.unitPrice, 0),
-    [revision],
-  )
 
   if (!open) return null
 
@@ -122,18 +117,11 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
                   />
                   <UIButton onClick={() => updateSellQty(item.id, sellQty + 1)} disabled={stock <= 0 || sellQty >= stock}>+</UIButton>
                 </div>
-                <span>{total} 💰</span>
-                <UIButton onClick={() => sellItem(item)} disabled={stock <= 0}>Vendre</UIButton>
+                <span>{total} 💵</span>
+                <UIButton onClick={() => sellItem(item)} disabled={stock <= 0}>💰</UIButton>
               </div>
             )
           })}
-        </div>
-
-        <div className="market-popup-footer">
-          <strong>Total stock: {totalStockValue} 💰</strong>
-          <div className="market-popup-actions">
-            <UIButton onClick={onClose}>Fermer</UIButton>
-          </div>
         </div>
       </div>
     </WorldPopup>
