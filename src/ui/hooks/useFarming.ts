@@ -127,6 +127,21 @@ export function registerFarmingActions(): void {
                 return changed
             }
 
+            const preferredSeedId = placementStore.preferredBulkSeedId
+            const targetTileType = world.tilesFactory.isSoil(ctx.cellX, ctx.cellZ)
+                ? "soil"
+                : (world.tilesFactory.getTileTypeAtCell(ctx.cellX, ctx.cellZ) ?? ctx.tileType)
+            const selectedCropDef = ALL_CROPS.find(def =>
+                def.seedItemId === preferredSeedId
+                && inventoryStore.getQty(def.seedItemId) > 0
+                && (def.plantTileTypes ?? ["soil"]).includes(targetTileType)
+            ) ?? ALL_CROPS.find(def =>
+                inventoryStore.getQty(def.seedItemId) > 0
+                && (def.plantTileTypes ?? ["soil"]).includes(targetTileType)
+            )
+
+            if (!selectedCropDef) return false
+
             for (const offset of offsets) {
                 const cellX = ctx.cellX + offset.x
                 const cellZ = ctx.cellZ + offset.z
@@ -135,21 +150,11 @@ export function registerFarmingActions(): void {
                 if (crop) continue
 
                 const tileType = world.tilesFactory.isSoil(cellX, cellZ) ? "soil" : world.tilesFactory.getTileTypeAtCell(cellX, cellZ)
-                const preferredSeedId = placementStore.preferredBulkSeedId
-                const cropDef = ALL_CROPS.find(def =>
-                    def.seedItemId === preferredSeedId
-                    && inventoryStore.getQty(def.seedItemId) > 0
-                    && (def.plantTileTypes ?? ["soil"]).includes(tileType ?? "")
-                ) ?? ALL_CROPS.find(def =>
-                    inventoryStore.getQty(def.seedItemId) > 0
-                    && (def.plantTileTypes ?? ["soil"]).includes(tileType ?? "")
-                )
+                if (!(selectedCropDef.plantTileTypes ?? ["soil"]).includes(tileType ?? "")) continue
+                if (inventoryStore.getQty(selectedCropDef.seedItemId) <= 0) break
+                if (!world.cropManager.plant(selectedCropDef, cellX, cellZ)) continue
 
-                if (!cropDef) continue
-                if (!(cropDef.plantTileTypes ?? ["soil"]).includes(tileType ?? "")) continue
-                if (!world.cropManager.plant(cropDef, cellX, cellZ)) continue
-
-                inventoryStore.consume(cropDef.seedItemId)
+                inventoryStore.consume(selectedCropDef.seedItemId)
                 world.tilesFactory.playPlantAnimation(cellX, cellZ)
                 changed = true
             }
