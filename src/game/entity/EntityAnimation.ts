@@ -4,6 +4,24 @@ import { World } from "../world/World"
 
 type W = NonNullable<typeof World.current>
 
+function getEntityGroundContactY(entity: THREE.Object3D, fallbackY: number): number {
+  const cachedGroundY = entity.userData.groundContactY
+  if (typeof cachedGroundY === "number") return cachedGroundY
+
+  entity.updateMatrixWorld(true)
+  const box = new THREE.Box3().setFromObject(entity)
+  if (Number.isFinite(box.min.y)) {
+    entity.userData.groundContactY = box.min.y
+    return box.min.y
+  }
+
+  return fallbackY
+}
+
+function getGroundedPositionY(originalY: number, groundY: number, scaleRatio: number): number {
+  return groundY + (originalY - groundY) * scaleRatio
+}
+
 export function syncInstance(w: W, e: THREE.Object3D) {
   if (!e.userData.isInstanced) return
   w.instanceManager.setTransform(e.userData.def, e.userData.instanceSlot, e.position, e.userData.rotY ?? 0, e.scale.x)
@@ -97,14 +115,16 @@ export function animateAppear(
 ) {
   const startTime = performance.now()
   const fromScale = en.scale.x
-  const fromY     = en.position.y
+  const groundY   = getEntityGroundContactY(en, originalY)
   en.rotation.copy(originalRotation)
 
   function animateIn(now: number) {
     const t    = Math.min((now - startTime) / 350, 1)
     const ease = 1 - Math.pow(1 - t, 3)
-    en.scale.setScalar(fromScale + (originalScale.x - fromScale) * ease)
-    en.position.y = fromY + (originalY - fromY) * ease + Math.sin(t * Math.PI) * 0.2
+    const scale = fromScale + (originalScale.x - fromScale) * ease
+    const scaleRatio = originalScale.x === 0 ? 1 : scale / originalScale.x
+    en.scale.setScalar(scale)
+    en.position.y = getGroundedPositionY(originalY, groundY, scaleRatio) + Math.sin(t * Math.PI) * 0.2
     syncInstance(w, en)
     if (t < 1) {
       requestAnimationFrame(animateIn)
