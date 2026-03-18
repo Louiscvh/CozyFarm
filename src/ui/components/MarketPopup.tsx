@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { type WheelEvent, useEffect, useState } from "react"
 import type { Object3D } from "three"
 import { soundManager } from "../../game/system/SoundManager"
 import { toolLevelStore } from "../store/ToolLevelStore"
@@ -6,6 +6,7 @@ import { inventoryStore } from "../store/InventoryStore"
 import { moneyStore } from "../store/MoneyStore"
 import { lootFeedbackStore } from "../store/LootFeedbackStore"
 import { UIButton } from "./UIButton"
+import { ItemIcon } from "./ItemIcon"
 import { WorldPopup } from "./WorldPopup"
 import "./MarketPopup.css"
 
@@ -161,6 +162,12 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
 
   const money = moneyStore.getAmount()
 
+  const handlePopupWheel = (e: WheelEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.stopPropagation()
+    e.currentTarget.scrollTop += e.deltaY
+  }
+
   return (
     <WorldPopup
       open={open}
@@ -172,7 +179,7 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
     >
-      <div>
+      <div className="market-popup-content" onWheel={handlePopupWheel}>
         <h3>🛒 Marché</h3>
         <p>{mode === "buy" ? "Choisis ce que tu veux acheter." : "Choisis rapidement la quantité à vendre pour chaque produit."}</p>
 
@@ -194,7 +201,7 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
               return (
                 <div key={item.id} className="market-popup-row market-popup-buy-row">
                   <div className="market-popup-item">
-                    <div className="market-popup-icon" aria-label={item.id}>{item.icon}
+                    <div className="market-popup-icon" aria-label={item.id}><ItemIcon icon={item.icon} alt={item.label} className="market-popup-icon-asset" />
                       <span>{stockLabel}</span>
                     </div>
                     <div className="market-popup-labels">
@@ -219,7 +226,7 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
 
               return (
                 <div key={item.id} className="market-popup-row">
-                  <div className="market-popup-icon" aria-label={item.id}>{item.icon}
+                  <div className="market-popup-icon" aria-label={item.id}><ItemIcon icon={item.icon} alt={item.id} className="market-popup-icon-asset" />
                     <span>{stock}</span>
                   </div>
                   <div className="market-popup-qty">
