@@ -39,8 +39,8 @@ test("shiftSeason conserve la progression journalière et ne descend pas sous 0"
 
 test("getBlendedSeasonValue interpole en douceur entre les saisons", () => {
   const colorAtBoundary = getBlendedSeasonValue(0.25, season => season.treeFoliageTint, (current, next, alpha) => ({ current, next, alpha }))
-  assert.deepEqual(colorAtBoundary, { current: "#c9bfa8", next: "#84cb63", alpha: 0 })
+  assert.deepEqual(colorAtBoundary, { current: "#f7f9fd", next: "#82df72", alpha: 0 })
 
   const midway = getBlendedSeasonValue(0.125, season => season.treeFoliageTint, (current, next, alpha) => ({ current, next, alpha }))
-  assert.deepEqual(midway, { current: "#d89045", next: "#c9bfa8", alpha: 0.5 })
+  assert.deepEqual(midway, { current: "#8b5a2b", next: "#f7f9fd", alpha: 0.5 })
 })

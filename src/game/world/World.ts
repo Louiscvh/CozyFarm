@@ -11,7 +11,7 @@ import { debugHitboxEnabled } from "../entity/EntityFactory"
 import { CropManager } from "../farming/CropManager"
 import { computeGrowthRate } from "../farming/GrowthConditions"
 import { FireLightManager } from "../system/FireLightManager"
-import { getBlendedSeasonValue, getSeasonState, type SeasonId } from "../system/Season"
+import { getBlendedSeasonValue, getSeasonState } from "../system/Season"
 import { Tree1Entity } from "../entity/entities/Tree1"
 import { Tree2Entity } from "../entity/entities/Tree2"
 import { Tree3Entity } from "../entity/entities/Tree3"
@@ -27,24 +27,7 @@ export class World {
     tree3: Tree3Entity,
     tree_orange: TreeOrangeEntity,
   }
-  private static readonly TREE_FOLIAGE_CONFIG: Record<string, { palette: Record<SeasonId, string>; emissiveIntensity: Record<SeasonId, number> }> = {
-    tree1: {
-      palette: { autumn: "#8b5a2b", winter: "#f5f7fb", spring: "#6fcf7a", summer: "#2f8f46" },
-      emissiveIntensity: { autumn: 0.05, winter: 0.18, spring: 0.05, summer: 0.03 },
-    },
-    tree2: {
-      palette: { autumn: "#a35f22", winter: "#fffaf5", spring: "#86e36b", summer: "#4fa63c" },
-      emissiveIntensity: { autumn: 0.06, winter: 0.2, spring: 0.05, summer: 0.03 },
-    },
-    tree3: {
-      palette: { autumn: "#b36a2e", winter: "#fffdf8", spring: "#9ce870", summer: "#63b641" },
-      emissiveIntensity: { autumn: 0.06, winter: 0.2, spring: 0.05, summer: 0.03 },
-    },
-    tree_orange: {
-      palette: { autumn: "#9a6734", winter: "#f4f6f8", spring: "#74d85e", summer: "#3f9e32" },
-      emissiveIntensity: { autumn: 0.05, winter: 0.16, spring: 0.04, summer: 0.03 },
-    },
-  }
+  private static readonly TREE_EMISSIVE_BY_SEASON: Record<string, number> = { autumn: 0.05, winter: 0.18, spring: 0.05, summer: 0.03 }
 
   readonly size: number = 50
   readonly tileSize: number
@@ -120,20 +103,18 @@ export class World {
 
   private applySeasonalTreeColors() {
     const { yearProgress, season } = getSeasonState()
+    const targetColor = getBlendedSeasonValue(
+      yearProgress,
+      currentSeason => new THREE.Color(currentSeason.treeFoliageTint),
+      (current, next, alpha) => current.clone().lerp(next, alpha),
+    )
+    const emissiveIntensity = getBlendedSeasonValue(
+      yearProgress,
+      currentSeason => World.TREE_EMISSIVE_BY_SEASON[currentSeason.id],
+      (current, next, alpha) => THREE.MathUtils.lerp(current, next, alpha),
+    )
 
-    for (const [treeId, config] of Object.entries(World.TREE_FOLIAGE_CONFIG)) {
-      const targetColor = getBlendedSeasonValue(
-        yearProgress,
-        currentSeason => new THREE.Color(config.palette[currentSeason.id]),
-        (current, next, alpha) => current.clone().lerp(next, alpha),
-      )
-      const emissiveIntensity = getBlendedSeasonValue(
-        yearProgress,
-        currentSeason => config.emissiveIntensity[currentSeason.id],
-        (current, next, alpha) => THREE.MathUtils.lerp(current, next, alpha),
-      )
-
-      const treeDef = World.TREE_DEFS[treeId]
+    for (const treeDef of Object.values(World.TREE_DEFS)) {
       this.instanceManager.forEachMaterial(treeDef, (material, sourceName) => {
         this.tintTreeMaterial(material, sourceName, targetColor, emissiveIntensity, season.id)
       })
@@ -142,18 +123,6 @@ export class World {
     for (const entity of this.entities) {
       const treeId = entity.userData.id as string | undefined
       if (!treeId || !World.TREE_IDS.has(treeId) || entity.userData.isInstanced) continue
-
-      const config = World.TREE_FOLIAGE_CONFIG[treeId]
-      const targetColor = getBlendedSeasonValue(
-        yearProgress,
-        currentSeason => new THREE.Color(config.palette[currentSeason.id]),
-        (current, next, alpha) => current.clone().lerp(next, alpha),
-      )
-      const emissiveIntensity = getBlendedSeasonValue(
-        yearProgress,
-        currentSeason => config.emissiveIntensity[currentSeason.id],
-        (current, next, alpha) => THREE.MathUtils.lerp(current, next, alpha),
-      )
 
       entity.traverse(obj => {
         if (!(obj as THREE.Mesh).isMesh) return
@@ -171,14 +140,13 @@ export class World {
     sourceName: string,
     targetColor: THREE.Color,
     emissiveIntensity: number,
-    seasonId: SeasonId,
+    seasonId: string,
   ) {
     if (!(material instanceof THREE.MeshStandardMaterial)) return
     if (!this.isLikelyFoliageMaterial(material, sourceName)) return
 
     if (!material.userData.seasonalTreeMaterial) {
       material.userData.seasonalTreeMaterial = true
-      material.userData.originalMap = material.map ?? null
       material.userData.currentSeasonColor = material.color.clone().getHexString()
       material.map = null
       material.needsUpdate = true
@@ -194,6 +162,7 @@ export class World {
     material.userData.currentSeasonColor = currentColor.getHexString()
   }
 
+
   private isLikelyFoliageMaterial(material: THREE.MeshStandardMaterial, sourceName: string): boolean {
     const label = `${sourceName} ${material.name}`.toLowerCase()
     if (/(trunk|bark|wood|branch|stem)/.test(label)) return false
@@ -206,7 +175,7 @@ export class World {
     if (looksLikeBark) return false
 
     if (material.map && hsl.s < 0.08 && hsl.l > 0.7) return true
-    return hsl.l > 0.2 && (hsl.h > 0.16 && hsl.h < 0.45 || hsl.s > 0.18)
+    return hsl.l > 0.2 && ((hsl.h > 0.16 && hsl.h < 0.45) || hsl.s > 0.18)
   }
 
   private applyTreeWind(now: number) {
