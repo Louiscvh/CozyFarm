@@ -38,6 +38,7 @@ const BUYABLE_ITEMS: BuyableItem[] = [
   { id: "shovel", icon: "🛠️", unitPrice: 125, label: "Amélioration pelle", description: "Creuse et nettoie plus efficacement.", kind: "tool_upgrade" },
   { id: "watering_can", icon: "/images/icons/items/watering_can.png", unitPrice: 150, label: "Amélioration arrosoir", description: "Arrose une zone plus large après achat.", kind: "tool_upgrade" },
   { id: "hoe", icon: "⛏️", unitPrice: 110, label: "Amélioration houe", description: "Augmente la zone de labour.", kind: "tool_upgrade" },
+  { id: "planter", icon: "🧺", unitPrice: 135, label: "Amélioration plantoir", description: "Passe le plantoir de 2x2 à 3x3 pour planter et récolter.", kind: "tool_upgrade" },
   { id: "bench", icon: "🪑", unitPrice: 18, label: "Banc", description: "Une petite déco pour aménager la ferme.", kind: "stock" },
   { id: "flower1", icon: "🌸", unitPrice: 6, label: "Fleur", description: "Ajoute de la couleur au jardin.", kind: "stock" },
   { id: "tulip", icon: "🌷", unitPrice: 7, label: "Tulipe", description: "Une déco florale élégante.", kind: "stock" },
@@ -113,7 +114,7 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
 
     if (item.kind === "tool_upgrade") {
       const unlockedLevel = toolLevelStore.getUnlockedLevel(item.id)
-      if (unlockedLevel >= 3) {
+      if (unlockedLevel >= toolLevelStore.getMaxLevel(item.id)) {
         moneyStore.add(item.unitPrice)
         soundManager.playError()
         return
@@ -196,7 +197,8 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
             {BUYABLE_ITEMS.map(item => {
               const canAfford = money >= item.unitPrice
               const unlockedLevel = item.kind === "tool_upgrade" ? toolLevelStore.getUnlockedLevel(item.id) : null
-              const isMaxLevel = unlockedLevel !== null && unlockedLevel >= 3
+              const maxLevel = item.kind === "tool_upgrade" ? toolLevelStore.getMaxLevel(item.id) : null
+              const isMaxLevel = unlockedLevel !== null && maxLevel !== null && unlockedLevel >= maxLevel
 
               return (
                 <div key={item.id} className="market-popup-row market-popup-buy-row">

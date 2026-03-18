@@ -15,6 +15,9 @@ export class MouseDrag {
 
     // Souris (desktop)
     window.addEventListener("mousedown", e => {
+      if (e.button !== 0) return
+      if ((e.target as HTMLElement | null)?.closest?.("#ui-root")) return
+
       e.preventDefault()
       this.dragging = true
       this.lastX = e.clientX

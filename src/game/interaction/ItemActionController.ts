@@ -8,7 +8,7 @@ import { World } from "../world/World"
 import { soundManager } from "../system/SoundManager"
 import { ghostMat } from "../shared/GhostMaterial"
 import { ALL_CROPS } from "../farming/CropDefinition"
-import { getAreaOffsetsForLevel, toolLevelStore } from "../../ui/store/ToolLevelStore"
+import { getAreaOffsetsForLevel, getAreaOffsetsForTool, toolLevelStore } from "../../ui/store/ToolLevelStore"
 import { TREE_MIN_AXE_LEVEL } from "../items/AxeItem"
 
 export class ItemActionController {
@@ -88,7 +88,8 @@ export class ItemActionController {
 
     private getToolOffsets(item: ItemDef): Array<{ x: number; z: number }> {
         if (!isUsableOnTile(item)) return [{ x: 0, z: 0 }]
-        if (item.id !== "hoe" && item.id !== "watering_can" && item.id !== "shovel") return [{ x: 0, z: 0 }]
+        if (item.id !== "hoe" && item.id !== "watering_can" && item.id !== "shovel" && item.id !== "planter") return [{ x: 0, z: 0 }]
+        if (item.id === "planter") return getAreaOffsetsForTool("planter", toolLevelStore.getLevel("planter"))
         return getAreaOffsetsForLevel(toolLevelStore.getLevel(item.id))
     }
 
@@ -112,6 +113,22 @@ export class ItemActionController {
         if (item.usage.actionId === "scanner:inspect") {
             const isValidTile = item.usage.targetTileTypes.includes(effectiveTileType)
             return isValidTile && !!this.world.cropManager.getCrop(cellX, cellZ)
+        }
+
+        if (item.usage.actionId === "farming:bulk_plant_or_harvest") {
+            const crop = this.world.cropManager.getCrop(cellX, cellZ)
+            if (crop?.isReady) return true
+            if (crop) return false
+
+            const preferredSeedId = placementStore.preferredBulkSeedId
+            return ALL_CROPS.some(def =>
+                (def.seedItemId === preferredSeedId || preferredSeedId === null)
+                && inventoryStore.getQty(def.seedItemId) > 0
+                && (def.plantTileTypes ?? ["soil"]).includes(effectiveTileType)
+            ) || ALL_CROPS.some(def =>
+                inventoryStore.getQty(def.seedItemId) > 0
+                && (def.plantTileTypes ?? ["soil"]).includes(effectiveTileType)
+            )
         }
 
         const hasCrop = !!this.world.cropManager.getCrop(cellX, cellZ)
@@ -367,8 +384,8 @@ export class ItemActionController {
 
     // ─── Use on tile ──────────────────────────────────────────────────────────
 
-    private handleUseOnTile(item: ItemDef): void {
-        if (!isUsableOnTile(item)) return
+    private handleUseOnTile(item: ItemDef, silentError = false): boolean {
+        if (!isUsableOnTile(item)) return false
 
         let targetCell = placementStore.hoveredCell
 
@@ -396,14 +413,14 @@ export class ItemActionController {
             }
         }
 
-        if (!targetCell) return
+        if (!targetCell) return false
 
         const { cellX, cellZ } = targetCell
 
         if (item.usage.actionId === "scanner:inspect") {
             if (!this.world.cropManager.getCrop(cellX, cellZ)) {
-                soundManager.playError()
-                return
+                if (!silentError) soundManager.playError()
+                return false
             }
 
             const tileType = this.getEffectiveTileType(cellX, cellZ) ?? "soil"
@@ -417,9 +434,9 @@ export class ItemActionController {
             if (success) {
                 this.playToolSuccessSound(item)
             } else {
-                soundManager.playError()
+                if (!silentError) soundManager.playError()
             }
-            return
+            return success
         }
 
         const canUse = this.getToolOffsets(item).some(offset =>
@@ -427,12 +444,15 @@ export class ItemActionController {
         )
 
         if (!canUse) {
-            soundManager.playError()
-            return
+            if (!silentError) soundManager.playError()
+            return false
         }
         const effectiveTileType = this.getEffectiveTileType(cellX, cellZ) ?? item.usage.targetTileTypes[0]
 
-        if (inventoryStore.getQty(item.id) <= 0) { soundManager.playError(); return }
+        if (inventoryStore.getQty(item.id) <= 0) {
+            if (!silentError) soundManager.playError()
+            return false
+        }
 
         const success = itemActionRegistry.executeTileAction(item.usage.actionId, {
             tileType: effectiveTileType,
@@ -447,8 +467,9 @@ export class ItemActionController {
 
             this.playToolSuccessSound(item)
         } else {
-            soundManager.playError()
+            if (!silentError) soundManager.playError()
         }
+        return success
     }
 
     private playToolSuccessSound(item: ItemDef): void {

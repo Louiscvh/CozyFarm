@@ -10,7 +10,7 @@ import { World } from "../world/World"
 import { getFootprint } from "../entity/Entity"
 import { isPlaceable, getItemEntity, isUsableOnTile } from "../entity/ItemDef"
 import type { ItemDef } from "../entity/ItemDef"
-import { toolLevelStore } from "../../ui/store/ToolLevelStore"
+import { getAreaOffsetsForTool, toolLevelStore } from "../../ui/store/ToolLevelStore"
 import {
     staticGridGroup,
     buildStaticGrid,
@@ -497,7 +497,9 @@ export class PlacementController {
         }
 
         if (!item || !isUsableOnTile(item)) return "single"
-        if (item.id !== "hoe" && item.id !== "watering_can" && item.id !== "shovel") return "single"
+        if (item.id !== "hoe" && item.id !== "watering_can" && item.id !== "shovel" && item.id !== "planter") return "single"
+
+        if (item.id === "planter") return "square"
 
         const level = toolLevelStore.getLevel(item.id)
         if (level >= 2) return "square"
@@ -539,7 +541,12 @@ export class PlacementController {
         }
 
         if (!item || !isUsableOnTile(item)) return 1
-        if (item.id !== "hoe" && item.id !== "watering_can" && item.id !== "shovel") return 1
+        if (item.id !== "hoe" && item.id !== "watering_can" && item.id !== "shovel" && item.id !== "planter") return 1
+
+        if (item.id === "planter") {
+            const offsets = getAreaOffsetsForTool("planter", toolLevelStore.getLevel("planter"))
+            return Math.round(Math.sqrt(offsets.length))
+        }
 
         const level = toolLevelStore.getLevel(item.id)
         if (level === 2) return 2

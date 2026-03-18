@@ -41,6 +41,7 @@ import { StakeItemDef } from "../../game/items/StakeItem"
 import { toolLevelStore, type ToolId } from "../store/ToolLevelStore"
 import { ItemIcon } from "./ItemIcon"
 import { ScannerItemDef } from "../../game/items/ScannerItem"
+import { PlanterItemDef } from "../../game/items/PlanterItem"
 
 // ─── Tous les items (construction + farming) ──────────────────────────────────
 
@@ -49,6 +50,7 @@ const ALL_ITEMS: ItemDef[] = [
     ShovelItemDef,
     WateringCanItemDef,
     AxeItemDef,
+    PlanterItemDef,
     ScannerItemDef,
     WoodItemDef,
 
@@ -117,6 +119,7 @@ inventoryStore.register([
     { id: "shovel", maxQty: 1, infinite: true },
     { id: "watering_can", maxQty: 1, infinite: true },
     { id: "axe", maxQty: 1, infinite: true },
+    { id: "planter", maxQty: 1, infinite: true },
     { id: "scanner", maxQty: 1, infinite: true },
     { id: "wood", maxQty: 64, initialQty: 24 },
 ])
@@ -141,13 +144,14 @@ type DragSource =
     | { zone: "extra"; id: string }
 
 const isLevelableTool = (itemId: string | null): itemId is ToolId =>
-    itemId === "hoe" || itemId === "watering_can" || itemId === "axe" || itemId === "shovel"
+    itemId === "hoe" || itemId === "watering_can" || itemId === "axe" || itemId === "shovel" || itemId === "planter"
 
 function renderToolLevelBars(itemId: ToolId) {
     const level = toolLevelStore.getLevel(itemId)
+    const maxLevel = toolLevelStore.getMaxLevel(itemId)
     return (
-        <span className="inv-slot-level" title={`Niveau ${level}/3`}>
-            {[3, 2, 1].map(step => (
+        <span className="inv-slot-level" title={`Niveau ${level}/${maxLevel}`}>
+            {Array.from({ length: maxLevel }, (_, index) => maxLevel - index).map(step => (
                 <span key={step} className={["inv-slot-level-bar", level >= step ? "active" : ""].filter(Boolean).join(" ")} />
             ))}
         </span>
@@ -436,6 +440,7 @@ export function InventoryBar() {
             const showLevel = isLevelableTool(item.id)
             const level = showLevel ? toolLevelStore.getLevel(item.id) : 1
             const unlockedLevel = showLevel ? toolLevelStore.getUnlockedLevel(item.id) : 1
+            const maxLevel = showLevel ? toolLevelStore.getMaxLevel(item.id) : 1
 
             if (item.id === "axe") {
                 return (
@@ -461,7 +466,7 @@ export function InventoryBar() {
                     {showLevel && (
                         <>
                             <span className="hint-key">↑</span>/<span className="hint-key">↓</span>
-                            {level}/{unlockedLevel}
+                            {level}/{unlockedLevel} max {maxLevel}
                             <span className="hint-sep">·</span>
                         </>
                     )}

@@ -5,7 +5,8 @@ import { inventoryStore } from "../../ui/store/InventoryStore"
 import { ALL_CROPS } from "../../game/farming/CropDefinition"
 import { itemActionRegistry, type UseOnEntityContext } from "../../game/interaction/ItemActionRegistry"
 import { World } from "../../game/world/World"
-import { getAreaOffsetsForLevel, toolLevelStore } from "../store/ToolLevelStore"
+import { getAreaOffsetsForLevel, getAreaOffsetsForTool, toolLevelStore } from "../store/ToolLevelStore"
+import { placementStore } from "../store/PlacementStore"
 
 export function useFarming() {
     useEffect(() => {
@@ -102,6 +103,64 @@ export function registerFarmingActions(): void {
         })
 
         registerPlantActions()
+
+        itemActionRegistry.registerTileAction("farming:bulk_plant_or_harvest", (ctx) => {
+            const world = World.current
+            if (!world) return false
+
+            const offsets = getAreaOffsetsForTool("planter", toolLevelStore.getLevel("planter"))
+            const readyCells = offsets
+                .map(offset => ({ cellX: ctx.cellX + offset.x, cellZ: ctx.cellZ + offset.z }))
+                .filter(({ cellX, cellZ }) => world.cropManager.getCrop(cellX, cellZ)?.isReady)
+
+            let changed = false
+
+            if (readyCells.length > 0) {
+                for (const { cellX, cellZ } of readyCells) {
+                    const harvested = world.cropManager.harvest(cellX, cellZ)
+                    if (!harvested) continue
+                    inventoryStore.produce(harvested.def.harvestItemId, harvested.def.harvestQty, { cellX, cellZ })
+                    inventoryStore.produce(harvested.def.harvestItemId, harvested.def.harvestQty)
+                    changed = true
+                }
+
+                return changed
+            }
+
+            const preferredSeedId = placementStore.preferredBulkSeedId
+            const targetTileType = world.tilesFactory.isSoil(ctx.cellX, ctx.cellZ)
+                ? "soil"
+                : (world.tilesFactory.getTileTypeAtCell(ctx.cellX, ctx.cellZ) ?? ctx.tileType)
+            const selectedCropDef = ALL_CROPS.find(def =>
+                def.seedItemId === preferredSeedId
+                && inventoryStore.getQty(def.seedItemId) > 0
+                && (def.plantTileTypes ?? ["soil"]).includes(targetTileType)
+            ) ?? ALL_CROPS.find(def =>
+                inventoryStore.getQty(def.seedItemId) > 0
+                && (def.plantTileTypes ?? ["soil"]).includes(targetTileType)
+            )
+
+            if (!selectedCropDef) return false
+
+            for (const offset of offsets) {
+                const cellX = ctx.cellX + offset.x
+                const cellZ = ctx.cellZ + offset.z
+                const crop = world.cropManager.getCrop(cellX, cellZ)
+
+                if (crop) continue
+
+                const tileType = world.tilesFactory.isSoil(cellX, cellZ) ? "soil" : world.tilesFactory.getTileTypeAtCell(cellX, cellZ)
+                if (!(selectedCropDef.plantTileTypes ?? ["soil"]).includes(tileType ?? "")) continue
+                if (inventoryStore.getQty(selectedCropDef.seedItemId) <= 0) break
+                if (!world.cropManager.plant(selectedCropDef, cellX, cellZ)) continue
+
+                inventoryStore.consume(selectedCropDef.seedItemId)
+                world.tilesFactory.playPlantAnimation(cellX, cellZ)
+                changed = true
+            }
+
+            return changed
+        })
 
         // ── Récolte ───────────────────────────────────────────────────
         itemActionRegistry.registerEntityAction(
