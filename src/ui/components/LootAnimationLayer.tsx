@@ -54,12 +54,18 @@ function centerOf(el: HTMLElement) {
     return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
 }
 
+function isElementVisible(el: HTMLElement | null) {
+    if (!el) return false
+    const rect = el.getBoundingClientRect()
+    return rect.width > 0 && rect.height > 0
+}
+
 function getInventoryBumpTarget(targetAnchor: HTMLElement | null, targetSlot: HTMLElement | null) {
     if (targetSlot) return targetSlot
     return targetAnchor?.closest<HTMLElement>(".inv-slot") ?? targetAnchor
 }
 
-function bump(el: HTMLElement | null, className: string, durationMs = 220) {
+function bump(el: HTMLElement | null, className: string, durationMs = 420) {
     if (!el) return
     el.classList.remove(className)
     void el.offsetWidth
@@ -88,18 +94,27 @@ export function LootAnimationLayer({ items }: LootAnimationLayerProps) {
             if (!icon) return
 
             const from = getMouseStartPosition(mousePosRef.current, event.cellX, event.cellZ)
-            const targetAnchor = event.targetSelector
+            const slotButton = event.targetSelector
                 ? document.querySelector<HTMLElement>(event.targetSelector)
-                : document.querySelector<HTMLElement>(`[data-inv-item-id="${event.itemId}"]`)
+                : document.querySelector<HTMLElement>(`[data-inv-slot-id="${event.itemId}"]`)
+                    ?? document.querySelector<HTMLElement>(`[data-inv-item-id="${event.itemId}"]`)
+            const targetAnchor = slotButton
+                ?? (event.targetSelector
+                    ? document.querySelector<HTMLElement>(event.targetSelector)
+                    : null)
             const targetSlot = targetAnchor?.closest<HTMLElement>(".inv-slot") ?? null
             const inventoryShell = document.querySelector<HTMLElement>("#inventory-slots")
             const inventoryExpandBtn = document.querySelector<HTMLElement>("#inventory-expand-btn")
-            const inventoryBumpTarget = getInventoryBumpTarget(targetAnchor, targetSlot)
+            const inventoryBumpTarget = isElementVisible(targetAnchor) || isElementVisible(targetSlot)
+                ? getInventoryBumpTarget(targetAnchor, targetSlot)
+                : null
+            const visibleTargetAnchor = isElementVisible(targetAnchor) ? targetAnchor : null
+            const visibleTargetSlot = isElementVisible(targetSlot) ? targetSlot : null
 
-            const to = targetAnchor
-                ? centerOf(targetAnchor)
-                : targetSlot
-                    ? centerOf(targetSlot)
+            const to = visibleTargetAnchor
+                ? centerOf(visibleTargetAnchor)
+                : visibleTargetSlot
+                    ? centerOf(visibleTargetSlot)
                     : inventoryShell
                         ? centerOf(inventoryShell)
                         : { x: window.innerWidth / 2, y: window.innerHeight / 2 }

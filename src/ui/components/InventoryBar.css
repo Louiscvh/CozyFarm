@@ -342,26 +342,62 @@ body.placing { cursor: crosshair; }
 }
 
 .inv-slot-bump {
-  animation: inventoryBump 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  animation: inventoryBump 420ms cubic-bezier(0.2, 0.9, 0.22, 1);
+  transform-origin: center;
+  will-change: transform, box-shadow, filter;
 }
 
 @keyframes inventoryBump {
-  0% { transform: scale(1); }
-  38% { transform: scale(1.16); }
-  68% { transform: scale(0.97); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1) translateY(0);
+    box-shadow: 0 0 0 rgba(255, 201, 92, 0);
+    filter: brightness(1);
+  }
+  24% {
+    transform: scale(1.18) translateY(-4px);
+    box-shadow: 0 8px 22px rgba(255, 201, 92, 0.24);
+    filter: brightness(1.08);
+  }
+  56% {
+    transform: scale(0.95) translateY(1px);
+    box-shadow: 0 3px 12px rgba(255, 201, 92, 0.12);
+    filter: brightness(1.02);
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    box-shadow: 0 0 0 rgba(255, 201, 92, 0);
+    filter: brightness(1);
+  }
 }
 
 
 #inventory-slots.inventory-receive-bump,
 #inventory-expand-btn.inventory-receive-bump,
 [data-money-counter='true'].inventory-receive-bump {
-  animation: inventoryReceiveBump 280ms cubic-bezier(0.22, 1, 0.36, 1);
+  animation: inventoryReceiveBump 460ms cubic-bezier(0.18, 0.9, 0.22, 1);
+  transform-origin: center;
+  will-change: transform, box-shadow, filter;
 }
 
 @keyframes inventoryReceiveBump {
-  0% { transform: scale(1); }
-  35% { transform: scale(1.12); }
-  65% { transform: scale(0.98); }
-  100% { transform: scale(1); }
+  0% {
+    transform: scale(1) translateY(0);
+    box-shadow: 0 0 0 rgba(255, 229, 145, 0);
+    filter: brightness(1);
+  }
+  22% {
+    transform: scale(1.12) translateY(-3px);
+    box-shadow: 0 10px 24px rgba(255, 229, 145, 0.18);
+    filter: brightness(1.06);
+  }
+  54% {
+    transform: scale(0.975) translateY(0);
+    box-shadow: 0 4px 12px rgba(255, 229, 145, 0.1);
+    filter: brightness(1.02);
+  }
+  100% {
+    transform: scale(1) translateY(0);
+    box-shadow: 0 0 0 rgba(255, 229, 145, 0);
+    filter: brightness(1);
+  }
 }
