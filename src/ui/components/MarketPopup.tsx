@@ -9,15 +9,16 @@ import "./MarketPopup.css"
 
 type SellableItem = {
   id: "carrot" | "lettuce" | "orange"
-  label: string
   icon: string
   unitPrice: number
 }
 
+const SELLABLE_QTY_STEPS = [-1, 1, 5, 10] as const
+
 const SELLABLE_ITEMS: SellableItem[] = [
-  { id: "carrot", label: "Carotte", icon: "🥕", unitPrice: 3 },
-  { id: "lettuce", label: "Salade", icon: "🥬", unitPrice: 4 },
-  { id: "orange", label: "Orange", icon: "🍊", unitPrice: 5 },
+  { id: "carrot", icon: "🥕", unitPrice: 3 },
+  { id: "lettuce", icon: "🥬", unitPrice: 4 },
+  { id: "orange", icon: "🍊", unitPrice: 5 },
 ]
 
 type MarketPopupProps = {
@@ -92,7 +93,7 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
     >
       <div>
         <h3>🛒 Marché</h3>
-        <p>Choisis la quantité à vendre pour chaque produit.</p>
+        <p>Choisis rapidement la quantité à vendre pour chaque produit.</p>
 
         <div className="market-popup-list">
           {SELLABLE_ITEMS.map(item => {
@@ -102,22 +103,25 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
 
             return (
               <div key={item.id} className="market-popup-row">
-                <span>{item.icon} {item.label}</span>
+                <span className="market-popup-icon" aria-label={item.id}>{item.icon}</span>
                 <span className="market-popup-stock">stock: {stock}</span>
                 <div className="market-popup-qty">
-                  <UIButton onClick={() => updateSellQty(item.id, sellQty - 1)} disabled={stock <= 0 || sellQty <= 1}>−</UIButton>
-                  <input
-                    className="market-popup-qty-input"
-                    type="number"
-                    min={1}
-                    max={Math.max(1, stock)}
-                    value={sellQty}
-                    onChange={(e) => updateSellQty(item.id, Number(e.target.value || 1))}
-                    disabled={stock <= 0}
-                  />
-                  <UIButton onClick={() => updateSellQty(item.id, sellQty + 1)} disabled={stock <= 0 || sellQty >= stock}>+</UIButton>
+                  <span className="market-popup-qty-value">x{sellQty}</span>
+                  <div className="market-popup-step-buttons">
+                    {SELLABLE_QTY_STEPS.map(step => {
+                      const nextQty = sellQty + step
+                      const isDisabled = stock <= 0 || nextQty < 1 || nextQty > stock
+                      const label = step > 0 ? `+${step}` : `${step}`
+
+                      return (
+                        <UIButton key={step} onClick={() => updateSellQty(item.id, nextQty)} disabled={isDisabled}>
+                          {label}
+                        </UIButton>
+                      )
+                    })}
+                  </div>
                 </div>
-                <span>{total} 💵</span>
+                <span className="market-popup-total">{total} 💵</span>
                 <UIButton onClick={() => sellItem(item)} disabled={stock <= 0}>💰</UIButton>
               </div>
             )

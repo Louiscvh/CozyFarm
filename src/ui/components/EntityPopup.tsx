@@ -11,6 +11,7 @@ import { OutlineSystem } from "../../render/OutlineSystem"
 import { Renderer } from "../../render/Renderer"
 import { WorldPopup } from "./WorldPopup"
 import { MarketPopup } from "./MarketPopup"
+import { soundManager } from "../../game/system/SoundManager"
 
 interface PopupInfo {
   entityObject: THREE.Object3D
@@ -67,8 +68,11 @@ export function EntityPopups() {
   const isOverPopup = useRef(false)
   const pendingEntityIdRef = useRef<string | null>(null)
   const pointerDownRef = useRef(false)
+  const pointerDownPosRef = useRef({ x: 0, y: 0 })
+  const pointerMovedRef = useRef(false)
 
   const HOVER_OPEN_DELAY_MS = 250
+  const CLICK_DRAG_THRESHOLD_PX = 8
 
   const cancelClose = () => {
     if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null }
@@ -124,6 +128,14 @@ export function EntityPopups() {
     }
 
     function onMouseMove(e: MouseEvent) {
+      if (pointerDownRef.current) {
+        const dx = e.clientX - pointerDownPosRef.current.x
+        const dy = e.clientY - pointerDownPosRef.current.y
+        if (Math.hypot(dx, dy) > CLICK_DRAG_THRESHOLD_PX) {
+          pointerMovedRef.current = true
+        }
+      }
+
       const w = World.current
       if (!w || !w.camera) return
       if (placementStore.selectedItem) { cancelClose(); cancelOpen(); applyHoverTarget(null); setHoveredPopup(null); return }
@@ -164,8 +176,10 @@ export function EntityPopups() {
       applyHoverTarget(owner)
     }
 
-    function onPointerDown() {
+    function onPointerDown(e: MouseEvent) {
       pointerDownRef.current = true
+      pointerMovedRef.current = false
+      pointerDownPosRef.current = { x: e.clientX, y: e.clientY }
     }
 
     function onPointerUp() {
@@ -173,6 +187,11 @@ export function EntityPopups() {
     }
 
     function onClick(e: MouseEvent) {
+      if (pointerMovedRef.current) {
+        pointerMovedRef.current = false
+        return
+      }
+
       const w = World.current
       if (!w || !w.camera || placementStore.selectedItem) return
 
@@ -198,6 +217,7 @@ export function EntityPopups() {
       OutlineSystem.instance?.setHovered(owner.entity)
       setHoveredPopup(null)
       setMarketEntity(owner.entity)
+      soundManager.playSuccess()
     }
 
     window.addEventListener("mousemove", onMouseMove)
