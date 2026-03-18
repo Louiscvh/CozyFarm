@@ -103,7 +103,7 @@ inventoryStore.register([
     { id: "lettuce_seed", maxQty: 64, initialQty: 20 },      // ← farming
     { id: "carrot_seed", maxQty: 64, initialQty: 20 },      // ← farming
     { id: "orange_sapling", maxQty: 32, initialQty: 5 },
-    { id: "stake", maxQty: 64, initialQty: 10 },
+    { id: "stake", maxQty: 64, initialQty: 0 },
     { id: "cabana", maxQty: 8 },
     { id: "torch", maxQty: 32 },
     { id: "campfire", maxQty: 16 },
@@ -119,8 +119,8 @@ inventoryStore.register([
     { id: "shovel", maxQty: 1, infinite: true },
     { id: "watering_can", maxQty: 1, initialQty: 0, infinite: true },
     { id: "axe", maxQty: 1, initialQty: 0, infinite: true },
-    { id: "planter", maxQty: 1, infinite: true },
-    { id: "scanner", maxQty: 1, infinite: true },
+    { id: "planter", maxQty: 1, initialQty: 0, infinite: true },
+    { id: "scanner", maxQty: 1, initialQty: 0, infinite: true },
     { id: "wood", maxQty: 64, initialQty: 24 },
 ])
 
@@ -134,13 +134,13 @@ const HOTBAR_SIZE = 9
 const STARTER_HOTBAR_IDS = [
     "hoe",
     "shovel",
-    "planter",
-    "scanner",
     "wood",
     "tree1",
     "tree2",
     "tree3",
     "rock1",
+    "flower1",
+    "tulip",
 ] as const
 
 const INITIAL_HOTBAR: (string | null)[] = [
@@ -185,7 +185,7 @@ export function InventoryBar() {
     const extraItems = extraOrder
         .map(id => itemById(id))
         .filter((item): item is ItemDef => item !== null)
-        .filter(item => !(isInfinite(item) && inventoryStore.getQty(item.id) <= 0))
+        .filter(item => inventoryStore.getQty(item.id) > 0)
     const hasExtra = extraItems.length > 0
     const dragSrc = useRef<DragSource | null>(null)
     const [dragOver, setDragOver] = useState<

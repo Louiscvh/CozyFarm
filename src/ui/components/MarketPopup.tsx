@@ -39,6 +39,7 @@ const BUYABLE_ITEMS: BuyableItem[] = [
   { id: "watering_can", icon: "/images/icons/items/watering_can.png", unitPrice: 150, label: "Amélioration arrosoir", description: "Arrose une zone plus large après achat.", kind: "tool_upgrade" },
   { id: "hoe", icon: "⛏️", unitPrice: 110, label: "Amélioration houe", description: "Augmente la zone de labour.", kind: "tool_upgrade" },
   { id: "planter", icon: "🧺", unitPrice: 135, label: "Amélioration plantoir", description: "Passe le plantoir de 2x2 à 3x3 pour planter et récolter.", kind: "tool_upgrade" },
+  { id: "scanner", icon: "🩺", unitPrice: 90, label: "Scanner", description: "Analyse une culture pour voir sa progression.", kind: "stock" },
   { id: "bench", icon: "🪑", unitPrice: 18, label: "Banc", description: "Une petite déco pour aménager la ferme.", kind: "stock" },
   { id: "flower1", icon: "🌸", unitPrice: 6, label: "Fleur", description: "Ajoute de la couleur au jardin.", kind: "stock" },
   { id: "tulip", icon: "🌷", unitPrice: 7, label: "Tulipe", description: "Une déco florale élégante.", kind: "stock" },
