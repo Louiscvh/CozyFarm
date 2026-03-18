@@ -27,22 +27,21 @@ export function toggleDebugHitbox() {
   }
 }
 
-export function attachHitBox(root: THREE.Object3D): void {
+export function attachHitBox(root: THREE.Object3D, targetGroundY: number = root.position.y): void {
   root.updateMatrixWorld(true)
 
   const originalScale = root.scale.clone()
   root.scale.set(1, 1, 1)
   root.updateMatrixWorld(true)
 
-  const box = new THREE.Box3().setFromObject(root)
-
+  const localBox = new THREE.Box3().setFromObject(root)
   const size   = new THREE.Vector3()
   const center = new THREE.Vector3()
-  box.getSize(size)
-  box.getCenter(center)
+  localBox.getSize(size)
+  localBox.getCenter(center)
 
-  root.position.y -= box.min.y * originalScale.y - 0.05
   root.scale.copy(originalScale)
+  root.position.y = targetGroundY - localBox.min.y * originalScale.y
   root.updateMatrixWorld(true)
 
   const geometry = new THREE.BoxGeometry(size.x, size.y, size.z)
@@ -78,7 +77,8 @@ export async function createEntity(
     const root = createTorchMesh()
     const scale = tileSize * 0.4
     root.scale.set(scale, scale, scale)
-    attachHitBox(root)
+    root.position.y = def.yOffset ?? 0
+    attachHitBox(root, def.yOffset ?? 0)
     return root
   }
 
@@ -87,7 +87,7 @@ export async function createEntity(
     const scale = tileSize * 0.55
     root.scale.set(scale, scale, scale)
     root.position.y = def.yOffset ?? 0
-    attachHitBox(root)
+    attachHitBox(root, def.yOffset ?? 0)
     return root
   }
 
@@ -102,6 +102,8 @@ export async function createEntity(
   const cast    = def.castShadow    !== undefined ? def.castShadow    : true
   const receive = def.receiveShadow !== undefined ? def.receiveShadow : true
 
+  root.position.y = def.yOffset ?? 0
+
   root.traverse((obj: THREE.Object3D) => {
     if ((obj as THREE.Mesh).isMesh) {
       obj.castShadow    = cast
@@ -109,6 +111,6 @@ export async function createEntity(
     }
   })
 
-  attachHitBox(root)
+  attachHitBox(root, def.yOffset ?? 0)
   return root
 }
