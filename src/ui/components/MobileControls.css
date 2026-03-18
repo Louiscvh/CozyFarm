@@ -63,6 +63,12 @@
   background: rgba(255, 99, 132, 0.14);
 }
 
+.mobile-controls__button--icon {
+  min-width: 38px;
+  padding-inline: 0;
+  font-size: 16px;
+}
+
 @media (min-width: 901px) and (pointer: fine) {
   .mobile-controls {
     display: none;

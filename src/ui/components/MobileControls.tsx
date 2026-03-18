@@ -65,8 +65,14 @@ export function MobileControls() {
         )}
 
         {selectedItem && (
-          <button type="button" className="mobile-controls__button mobile-controls__button--secondary" onClick={() => placementStore.cancel()}>
-            Annuler
+          <button
+            type="button"
+            className="mobile-controls__button mobile-controls__button--secondary mobile-controls__button--icon"
+            onClick={() => placementStore.cancel()}
+            aria-label="Annuler"
+            title="Annuler"
+          >
+            ✕
           </button>
         )}
       </div>
