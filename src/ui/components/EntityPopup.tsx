@@ -23,21 +23,38 @@ function getEntityHitEntries(entities: THREE.Object3D[]) {
     .filter((entry): entry is { entity: THREE.Object3D; hitbox: THREE.Object3D } => !!entry.hitbox)
 }
 
-function findHitboxOwner(
-  intersections: THREE.Intersection<THREE.Object3D>[],
+function raycastEntityHitboxes(
+  raycaster: THREE.Raycaster,
   hitEntries: Array<{ entity: THREE.Object3D; hitbox: THREE.Object3D }>,
 ) {
-  const hitObject = intersections[0]?.object
-  if (!hitObject) return null
+  const worldHitPoint = new THREE.Vector3()
 
-  return hitEntries.find(entry => {
-    let node: THREE.Object3D | null = hitObject
-    while (node) {
-      if (node === entry.hitbox) return true
-      node = node.parent
-    }
-    return false
-  }) ?? null
+  const hits = hitEntries
+    .map((entry) => {
+      entry.hitbox.updateWorldMatrix(true, false)
+
+      const geometry = entry.hitbox as THREE.Mesh
+      if (!geometry.geometry.boundingBox) {
+        geometry.geometry.computeBoundingBox()
+      }
+
+      const localBox = geometry.geometry.boundingBox
+      if (!localBox) return null
+
+      const worldBox = localBox.clone().applyMatrix4(entry.hitbox.matrixWorld)
+      const hitPoint = raycaster.ray.intersectBox(worldBox, worldHitPoint.clone())
+      if (!hitPoint) return null
+
+      return {
+        entity: entry.entity,
+        hitbox: entry.hitbox,
+        distance: raycaster.ray.origin.distanceToSquared(hitPoint),
+      }
+    })
+    .filter((hit): hit is { entity: THREE.Object3D; hitbox: THREE.Object3D; distance: number } => !!hit)
+    .sort((a, b) => a.distance - b.distance)
+
+  return hits[0] ?? null
 }
 
 export function EntityPopups() {
@@ -128,13 +145,7 @@ export function EntityPopups() {
 
       const hitEntries = getEntityHitEntries(w.entities)
 
-      const hitboxes = hitEntries.map(entry => entry.hitbox)
-      const ownerByHitbox = new Map(hitEntries.map(entry => [entry.hitbox.uuid, entry.entity]))
-      const intersections = raycaster.intersectObjects(hitboxes, false)
-
-      const owner = intersections.length > 0
-        ? ownerByHitbox.get(intersections[0].object.uuid) ?? null
-        : null
+      const owner = raycastEntityHitboxes(raycaster, hitEntries)?.entity ?? null
 
       if (!owner) {
         if (pointerDownRef.current) return
@@ -144,7 +155,9 @@ export function EntityPopups() {
 
       if (owner.userData.id === "market") {
         if (pointerDownRef.current) return
-        applyHoverTarget(null)
+        OutlineSystem.instance?.setHovered(owner)
+        cancelOpen()
+        scheduleClose()
         return
       }
 
@@ -175,14 +188,14 @@ export function EntityPopups() {
       raycaster.setFromCamera(mouse, w.camera)
 
       const hitEntries = getEntityHitEntries(w.entities)
-      const intersects = raycaster.intersectObjects(hitEntries.map(entry => entry.hitbox), true)
-      const owner = findHitboxOwner(intersects, hitEntries)
+      const owner = raycastEntityHitboxes(raycaster, hitEntries)
 
       if (!owner || owner.entity.userData.id !== "market") {
         setMarketEntity(null)
         return
       }
 
+      OutlineSystem.instance?.setHovered(owner.entity)
       setHoveredPopup(null)
       setMarketEntity(owner.entity)
     }
