@@ -19,6 +19,29 @@
   margin-bottom: 1rem;
 }
 
+.market-popup-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.market-popup-tab {
+  min-width: 92px;
+}
+
+.market-popup-tab.is-active {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.market-popup-money {
+  margin-left: auto;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.82);
+}
+
 .market-popup-list {
   display: flex;
   flex-direction: column;
@@ -29,34 +52,32 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 32px;
+  gap: 16px;
   background: rgba(255, 255, 255, 0.06);
   border-radius: 10px;
   padding: 8px;
 }
 
-.market-popup-stock {
-  justify-self: start;
-  font-size: 10px;
-  line-height: 1;
-  letter-spacing: 0.02em;
-  opacity: 0.82;
-  padding: 3px 6px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.market-popup-footer {
-  margin-top: 10px;
+.market-popup-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  gap: 12px;
+  min-width: 0;
 }
 
-.market-popup-actions {
+.market-popup-labels {
   display: flex;
-  gap: 6px;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.market-popup-labels strong {
+  font-size: 0.9rem;
+}
+
+.market-popup-labels span {
+  font-size: 0.75rem;
+  opacity: 0.8;
 }
 
 .market-popup-icon {
@@ -77,7 +98,7 @@
 
 .market-popup-qty {
   display: flex;
-  flex-direction: rox;
+  flex-direction: row;
   align-items: center;
   gap: 16px;
 }
