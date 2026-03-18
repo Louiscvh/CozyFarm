@@ -18,3 +18,12 @@
   }
 
   
+
+@media (max-width: 900px), (pointer: coarse) {
+  .rollback-bar {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 96px);
+    left: max(12px, env(safe-area-inset-left, 0px));
+    padding: 4px;
+    gap: 4px;
+  }
+}

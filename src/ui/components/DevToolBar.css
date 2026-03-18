@@ -54,3 +54,10 @@
     backdrop-filter: blur(8px) saturate(1.05);
   }
 }
+
+
+@media (max-width: 900px), (pointer: coarse) {
+  .dev-toolbar {
+    display: none;
+  }
+}

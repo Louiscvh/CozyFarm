@@ -70,7 +70,7 @@ export class CameraController {
       if (e.touches.length === 2 && this.pinchLastDistance !== null && this.pinchLastMidpoint) {
         e.preventDefault()
         const d = this.getTouchDistance(e.touches[0], e.touches[1])
-        addZoom((this.pinchLastDistance - d) * 0.05)
+        addZoom((d - this.pinchLastDistance) * 0.12)
 
         const midpoint = this.getTouchMidpoint(e.touches[0], e.touches[1])
         this.panFromScreenDelta(midpoint.x - this.pinchLastMidpoint.x, midpoint.y - this.pinchLastMidpoint.y)

@@ -408,13 +408,7 @@ body.placing { cursor: crosshair; }
   }
 
   #placement-hint {
-    align-self: center;
-    max-width: min(100%, 34rem);
-    flex-wrap: wrap;
-    justify-content: center;
-    text-align: center;
-    padding: 8px 12px;
-    font-size: 10px;
+    display: none;
   }
 
   #inventory-wrapper {

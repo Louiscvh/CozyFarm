@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useState } from "react"
 import { placementStore } from "../store/PlacementStore"
 import { toolLevelStore, type ToolId } from "../store/ToolLevelStore"
-import { isPlaceable, isUsableOnEntity, isUsableOnTile } from "../../game/entity/ItemDef"
+import { isPlaceable } from "../../game/entity/ItemDef"
 import "./MobileControls.css"
 
 const MOBILE_QUERY = "(max-width: 900px), (pointer: coarse)"
@@ -39,24 +39,12 @@ export function MobileControls() {
     ? `${toolLevelStore.getLevel(selectedId)}/${toolLevelStore.getUnlockedLevel(selectedId)}`
     : null
 
-  const actionLabel = useMemo(() => {
-    if (!selectedItem) return "Tape sur une culture prête pour récolter."
-    if (isPlaceable(selectedItem)) return "Tape sur le terrain pour placer l'objet."
-    if (isUsableOnEntity(selectedItem) || isUsableOnTile(selectedItem)) return "Tape sur le terrain ou un objet du monde pour agir."
-    return "Choisis un objet dans la barre d'inventaire."
-  }, [selectedItem])
 
-  if (!mobile) return null
+
+  if (!mobile || (!selectedItem && !showLevel)) return null
 
   return (
     <div className="mobile-controls" aria-label="Contrôles mobile">
-      <div className="mobile-controls__tips">
-        <strong>Mobile</strong>
-        <span>1 doigt: caméra</span>
-        <span>2 doigts: déplacer + zoom</span>
-        <span>{actionLabel}</span>
-      </div>
-
       <div className="mobile-controls__actions">
         {showRotate && (
           <button type="button" className="mobile-controls__button" onClick={() => placementStore.rotate()}>
