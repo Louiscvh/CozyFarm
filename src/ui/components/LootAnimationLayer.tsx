@@ -54,6 +54,11 @@ function centerOf(el: HTMLElement) {
     return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
 }
 
+function getInventoryBumpTarget(targetAnchor: HTMLElement | null, targetSlot: HTMLElement | null) {
+    if (targetSlot) return targetSlot
+    return targetAnchor?.closest<HTMLElement>(".inv-slot") ?? targetAnchor
+}
+
 function bump(el: HTMLElement | null, className: string, durationMs = 220) {
     if (!el) return
     el.classList.remove(className)
@@ -89,6 +94,7 @@ export function LootAnimationLayer({ items }: LootAnimationLayerProps) {
             const targetSlot = targetAnchor?.closest<HTMLElement>(".inv-slot") ?? null
             const inventoryShell = document.querySelector<HTMLElement>("#inventory-slots")
             const inventoryExpandBtn = document.querySelector<HTMLElement>("#inventory-expand-btn")
+            const inventoryBumpTarget = getInventoryBumpTarget(targetAnchor, targetSlot)
 
             const to = targetAnchor
                 ? centerOf(targetAnchor)
@@ -116,13 +122,8 @@ export function LootAnimationLayer({ items }: LootAnimationLayerProps) {
 
             const bumpDelay = Math.max(0, LOOT_FLIGHT_DURATION_MS - LOOT_RECEIVE_BUMP_OVERLAP_MS + (clampedAmount - 1) * 65)
             window.setTimeout(() => {
-                if (targetAnchor) {
-                    bump(targetAnchor, "inventory-receive-bump")
-                    return
-                }
-
-                if (targetSlot) {
-                    bump(targetSlot, "inv-slot-bump")
+                if (inventoryBumpTarget) {
+                    bump(inventoryBumpTarget, targetSlot ? "inv-slot-bump" : "inventory-receive-bump")
                     return
                 }
 
