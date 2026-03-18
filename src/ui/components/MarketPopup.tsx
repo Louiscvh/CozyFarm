@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import type { Object3D } from "three"
 import { soundManager } from "../../game/system/SoundManager"
+import { toolLevelStore } from "../store/ToolLevelStore"
 import { inventoryStore } from "../store/InventoryStore"
 import { moneyStore } from "../store/MoneyStore"
 import { lootFeedbackStore } from "../store/LootFeedbackStore"
@@ -9,10 +10,12 @@ import { WorldPopup } from "./WorldPopup"
 import "./MarketPopup.css"
 
 type BuyableItem = {
-  id: "carrot_seed" | "lettuce_seed" | "orange_sapling" | "stake"
+  id: string
   icon: string
   unitPrice: number
   label: string
+  description: string
+  kind: "stock" | "tool_upgrade"
 }
 
 type SellableItem = {
@@ -26,10 +29,21 @@ type MarketMode = "buy" | "sell"
 const SELLABLE_QTY_STEPS = [-1, 5, 10] as const
 
 const BUYABLE_ITEMS: BuyableItem[] = [
-  { id: "carrot_seed", icon: "🌱", unitPrice: 2, label: "Graine carotte" },
-  { id: "lettuce_seed", icon: "🌱", unitPrice: 2, label: "Graine salade" },
-  { id: "orange_sapling", icon: "🌱", unitPrice: 12, label: "Pousse d'oranger" },
-  { id: "stake", icon: "🪵", unitPrice: 4, label: "Tuteur" },
+  { id: "carrot_seed", icon: "🌱", unitPrice: 2, label: "Graine carotte", description: "Pour lancer une culture rentable.", kind: "stock" },
+  { id: "lettuce_seed", icon: "🌱", unitPrice: 2, label: "Graine salade", description: "Parfait pour remplir les champs vite.", kind: "stock" },
+  { id: "orange_sapling", icon: "🌱", unitPrice: 12, label: "Pousse d'oranger", description: "Investissement long terme pour des oranges.", kind: "stock" },
+  { id: "stake", icon: "🪵", unitPrice: 4, label: "Tuteur", description: "Un support utile pour tes plantations.", kind: "stock" },
+  { id: "axe", icon: "🪓", unitPrice: 140, label: "Amélioration hache", description: "Fait grimper le niveau de la hache jusqu'à 3.", kind: "tool_upgrade" },
+  { id: "shovel", icon: "🛠️", unitPrice: 125, label: "Amélioration pelle", description: "Creuse et nettoie plus efficacement.", kind: "tool_upgrade" },
+  { id: "watering_can", icon: "/images/icons/items/watering_can.png", unitPrice: 150, label: "Amélioration arrosoir", description: "Arrose une zone plus large après achat.", kind: "tool_upgrade" },
+  { id: "hoe", icon: "⛏️", unitPrice: 110, label: "Amélioration houe", description: "Augmente la zone de labour.", kind: "tool_upgrade" },
+  { id: "bench", icon: "🪑", unitPrice: 18, label: "Banc", description: "Une petite déco pour aménager la ferme.", kind: "stock" },
+  { id: "flower1", icon: "🌸", unitPrice: 6, label: "Fleur", description: "Ajoute de la couleur au jardin.", kind: "stock" },
+  { id: "tulip", icon: "🌷", unitPrice: 7, label: "Tulipe", description: "Une déco florale élégante.", kind: "stock" },
+  { id: "torch", icon: "🔥", unitPrice: 10, label: "Torche", description: "Éclaire joliment tes allées.", kind: "stock" },
+  { id: "campfire", icon: "🏕️", unitPrice: 24, label: "Feu de camp", description: "Pour une ambiance cosy le soir.", kind: "stock" },
+  { id: "wood_fence", icon: "🪜", unitPrice: 8, label: "Barrière", description: "Délimite les espaces avec style.", kind: "stock" },
+  { id: "grass", icon: "🌱", unitPrice: 3, label: "Herbe", description: "Cache les zones vides avec un tapis vert.", kind: "stock" },
 ]
 
 const SELLABLE_ITEMS: SellableItem[] = [
@@ -57,7 +71,21 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
 
   useEffect(() => inventoryStore.subscribe(() => forceRefresh(v => v + 1)), [])
   useEffect(() => moneyStore.subscribe(() => forceRefresh(v => v + 1)), [])
+  useEffect(() => toolLevelStore.subscribe(() => forceRefresh(v => v + 1)), [])
 
+  const emitPurchaseFeedback = (itemId: string, icon?: string) => {
+    const cellX = marketEntity?.userData.cellX as number | undefined
+    const cellZ = marketEntity?.userData.cellZ as number | undefined
+    if (cellX === undefined || cellZ === undefined) return
+
+    lootFeedbackStore.emit({
+      itemId,
+      icon,
+      amount: 1,
+      cellX,
+      cellZ,
+    })
+  }
 
   const handleClose = () => {
     setMode("buy")
@@ -80,7 +108,23 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
       return
     }
 
-    inventoryStore.produce(item.id, 1)
+    if (item.kind === "tool_upgrade") {
+      const currentLevel = toolLevelStore.getLevel(item.id)
+      if (currentLevel >= 3) {
+        moneyStore.add(item.unitPrice)
+        soundManager.playError()
+        return
+      }
+
+      toolLevelStore.increase(item.id)
+      emitPurchaseFeedback(item.id, item.icon)
+      soundManager.playSuccess()
+      forceRefresh(v => v + 1)
+      return
+    }
+
+    inventoryStore.grant(item.id, 1)
+    emitPurchaseFeedback(item.id, item.icon)
     soundManager.playSuccess()
     forceRefresh(v => v + 1)
   }
@@ -143,19 +187,25 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
             {BUYABLE_ITEMS.map(item => {
               const stock = inventoryStore.getQty(item.id)
               const canAfford = money >= item.unitPrice
+              const toolLevel = item.kind === "tool_upgrade" ? toolLevelStore.getLevel(item.id) : null
+              const isMaxLevel = toolLevel !== null && toolLevel >= 3
+              const stockLabel = toolLevel !== null ? `niv. ${toolLevel}/3` : `stock ${stock}`
 
               return (
-                <div key={item.id} className="market-popup-row">
+                <div key={item.id} className="market-popup-row market-popup-buy-row">
                   <div className="market-popup-item">
                     <div className="market-popup-icon" aria-label={item.id}>{item.icon}
-                      <span>{stock}</span>
+                      <span>{stockLabel}</span>
                     </div>
                     <div className="market-popup-labels">
                       <strong>{item.label}</strong>
-                      <span>{item.unitPrice} 💵 / unité</span>
+                      <span>{item.description}</span>
                     </div>
                   </div>
-                  <UIButton onClick={() => buyItem(item)} disabled={!canAfford}>Acheter</UIButton>
+                  <div className="market-popup-buy-meta">
+                    <span className="market-popup-total">{item.unitPrice} 💵</span>
+                    <UIButton onClick={() => buyItem(item)} disabled={!canAfford || isMaxLevel}>{isMaxLevel ? "Max" : "Acheter"}</UIButton>
+                  </div>
                 </div>
               )
             })}

@@ -116,3 +116,15 @@
 .market-popup-total {
   font-weight: 700;
 }
+
+.market-popup-buy-row {
+  align-items: stretch;
+}
+
+.market-popup-buy-meta {
+  display: flex;
+  align-items: flex-end;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+}

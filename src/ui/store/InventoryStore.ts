@@ -19,6 +19,7 @@ class InventoryStore {
     private farmingItems = new Set<string>()
     private farmingQty = new Map<string, number>()
     private farmingMax = new Map<string, number>()
+    private bonusQuantities = new Map<string, number>()
 
     private listeners: (() => void)[] = []
     private notify() { this.listeners.forEach(fn => fn()) }
@@ -46,7 +47,7 @@ class InventoryStore {
                 this.farmingMax.set(e.id, e.maxQty)
             } else {
                 // Item de construction — géré par l'historique undo/redo
-                this.quantities.set(e.id, e.maxQty)
+                this.quantities.set(e.id, e.maxQty + (this.bonusQuantities.get(e.id) ?? 0))
             }
         }
         historyStore.subscribe(() => this.syncFromHistory())
@@ -64,6 +65,23 @@ class InventoryStore {
 
     getMax(id: string): number {
         return this.entries.get(id)?.maxQty ?? 0
+    }
+
+    grant(id: string, amount = 1): boolean {
+        if (amount <= 0) return false
+        const entry = this.entries.get(id)
+        if (!entry) return false
+
+        if (this.farmingItems.has(id)) {
+            this.produce(id, amount)
+            return true
+        }
+
+        if (entry.infinite) return true
+
+        this.bonusQuantities.set(id, (this.bonusQuantities.get(id) ?? 0) + amount)
+        this.syncFromHistory()
+        return true
     }
 
     // ─── Actions ─────────────────────────────────────────────────────────────
@@ -127,7 +145,7 @@ class InventoryStore {
 
         for (const [id, entry] of this.entries) {
             if (this.farmingItems.has(id)) continue
-            this.quantities.set(id, entry.maxQty - (placed.get(id) ?? 0))
+            this.quantities.set(id, entry.maxQty + (this.bonusQuantities.get(id) ?? 0) - (placed.get(id) ?? 0))
         }
 
         this.notify()
