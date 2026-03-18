@@ -144,26 +144,136 @@ export class World {
     deltaTime: number,
   ) {
     if (!(material instanceof THREE.MeshStandardMaterial)) return
-    if (this.isTreeTrunkMaterial(material, sourceName)) return
 
-    if (!material.userData.seasonalTreeMaterial) {
-      material.userData.seasonalTreeMaterial = true
-      material.userData.currentSeasonColor = material.color.clone().getHexString()
-      material.map = null
-      material.needsUpdate = true
+    const currentColor = this.getSmoothedTreeTint(material, targetColor, deltaTime)
+
+    if (material.map?.image) {
+      this.applySeasonalTextureTint(material, currentColor)
+    } else {
+      if (this.isTreeTrunkMaterial(material, sourceName)) return
+      material.color.copy(currentColor)
     }
 
-    const currentColor = new THREE.Color(`#${material.userData.currentSeasonColor ?? material.color.getHexString()}`)
-    const transitionAlpha = 1 - Math.exp(-deltaTime * 2.1)
-    currentColor.lerp(targetColor, transitionAlpha)
-    material.color.copy(currentColor)
-    material.emissive.copy(targetColor).multiplyScalar(seasonId === "winter" ? 1 : 0.35)
+    material.emissive.copy(currentColor).multiplyScalar(seasonId === "winter" ? 0.55 : 0.18)
     material.emissiveIntensity = emissiveIntensity
     material.roughness = seasonId === "winter" ? 0.62 : 0.9
     material.metalness = 0
-    material.userData.currentSeasonColor = currentColor.getHexString()
   }
 
+  private getSmoothedTreeTint(material: THREE.MeshStandardMaterial, targetColor: THREE.Color, deltaTime: number): THREE.Color {
+    if (!material.userData.seasonalTreeMaterial) {
+      material.userData.seasonalTreeMaterial = true
+      material.userData.currentSeasonColor = material.color.clone().getHexString()
+    }
+
+    const currentColor = new THREE.Color(`#${material.userData.currentSeasonColor ?? material.color.getHexString()}`)
+    const transitionAlpha = 1 - Math.exp(-deltaTime * 1.35)
+    currentColor.lerp(targetColor, transitionAlpha)
+    material.userData.currentSeasonColor = currentColor.getHexString()
+    return currentColor
+  }
+
+  private applySeasonalTextureTint(material: THREE.MeshStandardMaterial, tintColor: THREE.Color): void {
+    const image = material.map?.image as CanvasImageSource | undefined
+    if (!image) return
+
+    const state = this.getOrCreateSeasonalTextureState(material, image)
+    const tintHex = tintColor.getHexString()
+    if (state.lastTintHex === tintHex) return
+
+    const { width, height } = state.sourceCanvas
+    const srcImage = state.sourceCtx.getImageData(0, 0, width, height)
+    const dstImage = state.tintedCtx.createImageData(width, height)
+    const src = srcImage.data
+    const dst = dstImage.data
+    const target = { r: Math.round(tintColor.r * 255), g: Math.round(tintColor.g * 255), b: Math.round(tintColor.b * 255) }
+
+    for (let i = 0; i < src.length; i += 4) {
+      const r = src[i]
+      const g = src[i + 1]
+      const b = src[i + 2]
+      const a = src[i + 3]
+      const { h, s, l } = this.rgbToHsl(r, g, b)
+      const foliageMask = h > 0.16 && h < 0.45 && s > 0.12 ? Math.min(1, s * 1.25 + l * 0.35) : 0
+      const lightFactor = 0.35 + l * 1.05
+      const tintedR = Math.min(255, target.r * lightFactor)
+      const tintedG = Math.min(255, target.g * lightFactor)
+      const tintedB = Math.min(255, target.b * lightFactor)
+
+      dst[i] = Math.round(r * (1 - foliageMask) + tintedR * foliageMask)
+      dst[i + 1] = Math.round(g * (1 - foliageMask) + tintedG * foliageMask)
+      dst[i + 2] = Math.round(b * (1 - foliageMask) + tintedB * foliageMask)
+      dst[i + 3] = a
+    }
+
+    state.tintedCtx.putImageData(dstImage, 0, 0)
+    state.texture.needsUpdate = true
+    state.lastTintHex = tintHex
+    material.map = state.texture
+    material.color.set("#ffffff")
+    material.needsUpdate = true
+  }
+
+  private getOrCreateSeasonalTextureState(material: THREE.MeshStandardMaterial, image: CanvasImageSource) {
+    if (material.userData.seasonalTextureState) return material.userData.seasonalTextureState as {
+      sourceCanvas: HTMLCanvasElement
+      sourceCtx: CanvasRenderingContext2D
+      tintedCanvas: HTMLCanvasElement
+      tintedCtx: CanvasRenderingContext2D
+      texture: THREE.CanvasTexture
+      lastTintHex: string
+    }
+
+    const width = (image as { width?: number }).width ?? 1
+    const height = (image as { height?: number }).height ?? 1
+    const sourceCanvas = document.createElement("canvas")
+    sourceCanvas.width = width
+    sourceCanvas.height = height
+    const sourceCtx = sourceCanvas.getContext("2d")!
+    sourceCtx.drawImage(image, 0, 0, width, height)
+
+    const tintedCanvas = document.createElement("canvas")
+    tintedCanvas.width = width
+    tintedCanvas.height = height
+    const tintedCtx = tintedCanvas.getContext("2d")!
+    const texture = new THREE.CanvasTexture(tintedCanvas)
+    texture.colorSpace = THREE.SRGBColorSpace
+    texture.flipY = material.map?.flipY ?? false
+    texture.wrapS = material.map?.wrapS ?? THREE.ClampToEdgeWrapping
+    texture.wrapT = material.map?.wrapT ?? THREE.ClampToEdgeWrapping
+
+    const state = { sourceCanvas, sourceCtx, tintedCanvas, tintedCtx, texture, lastTintHex: "" }
+    material.userData.seasonalTextureState = state
+    return state
+  }
+
+  private rgbToHsl(r: number, g: number, b: number): { h: number; s: number; l: number } {
+    const rn = r / 255
+    const gn = g / 255
+    const bn = b / 255
+    const max = Math.max(rn, gn, bn)
+    const min = Math.min(rn, gn, bn)
+    const l = (max + min) / 2
+
+    if (max === min) return { h: 0, s: 0, l }
+
+    const d = max - min
+    const s = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+    let h = 0
+    switch (max) {
+      case rn:
+        h = (gn - bn) / d + (gn < bn ? 6 : 0)
+        break
+      case gn:
+        h = (bn - rn) / d + 2
+        break
+      default:
+        h = (rn - gn) / d + 4
+        break
+    }
+
+    return { h: h / 6, s, l }
+  }
 
   private isTreeTrunkMaterial(material: THREE.MeshStandardMaterial, sourceName: string): boolean {
     const label = `${sourceName} ${material.name}`.toLowerCase()
