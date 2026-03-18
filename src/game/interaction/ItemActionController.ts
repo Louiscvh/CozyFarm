@@ -10,7 +10,6 @@ import { ghostMat } from "../shared/GhostMaterial"
 import { ALL_CROPS } from "../farming/CropDefinition"
 import { getAreaOffsetsForLevel, getAreaOffsetsForTool, toolLevelStore } from "../../ui/store/ToolLevelStore"
 import { TREE_MIN_AXE_LEVEL } from "../items/AxeItem"
-import { PlanterItemDef } from "../items/PlanterItem"
 
 export class ItemActionController {
 
@@ -23,9 +22,6 @@ export class ItemActionController {
 
     // ── Drag detection ────────────────────────────────────────────────────────
     private mouseDownPos = { x: 0, y: 0 }
-    private isPointerDown = false
-    private suppressNextClick = false
-    private lastHoldActionKey: string | null = null
 
     // ── Store subscription ────────────────────────────────────────────────────
     private unsubscribeStore: (() => void) | null = null
@@ -34,7 +30,6 @@ export class ItemActionController {
     private readonly _onMouseDown = this.onMouseDown.bind(this)
     private readonly _onMouseMove = this.onMouseMove.bind(this)
     private readonly _onClick = this.onClick.bind(this)
-    private readonly _onMouseUp = this.onMouseUp.bind(this)
 
     // ── Injected dependencies ─────────────────────────────────────────────────
     private readonly camera: THREE.Camera
@@ -53,7 +48,6 @@ export class ItemActionController {
         window.addEventListener("mousedown", this._onMouseDown)
         window.addEventListener("mousemove", this._onMouseMove)
         window.addEventListener("click", this._onClick)
-        window.addEventListener("mouseup", this._onMouseUp)
         this.unsubscribeStore = placementStore.subscribe(() => this.onStoreChange())
     }
 
@@ -64,7 +58,6 @@ export class ItemActionController {
         window.removeEventListener("mousedown", this._onMouseDown)
         window.removeEventListener("mousemove", this._onMouseMove)
         window.removeEventListener("click", this._onClick)
-        window.removeEventListener("mouseup", this._onMouseUp)
     }
 
     // ─── Helpers généraux ─────────────────────────────────────────────────────
@@ -284,20 +277,11 @@ export class ItemActionController {
 
     private onMouseDown(e: MouseEvent): void {
         this.mouseDownPos = { x: e.clientX, y: e.clientY }
-        this.isPointerDown = e.button === 0
-        this.lastHoldActionKey = null
-        if (e.button !== 0 || (e.target as HTMLElement).closest("#ui-root")) return
-        const acted = this.tryPointerAction()
-        this.suppressNextClick = acted
     }
 
-    private onMouseMove(e: MouseEvent): void {
+    private onMouseMove(): void {
         const item = placementStore.selectedItem
         const hoveredCell = placementStore.hoveredCell
-
-        if (this.isPointerDown && hoveredCell && (e.buttons & 1) === 1) {
-            this.tryPointerAction()
-        }
 
         // Ghost item (plaçable ou graine) — cursor géré par PlacementController
         if (item && (isPlaceable(item) || !!ALL_CROPS.find(c => c.seedItemId === item.id)?.usePlacementGhost)) {
@@ -324,19 +308,10 @@ export class ItemActionController {
         this.setCursor("default")
     }
 
-    private onMouseUp(): void {
-        this.isPointerDown = false
-        this.lastHoldActionKey = null
-    }
-
     // ─── Click ────────────────────────────────────────────────────────────────
 
     private onClick(e: MouseEvent): void {
         if ((e.target as HTMLElement).closest("#ui-root")) return
-        if (this.suppressNextClick) {
-            this.suppressNextClick = false
-            return
-        }
         if (this.isDrag(e)) return
 
         this.mouse.copy(this.toNDC(e))
@@ -349,27 +324,6 @@ export class ItemActionController {
 
         if (isUsableOnEntity(item)) { this.handleUseOnEntity(item); return }
         if (isUsableOnTile(item)) { this.handleUseOnTile(item); return }
-    }
-
-    private tryPointerAction(): boolean {
-        const hoveredCell = placementStore.hoveredCell
-        if (!hoveredCell) return false
-
-        const item = placementStore.selectedItem ?? (this.world.cropManager.getCrop(hoveredCell.cellX, hoveredCell.cellZ)?.isReady ? PlanterItemDef : null)
-        if (!item) return false
-
-        const actionKey = `${item.id}:${hoveredCell.cellX}:${hoveredCell.cellZ}`
-        if (this.lastHoldActionKey === actionKey) return false
-
-        let success = false
-        if (!placementStore.selectedItem && item.id === "planter") {
-            success = this.tryHarvestCrop()
-        } else if (isUsableOnTile(item)) {
-            success = this.handleUseOnTile(item, true)
-        }
-
-        if (success) this.lastHoldActionKey = actionKey
-        return success
     }
 
     // ─── Harvest ──────────────────────────────────────────────────────────────

@@ -1,5 +1,3 @@
-import { placementStore } from "../ui/store/PlacementStore"
-
 export class MouseDrag {
   dragging = false
   lastX = 0
@@ -19,10 +17,6 @@ export class MouseDrag {
     window.addEventListener("mousedown", e => {
       if (e.button !== 0) return
       if ((e.target as HTMLElement | null)?.closest?.("#ui-root")) return
-
-      const selectedItem = placementStore.selectedItem
-      const blocksCameraDrag = selectedItem?.id === "planter"
-      if (blocksCameraDrag) return
 
       e.preventDefault()
       this.dragging = true
