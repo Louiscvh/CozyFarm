@@ -28,25 +28,14 @@ type MarketPopupProps = {
 }
 
 export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
-  const [revision, setRevision] = useState(0)
+  const [, forceRefresh] = useState(0)
   const [sellQtyById, setSellQtyById] = useState<Record<SellableItem["id"], number>>({
     carrot: 1,
     lettuce: 1,
     orange: 1,
   })
 
-  useEffect(() => inventoryStore.subscribe(() => setRevision(v => v + 1)), [])
-
-  useEffect(() => {
-    setSellQtyById((prev) => {
-      const next = { ...prev }
-      for (const item of SELLABLE_ITEMS) {
-        const stock = inventoryStore.getQty(item.id)
-        next[item.id] = Math.max(1, Math.min(prev[item.id] ?? 1, stock || 1))
-      }
-      return next
-    })
-  }, [revision])
+  useEffect(() => inventoryStore.subscribe(() => forceRefresh(v => v + 1)), [])
 
   if (!open) return null
 
@@ -79,7 +68,7 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
       })
     }
 
-    setRevision(v => v + 1)
+    forceRefresh(v => v + 1)
   }
 
   return (
@@ -90,6 +79,8 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
       anchorResolver={(entityObject) => entityObject.getObjectByName("__hitbox__") ?? entityObject}
       offsetY={0.38}
       className="market-popup"
+      onMouseDown={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
     >
       <div>
         <h3>🛒 Marché</h3>

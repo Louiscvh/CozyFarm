@@ -15,6 +15,8 @@ interface WorldPopupProps {
   readonly children: ReactNode
   readonly onMouseEnter?: MouseEventHandler<HTMLDivElement>
   readonly onMouseLeave?: MouseEventHandler<HTMLDivElement>
+  readonly onMouseDown?: MouseEventHandler<HTMLDivElement>
+  readonly onClick?: MouseEventHandler<HTMLDivElement>
 }
 
 export function WorldPopup({
@@ -29,6 +31,8 @@ export function WorldPopup({
   children,
   onMouseEnter,
   onMouseLeave,
+  onMouseDown,
+  onClick,
 }: WorldPopupProps) {
   const popupRef = useRef<HTMLDivElement | null>(null)
   const currentPosRef = useRef<{ x: number; y: number } | null>(null)
@@ -107,6 +111,8 @@ export function WorldPopup({
       ref={popupRef}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
+      onMouseDown={onMouseDown}
+      onClick={onClick}
       style={{
         position: "absolute",
         left: 0,

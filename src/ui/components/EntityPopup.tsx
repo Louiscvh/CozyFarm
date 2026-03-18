@@ -70,6 +70,7 @@ export function EntityPopups() {
   const pointerDownRef = useRef(false)
   const pointerDownPosRef = useRef({ x: 0, y: 0 })
   const pointerMovedRef = useRef(false)
+  const marketCursorActiveRef = useRef(false)
 
   const HOVER_OPEN_DELAY_MS = 250
   const CLICK_DRAG_THRESHOLD_PX = 8
@@ -111,6 +112,23 @@ export function EntityPopups() {
     const raycaster = new THREE.Raycaster()
     const mouse = new THREE.Vector2()
 
+    const setMarketCursor = (enabled: boolean) => {
+      const canvas = Renderer.instance?.renderer?.domElement
+      if (!canvas) return
+      if (enabled) {
+        if (!marketCursorActiveRef.current) {
+          canvas.style.cursor = "pointer"
+          marketCursorActiveRef.current = true
+        }
+        return
+      }
+
+      if (marketCursorActiveRef.current) {
+        canvas.style.cursor = "default"
+        marketCursorActiveRef.current = false
+      }
+    }
+
     const applyHoverTarget = (target: THREE.Object3D | null) => {
       OutlineSystem.instance?.setHovered(target)
 
@@ -138,7 +156,7 @@ export function EntityPopups() {
 
       const w = World.current
       if (!w || !w.camera) return
-      if (placementStore.selectedItem) { cancelClose(); cancelOpen(); applyHoverTarget(null); setHoveredPopup(null); return }
+      if (placementStore.selectedItem) { setMarketCursor(false); cancelClose(); cancelOpen(); applyHoverTarget(null); setHoveredPopup(null); return }
       if (isOverPopup.current) { cancelClose(); return }
 
       const renderer = Renderer.instance?.renderer
@@ -146,6 +164,7 @@ export function EntityPopups() {
       const rect = renderer.domElement.getBoundingClientRect()
       if (rect.width <= 0 || rect.height <= 0) return
       if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) {
+        setMarketCursor(false)
         if (pointerDownRef.current) return
         applyHoverTarget(null)
         return
@@ -160,12 +179,14 @@ export function EntityPopups() {
       const owner = raycastEntityHitboxes(raycaster, hitEntries)?.entity ?? null
 
       if (!owner) {
+        setMarketCursor(false)
         if (pointerDownRef.current) return
         applyHoverTarget(null)
         return
       }
 
       if (owner.userData.id === "market") {
+        setMarketCursor(true)
         if (pointerDownRef.current) return
         OutlineSystem.instance?.setHovered(owner)
         cancelOpen()
@@ -173,6 +194,7 @@ export function EntityPopups() {
         return
       }
 
+      setMarketCursor(false)
       applyHoverTarget(owner)
     }
 
@@ -229,6 +251,7 @@ export function EntityPopups() {
       window.removeEventListener("mousedown", onPointerDown)
       window.removeEventListener("mouseup", onPointerUp)
       window.removeEventListener("click", onClick)
+      setMarketCursor(false)
       cancelClose()
       cancelOpen()
       applyHoverTarget(null)
