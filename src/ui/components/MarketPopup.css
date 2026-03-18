@@ -27,7 +27,7 @@
 
 .market-popup-row {
   display: grid;
-  grid-template-columns: 1.2fr 0.8fr 1.4fr 0.8fr auto;
+  grid-template-columns: auto 0.9fr 1.8fr 0.8fr auto;
   align-items: center;
   gap: 8px;
   background: rgba(255, 255, 255, 0.06);
@@ -36,23 +36,14 @@
 }
 
 .market-popup-stock {
-  font-size: 12px;
-  opacity: 0.8;
-}
-
-.market-popup-qty {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.market-popup-qty-input {
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  background: rgba(0, 0, 0, 0.2);
-  color: #fff;
-  padding: 4px;
-  text-align: center;
+  justify-self: start;
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  opacity: 0.82;
+  padding: 3px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .market-popup-footer {
@@ -66,4 +57,31 @@
 .market-popup-actions {
   display: flex;
   gap: 6px;
+}
+
+.market-popup-icon {
+  font-size: 1.4rem;
+  line-height: 1;
+}
+
+.market-popup-qty {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.market-popup-qty-value {
+  font-size: 0.85rem;
+  opacity: 0.9;
+}
+
+.market-popup-step-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.market-popup-total {
+  font-weight: 700;
 }
