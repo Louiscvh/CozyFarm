@@ -1,5 +1,5 @@
 // src/ui/components/InventoryBar.tsx
-import { useState, useEffect, useMemo, useRef } from "react"
+import { useState, useEffect, useRef } from "react"
 import { placementStore } from "../store/PlacementStore"
 import { inventoryStore } from "../store/InventoryStore"
 import type { ItemDef } from "../../game/entity/ItemDef"
@@ -182,13 +182,10 @@ export function InventoryBar() {
         ALL_ITEMS.map(item => item.id).filter(id => !INITIAL_HOTBAR.includes(id))
     )
 
-    const extraItems = useMemo(
-        () => extraOrder
-            .map(id => itemById(id))
-            .filter((item): item is ItemDef => item !== null)
-            .filter(item => !(isInfinite(item) && inventoryStore.getQty(item.id) <= 0)),
-        [extraOrder]
-    )
+    const extraItems = extraOrder
+        .map(id => itemById(id))
+        .filter((item): item is ItemDef => item !== null)
+        .filter(item => !(isInfinite(item) && inventoryStore.getQty(item.id) <= 0))
     const hasExtra = extraItems.length > 0
     const dragSrc = useRef<DragSource | null>(null)
     const [dragOver, setDragOver] = useState<

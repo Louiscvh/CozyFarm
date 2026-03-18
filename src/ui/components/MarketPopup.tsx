@@ -226,7 +226,7 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
                     </div>
                   </div>
                   <div className="market-popup-buy-meta">
-                    <UIButton playClickSound={false} onClick={() => buyItem(item)} disabled={!canAfford || isMaxLevel}>{isMaxLevel ? "Max" : !ownedTool && item.kind === "tool_upgrade" ? `Acheter • ${item.unitPrice} 💵` : item.unitPrice + " 💵"}</UIButton>
+                    <UIButton playClickSound={false} onClick={() => buyItem(item)} disabled={!canAfford || isMaxLevel}>{isMaxLevel ? "Max" : item.unitPrice + " 💵"}</UIButton>
                   </div>
                 </div>
               )
