@@ -443,7 +443,7 @@ export function InventoryBar() {
                         Clique pour couper un arbre - Max: {getBestTreeLabelForAxeLevel(level)}
                         <span className="hint-sep">·</span>
                         <span className="hint-key">↑</span>/<span className="hint-key">↓</span>
-                        Ajuster ({unlockedLevel} pallier{unlockedLevel > 1 ? "s" : ""} débloqué{unlockedLevel > 1 ? "s" : ""})
+                        {level}/{unlockedLevel}
                         <span className="hint-sep">·</span>
                         {renderEscapeHint()}
                     </div>
@@ -461,7 +461,7 @@ export function InventoryBar() {
                     {showLevel && (
                         <>
                             <span className="hint-key">↑</span>/<span className="hint-key">↓</span>
-                            Ajuster ({unlockedLevel} pallier{unlockedLevel > 1 ? "s" : ""} débloqué{unlockedLevel > 1 ? "s" : ""})
+                            {level}/{unlockedLevel}
                             <span className="hint-sep">·</span>
                         </>
                     )}
