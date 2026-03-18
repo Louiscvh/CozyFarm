@@ -336,12 +336,8 @@ export class PlacementController {
         const root = await createEntity(entity, this.world.tileSize)
         if (this._ghostToken !== token) return
 
-        const info = this.world.instanceManager.getInfo(entity)
-        const groundSnap = info?.yOffset ?? (() => {
-            const box = new THREE.Box3().setFromObject(root)
-            return box.min.y < 0 ? -box.min.y : 0
-        })()
-        this.yOffset = groundSnap
+        root.updateMatrixWorld(true)
+        this.yOffset = root.position.y
 
         applyGhostMaterials(root)
         root.rotation.y = targetRotRad
