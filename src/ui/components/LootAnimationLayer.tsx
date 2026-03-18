@@ -20,7 +20,7 @@ interface LootAnimationLayerProps {
 
 const worldProjectVector = new THREE.Vector3()
 const LOOT_FLIGHT_DURATION_MS = 580
-const LOOT_RECEIVE_BUMP_OVERLAP_MS = 110
+const LOOT_RECEIVE_BUMP_OVERLAP_MS = 180
 
 function worldCellToScreen(cellX: number, cellZ: number) {
     const world = World.current
