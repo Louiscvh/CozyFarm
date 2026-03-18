@@ -342,12 +342,13 @@ body.placing { cursor: crosshair; }
 }
 
 .inv-slot-bump {
-  animation: inventoryBump 200ms cubic-bezier(0.33, 1, 0.68, 1);
+  animation: inventoryBump 260ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @keyframes inventoryBump {
   0% { transform: scale(1); }
-  40% { transform: scale(1.1); }
+  38% { transform: scale(1.16); }
+  68% { transform: scale(0.97); }
   100% { transform: scale(1); }
 }
 
@@ -355,11 +356,12 @@ body.placing { cursor: crosshair; }
 #inventory-slots.inventory-receive-bump,
 #inventory-expand-btn.inventory-receive-bump,
 [data-money-counter='true'].inventory-receive-bump {
-  animation: inventoryReceiveBump 220ms cubic-bezier(0.33, 1, 0.68, 1);
+  animation: inventoryReceiveBump 280ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 @keyframes inventoryReceiveBump {
   0% { transform: scale(1); }
-  45% { transform: scale(1.045); }
+  35% { transform: scale(1.12); }
+  65% { transform: scale(0.98); }
   100% { transform: scale(1); }
 }
