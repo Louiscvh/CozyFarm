@@ -34,17 +34,15 @@ export function attachHitBox(root: THREE.Object3D, targetGroundY: number = root.
   root.scale.set(1, 1, 1)
   root.updateMatrixWorld(true)
 
-  const sourceBox = new THREE.Box3().setFromObject(root)
-  root.scale.copy(originalScale)
-  root.position.y = targetGroundY - sourceBox.min.y * originalScale.y
-  root.updateMatrixWorld(true)
-
-  const groundedBox = new THREE.Box3().setFromObject(root)
-
+  const localBox = new THREE.Box3().setFromObject(root)
   const size   = new THREE.Vector3()
   const center = new THREE.Vector3()
-  groundedBox.getSize(size)
-  groundedBox.getCenter(center)
+  localBox.getSize(size)
+  localBox.getCenter(center)
+
+  root.scale.copy(originalScale)
+  root.position.y = targetGroundY - localBox.min.y * originalScale.y
+  root.updateMatrixWorld(true)
 
   const geometry = new THREE.BoxGeometry(size.x, size.y, size.z)
 
