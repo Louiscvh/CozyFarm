@@ -115,8 +115,8 @@ export class World {
     )
 
     for (const treeDef of Object.values(World.TREE_DEFS)) {
-      this.instanceManager.forEachMaterial(treeDef, (material, sourceName) => {
-        this.tintTreeMaterial(material, sourceName, targetColor, emissiveIntensity, season.id)
+      this.instanceManager.forEachMaterial(treeDef, material => {
+        this.tintTreeMaterial(material, targetColor, emissiveIntensity, season.id)
       })
     }
 
@@ -129,7 +129,7 @@ export class World {
         const mesh = obj as THREE.Mesh
         const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
         for (const material of materials) {
-          this.tintTreeMaterial(material, mesh.name, targetColor, emissiveIntensity, season.id)
+          this.tintTreeMaterial(material, targetColor, emissiveIntensity, season.id)
         }
       })
     }
@@ -137,13 +137,11 @@ export class World {
 
   private tintTreeMaterial(
     material: THREE.Material,
-    sourceName: string,
     targetColor: THREE.Color,
     emissiveIntensity: number,
     seasonId: string,
   ) {
     if (!(material instanceof THREE.MeshStandardMaterial)) return
-    if (!this.isLikelyFoliageMaterial(material, sourceName)) return
 
     if (!material.userData.seasonalTreeMaterial) {
       material.userData.seasonalTreeMaterial = true
@@ -153,7 +151,7 @@ export class World {
     }
 
     const currentColor = new THREE.Color(`#${material.userData.currentSeasonColor ?? material.color.getHexString()}`)
-    currentColor.lerp(targetColor, 0.12)
+    currentColor.lerp(targetColor, 0.22)
     material.color.copy(currentColor)
     material.emissive.copy(targetColor).multiplyScalar(seasonId === "winter" ? 1 : 0.35)
     material.emissiveIntensity = emissiveIntensity
@@ -163,20 +161,6 @@ export class World {
   }
 
 
-  private isLikelyFoliageMaterial(material: THREE.MeshStandardMaterial, sourceName: string): boolean {
-    const label = `${sourceName} ${material.name}`.toLowerCase()
-    if (/(trunk|bark|wood|branch|stem)/.test(label)) return false
-    if (/(leaf|leaves|foliage|canopy|crown)/.test(label)) return true
-
-    const hsl = { h: 0, s: 0, l: 0 }
-    material.color.getHSL(hsl)
-
-    const looksLikeBark = hsl.h > 0.03 && hsl.h < 0.14 && hsl.s > 0.12 && hsl.l < 0.45
-    if (looksLikeBark) return false
-
-    if (material.map && hsl.s < 0.08 && hsl.l > 0.7) return true
-    return hsl.l > 0.2 && ((hsl.h > 0.16 && hsl.h < 0.45) || hsl.s > 0.18)
-  }
 
   private applyTreeWind(now: number) {
     const baseFrequency = 0.75
