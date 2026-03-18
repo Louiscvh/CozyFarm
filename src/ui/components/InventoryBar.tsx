@@ -493,6 +493,7 @@ export function InventoryBar() {
             >
                 {item ? (
                     <UIButton
+                        data-inv-slot-id={item.id}
                         className={[
                             "inv-slot",
                             selectedId === item.id ? "selected" : "",
@@ -541,6 +542,7 @@ export function InventoryBar() {
                 onDrop={() => onDropExtra(item.id)}
             >
                 <UIButton
+                    data-inv-slot-id={item.id}
                     className={[
                         "inv-slot",
                         selectedId === item.id ? "selected" : "",
