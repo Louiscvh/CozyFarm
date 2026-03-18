@@ -20,7 +20,7 @@ type BuyableItem = {
 }
 
 type SellableItem = {
-  id: "carrot" | "lettuce" | "orange"
+  id: "carrot" | "lettuce" | "orange" | "wood"
   icon: string
   unitPrice: number
 }
@@ -51,12 +51,14 @@ const SELLABLE_ITEMS: SellableItem[] = [
   { id: "carrot", icon: "🥕", unitPrice: 3 },
   { id: "lettuce", icon: "🥬", unitPrice: 4 },
   { id: "orange", icon: "🍊", unitPrice: 5 },
+  { id: "wood", icon: "🪵", unitPrice: 2 },
 ]
 
 const DEFAULT_SELL_QTY: Record<SellableItem["id"], number> = {
   carrot: 1,
   lettuce: 1,
   orange: 1,
+  wood: 1,
 }
 
 type MarketPopupProps = {
