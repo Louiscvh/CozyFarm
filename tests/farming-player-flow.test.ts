@@ -16,6 +16,7 @@ function createFakeWorld() {
   const tilled = new Set<Cell>()
   const watered = new Set<Cell>()
   const planted = new Set<Cell>()
+  const harvestedParticles: Cell[] = []
 
   const tilesFactory = {
     tillCell(cellX: number, cellZ: number) {
@@ -43,6 +44,12 @@ function createFakeWorld() {
     },
     playPlantAnimation() {
       return
+    },
+    playSoilHarvestParticles(cellX: number, cellZ: number) {
+      harvestedParticles.push(key(cellX, cellZ))
+    },
+    isSoil(cellX: number, cellZ: number) {
+      return tilled.has(key(cellX, cellZ))
     },
     isWatered(cellX: number, cellZ: number) {
       return watered.has(key(cellX, cellZ))
@@ -91,7 +98,7 @@ function createFakeWorld() {
     },
   }
 
-  return { world: { tilesFactory, cropManager }, tilled, watered, planted }
+  return { world: { tilesFactory, cropManager }, tilled, watered, planted, harvestedParticles }
 }
 
 test("parcours joueur: bêcher -> planter -> arroser -> récolter", () => {
@@ -99,7 +106,7 @@ test("parcours joueur: bêcher -> planter -> arroser -> récolter", () => {
   toolLevelStore.setLevel("watering_can", 1)
   toolLevelStore.setLevel("shovel", 1)
 
-  const { world, tilled, watered, planted } = createFakeWorld()
+  const { world, tilled, watered, planted, harvestedParticles } = createFakeWorld()
   World.current = world as never
 
   const produced: Array<{ id: string; amount: number }> = []
@@ -150,6 +157,7 @@ test("parcours joueur: bêcher -> planter -> arroser -> récolter", () => {
       { id: "carrot", amount: 1 },
       { id: "carrot", amount: 1 },
     ])
+    assert.deepEqual(harvestedParticles, ["10|12"])
   } finally {
     inventoryStore.produce = originalProduce
     World.current = null

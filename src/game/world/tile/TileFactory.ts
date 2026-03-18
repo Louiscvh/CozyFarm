@@ -238,6 +238,11 @@ export class TileFactory {
         }
     }
 
+    playSoilHarvestParticles(cellX: number, cellZ: number): void {
+        if (!this.isSoil(cellX, cellZ)) return
+        this.tillParticles.spawnAtCell(cellX, cellZ, "dirt")
+    }
+
     hasSnowAtCell(cellX: number, cellZ: number): boolean {
         return this.snowSlots.has(this.cellKey(cellX, cellZ))
     }

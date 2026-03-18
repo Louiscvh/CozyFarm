@@ -1,5 +1,5 @@
 // src/ui/components/InventoryBar.tsx
-import { useState, useEffect, useMemo, useRef } from "react"
+import { useState, useEffect, useRef } from "react"
 import { placementStore } from "../store/PlacementStore"
 import { inventoryStore } from "../store/InventoryStore"
 import type { ItemDef } from "../../game/entity/ItemDef"
@@ -103,7 +103,7 @@ inventoryStore.register([
     { id: "lettuce_seed", maxQty: 64, initialQty: 20 },      // ← farming
     { id: "carrot_seed", maxQty: 64, initialQty: 20 },      // ← farming
     { id: "orange_sapling", maxQty: 32, initialQty: 5 },
-    { id: "stake", maxQty: 64, initialQty: 10 },
+    { id: "stake", maxQty: 64, initialQty: 0 },
     { id: "cabana", maxQty: 8 },
     { id: "torch", maxQty: 32 },
     { id: "campfire", maxQty: 16 },
@@ -117,10 +117,10 @@ inventoryStore.register([
     { id: "lettuce", maxQty: 9999, initialQty: 64 },      // ← farming
     { id: "orange", maxQty: 99, initialQty: 0 },
     { id: "shovel", maxQty: 1, infinite: true },
-    { id: "watering_can", maxQty: 1, infinite: true },
-    { id: "axe", maxQty: 1, infinite: true },
-    { id: "planter", maxQty: 1, infinite: true },
-    { id: "scanner", maxQty: 1, infinite: true },
+    { id: "watering_can", maxQty: 1, initialQty: 0, infinite: true },
+    { id: "axe", maxQty: 1, initialQty: 0, infinite: true },
+    { id: "planter", maxQty: 1, initialQty: 0, infinite: true },
+    { id: "scanner", maxQty: 1, initialQty: 0, infinite: true },
     { id: "wood", maxQty: 64, initialQty: 24 },
 ])
 
@@ -131,9 +131,21 @@ const isInfinite = (item: ItemDef): boolean =>
 
 const HOTBAR_SIZE = 9
 
+const STARTER_HOTBAR_IDS = [
+    "hoe",
+    "shovel",
+    "wood",
+    "tree1",
+    "tree2",
+    "tree3",
+    "rock1",
+    "flower1",
+    "tulip",
+] as const
+
 const INITIAL_HOTBAR: (string | null)[] = [
-    ...ALL_ITEMS.slice(0, HOTBAR_SIZE).map(i => i.id),
-    ...Array(Math.max(0, HOTBAR_SIZE - ALL_ITEMS.length)).fill(null),
+    ...STARTER_HOTBAR_IDS.slice(0, HOTBAR_SIZE),
+    ...Array(Math.max(0, HOTBAR_SIZE - STARTER_HOTBAR_IDS.length)).fill(null),
 ]
 
 const itemById = (id: string | null): ItemDef | null =>
@@ -170,10 +182,10 @@ export function InventoryBar() {
         ALL_ITEMS.map(item => item.id).filter(id => !INITIAL_HOTBAR.includes(id))
     )
 
-    const extraItems = useMemo(
-        () => extraOrder.map(id => itemById(id)).filter((item): item is ItemDef => item !== null),
-        [extraOrder]
-    )
+    const extraItems = extraOrder
+        .map(id => itemById(id))
+        .filter((item): item is ItemDef => item !== null)
+        .filter(item => inventoryStore.getQty(item.id) > 0)
     const hasExtra = extraItems.length > 0
     const dragSrc = useRef<DragSource | null>(null)
     const [dragOver, setDragOver] = useState<

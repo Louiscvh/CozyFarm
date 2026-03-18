@@ -39,6 +39,7 @@ const BUYABLE_ITEMS: BuyableItem[] = [
   { id: "watering_can", icon: "/images/icons/items/watering_can.png", unitPrice: 150, label: "Amélioration arrosoir", description: "Arrose une zone plus large après achat.", kind: "tool_upgrade" },
   { id: "hoe", icon: "⛏️", unitPrice: 110, label: "Amélioration houe", description: "Augmente la zone de labour.", kind: "tool_upgrade" },
   { id: "planter", icon: "🧺", unitPrice: 135, label: "Amélioration plantoir", description: "Passe le plantoir de 2x2 à 3x3 pour planter et récolter.", kind: "tool_upgrade" },
+  { id: "scanner", icon: "🩺", unitPrice: 90, label: "Scanner", description: "Analyse une culture pour voir sa progression.", kind: "stock" },
   { id: "bench", icon: "🪑", unitPrice: 18, label: "Banc", description: "Une petite déco pour aménager la ferme.", kind: "stock" },
   { id: "flower1", icon: "🌸", unitPrice: 6, label: "Fleur", description: "Ajoute de la couleur au jardin.", kind: "stock" },
   { id: "tulip", icon: "🌷", unitPrice: 7, label: "Tulipe", description: "Une déco florale élégante.", kind: "stock" },
@@ -113,6 +114,15 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
     }
 
     if (item.kind === "tool_upgrade") {
+      const alreadyOwned = inventoryStore.getQty(item.id) > 0
+      if (!alreadyOwned) {
+        inventoryStore.grant(item.id, 1)
+        emitPurchaseFeedback(item.id, item.icon)
+        soundManager.playSuccess()
+        forceRefresh(v => v + 1)
+        return
+      }
+
       const unlockedLevel = toolLevelStore.getUnlockedLevel(item.id)
       if (unlockedLevel >= toolLevelStore.getMaxLevel(item.id)) {
         moneyStore.add(item.unitPrice)
@@ -196,15 +206,16 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
           <div className="market-popup-list">
             {BUYABLE_ITEMS.map(item => {
               const canAfford = money >= item.unitPrice
+              const ownedTool = item.kind === "tool_upgrade" ? inventoryStore.getQty(item.id) > 0 : false
               const unlockedLevel = item.kind === "tool_upgrade" ? toolLevelStore.getUnlockedLevel(item.id) : null
               const maxLevel = item.kind === "tool_upgrade" ? toolLevelStore.getMaxLevel(item.id) : null
-              const isMaxLevel = unlockedLevel !== null && maxLevel !== null && unlockedLevel >= maxLevel
+              const isMaxLevel = ownedTool && unlockedLevel !== null && maxLevel !== null && unlockedLevel >= maxLevel
 
               return (
                 <div key={item.id} className="market-popup-row market-popup-buy-row">
                   <div className="market-popup-item">
                     <div className="market-popup-icon" aria-label={item.id}><ItemIcon icon={item.icon} alt={item.label} className="market-popup-icon-asset" />
-                      {unlockedLevel !== null  && <span className="market-popup-icon-count">
+                      {ownedTool && unlockedLevel !== null  && <span className="market-popup-icon-count">
                         <span>Niv.</span>
                         <span>{`${unlockedLevel}`}</span>
                       </span>}
