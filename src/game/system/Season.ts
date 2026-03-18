@@ -9,6 +9,9 @@ export interface SeasonConfig {
   skyColor: string
   lightTint: string
   terrainTint: string
+  treeFoliageTint: string
+  citrusFoliageTint: string
+  pineFoliageTint: string
   temperatureOffset: number
   growthMultiplier: number
 }
@@ -23,10 +26,10 @@ export interface SeasonState {
 
 export const DAYS_PER_SEASON = 30
 const SEASONS: SeasonConfig[] = [
-  { id: "autumn", label: "Automne", shortLabel: "🍂", skyColor: "#f4b184", lightTint: "#ffd2b0", terrainTint: "#d59f72", temperatureOffset: -2, growthMultiplier: 0.9 },
-  { id: "winter", label: "Hiver", shortLabel: "❄️", skyColor: "#cfe4ff", lightTint: "#e6f1ff", terrainTint: "#e5edf7", temperatureOffset: -8, growthMultiplier: 0.55 },
-  { id: "spring", label: "Printemps", shortLabel: "🌸", skyColor: "#b7e6c9", lightTint: "#e0ffd9", terrainTint: "#8ccd7b", temperatureOffset: 1, growthMultiplier: 1.2 },
-  { id: "summer", label: "Été", shortLabel: "🌻", skyColor: "#ffd39a", lightTint: "#ffe3b0", terrainTint: "#c8b05a", temperatureOffset: 5, growthMultiplier: 1.05 },
+  { id: "autumn", label: "Automne", shortLabel: "🍂", skyColor: "#f4b184", lightTint: "#ffd2b0", terrainTint: "#d59f72", treeFoliageTint: "#d89045", citrusFoliageTint: "#7aa24c", pineFoliageTint: "#55794c", temperatureOffset: -2, growthMultiplier: 0.9 },
+  { id: "winter", label: "Hiver", shortLabel: "❄️", skyColor: "#cfe4ff", lightTint: "#e6f1ff", terrainTint: "#e5edf7", treeFoliageTint: "#c9bfa8", citrusFoliageTint: "#728a62", pineFoliageTint: "#4d6651", temperatureOffset: -8, growthMultiplier: 0.55 },
+  { id: "spring", label: "Printemps", shortLabel: "🌸", skyColor: "#b7e6c9", lightTint: "#e0ffd9", terrainTint: "#8ccd7b", treeFoliageTint: "#84cb63", citrusFoliageTint: "#5fac45", pineFoliageTint: "#3c7442", temperatureOffset: 1, growthMultiplier: 1.2 },
+  { id: "summer", label: "Été", shortLabel: "🌻", skyColor: "#ffd39a", lightTint: "#ffe3b0", terrainTint: "#c8b05a", treeFoliageTint: "#5fae45", citrusFoliageTint: "#488f38", pineFoliageTint: "#2d6137", temperatureOffset: 5, growthMultiplier: 1.05 },
 ]
 
 const DAYS_PER_YEAR = DAYS_PER_SEASON * SEASONS.length
@@ -58,4 +61,21 @@ export function shiftSeason(step: -1 | 1): void {
   const targetAbsoluteSeason = Math.max(0, absoluteSeason + step)
   const targetTotalDays = targetAbsoluteSeason * DAYS_PER_SEASON + dayProgress
   Time.elapsed = targetTotalDays * Time.cycleSeconds
+}
+
+
+function getSeasonBlendIndices(yearProgress: number): { currentIndex: number; nextIndex: number; blend: number } {
+  const absoluteSeason = wrap01(yearProgress) * SEASONS.length
+  const currentIndex = Math.floor(absoluteSeason) % SEASONS.length
+  const nextIndex = (currentIndex + 1) % SEASONS.length
+  return { currentIndex, nextIndex, blend: absoluteSeason - Math.floor(absoluteSeason) }
+}
+
+export function getBlendedSeasonValue<T>(
+  yearProgress: number,
+  picker: (season: SeasonConfig) => T,
+  blend: (current: T, next: T, alpha: number) => T,
+): T {
+  const { currentIndex, nextIndex, blend: alpha } = getSeasonBlendIndices(yearProgress)
+  return blend(picker(SEASONS[currentIndex]), picker(SEASONS[nextIndex]), alpha)
 }

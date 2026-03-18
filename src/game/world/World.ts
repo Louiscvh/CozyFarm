@@ -11,11 +11,28 @@ import { debugHitboxEnabled } from "../entity/EntityFactory"
 import { CropManager } from "../farming/CropManager"
 import { computeGrowthRate } from "../farming/GrowthConditions"
 import { FireLightManager } from "../system/FireLightManager"
+import { getBlendedSeasonValue, getSeasonState } from "../system/Season"
+import { Tree1Entity } from "../entity/entities/Tree1"
+import { Tree2Entity } from "../entity/entities/Tree2"
+import { Tree3Entity } from "../entity/entities/Tree3"
+import { TreeOrangeEntity } from "../entity/entities/TreeOrange"
 
 export class World {
   static current: World | null = null
 
   private static readonly TREE_IDS = new Set(["tree1", "tree2", "tree3", "tree_orange"])
+  private static readonly TREE_DEFS: Record<string, Entity> = {
+    tree1: Tree1Entity,
+    tree2: Tree2Entity,
+    tree3: Tree3Entity,
+    tree_orange: TreeOrangeEntity,
+  }
+  private static readonly TREE_FOLIAGE_CONFIG: Record<string, { seasonalKey: "treeFoliageTint" | "citrusFoliageTint" | "pineFoliageTint"; saturationBoost: number; lightnessBoost: number }> = {
+    tree1: { seasonalKey: "pineFoliageTint", saturationBoost: 0.02, lightnessBoost: -0.03 },
+    tree2: { seasonalKey: "treeFoliageTint", saturationBoost: 0.06, lightnessBoost: 0.02 },
+    tree3: { seasonalKey: "treeFoliageTint", saturationBoost: 0.04, lightnessBoost: 0.05 },
+    tree_orange: { seasonalKey: "citrusFoliageTint", saturationBoost: 0.03, lightnessBoost: -0.02 },
+  }
 
   readonly size: number = 50
   readonly tileSize: number
@@ -77,13 +94,92 @@ export class World {
         const torchIntensity = this.weather ? 1 - this.weather.daylight : 1
         for (const entity of this.entities) {
             if (!entity.userData.isFireSource) continue
-                ; (entity as any).updateFireVisual(now, torchIntensity)
+            const fireSource = entity as THREE.Object3D & { updateFireVisual?: (time: number, intensity: number) => void }
+            fireSource.updateFireVisual?.(now, torchIntensity)
         }
 
         this.fireLightManager.update(this.entities, this.camera ?? null, torchIntensity)
 
+        this.applySeasonalTreeColors()
         this.applyTreeWind(now)
     }
+
+
+
+  private applySeasonalTreeColors() {
+    const { yearProgress } = getSeasonState()
+
+    for (const [treeId, config] of Object.entries(World.TREE_FOLIAGE_CONFIG)) {
+      const targetColor = getBlendedSeasonValue(
+        yearProgress,
+        season => new THREE.Color(season[config.seasonalKey]),
+        (current, next, alpha) => current.clone().lerp(next, alpha),
+      )
+      const adjustedTarget = this.adjustTreeColor(targetColor, config.saturationBoost, config.lightnessBoost)
+
+      const treeDef = World.TREE_DEFS[treeId]
+      this.instanceManager.forEachMaterial(treeDef, material => {
+        if (!(material instanceof THREE.Material)) return
+        this.tintTreeMaterial(material, treeId, adjustedTarget)
+      })
+    }
+
+    for (const entity of this.entities) {
+      const treeId = entity.userData.id as string | undefined
+      if (!treeId || !World.TREE_IDS.has(treeId) || entity.userData.isInstanced) continue
+      entity.traverse(obj => {
+        if (!(obj as THREE.Mesh).isMesh) return
+        const mesh = obj as THREE.Mesh
+        const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
+        for (const material of materials) this.tintTreeMaterial(material, treeId)
+      })
+    }
+  }
+
+  private tintTreeMaterial(material: THREE.Material, treeId: string, explicitTarget?: THREE.Color) {
+    if (!(material instanceof THREE.MeshStandardMaterial)) return
+    if (!this.isLikelyFoliageMaterial(material)) return
+
+    if (!material.userData.seasonalTreeMaterial) {
+      material.userData.seasonalTreeMaterial = true
+      material.userData.baseSeasonColor = material.color.clone().getHexString()
+      material.userData.currentSeasonColor = material.color.clone().getHexString()
+    }
+
+    const target = explicitTarget ?? this.getTargetTreeColor(treeId, material)
+    const currentColor = new THREE.Color(`#${material.userData.currentSeasonColor ?? material.color.getHexString()}`)
+    currentColor.lerp(target, 0.045)
+    material.color.copy(currentColor)
+    material.userData.currentSeasonColor = currentColor.getHexString()
+  }
+
+  private getTargetTreeColor(treeId: string, material: THREE.MeshStandardMaterial): THREE.Color {
+    const { yearProgress } = getSeasonState()
+    const config = World.TREE_FOLIAGE_CONFIG[treeId] ?? World.TREE_FOLIAGE_CONFIG.tree2
+    const seasonalColor = getBlendedSeasonValue(
+      yearProgress,
+      season => new THREE.Color(season[config.seasonalKey]),
+      (current, next, alpha) => current.clone().lerp(next, alpha),
+    )
+    const baseColor = new THREE.Color(`#${material.userData.baseSeasonColor ?? material.color.getHexString()}`)
+    return this.adjustTreeColor(baseColor.lerp(seasonalColor, 0.72), config.saturationBoost, config.lightnessBoost)
+  }
+
+  private adjustTreeColor(color: THREE.Color, saturationBoost: number, lightnessBoost: number): THREE.Color {
+    const hsl = { h: 0, s: 0, l: 0 }
+    color.getHSL(hsl)
+    return new THREE.Color().setHSL(
+      hsl.h,
+      THREE.MathUtils.clamp(hsl.s + saturationBoost, 0, 1),
+      THREE.MathUtils.clamp(hsl.l + lightnessBoost, 0, 1),
+    )
+  }
+
+  private isLikelyFoliageMaterial(material: THREE.MeshStandardMaterial): boolean {
+    const hsl = { h: 0, s: 0, l: 0 }
+    material.color.getHSL(hsl)
+    return hsl.s > 0.08 && hsl.l > 0.16 && hsl.l < 0.82 && (hsl.h < 0.22 || hsl.h > 0.9)
+  }
 
   private applyTreeWind(now: number) {
     const baseFrequency = 0.75

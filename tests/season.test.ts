@@ -1,7 +1,7 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import { Time } from "../src/game/core/Time.ts"
-import { getSeasonState, shiftSeason } from "../src/game/system/Season.ts"
+import { getBlendedSeasonValue, getSeasonState, shiftSeason } from "../src/game/system/Season.ts"
 
 function resetTime() {
   Time.delta = 0
@@ -34,4 +34,13 @@ test("shiftSeason conserve la progression journalière et ne descend pas sous 0"
   shiftSeason(-1)
   assert.ok(Time.elapsed >= 0)
   assert.equal(getSeasonState().season.id, "autumn")
+})
+
+
+test("getBlendedSeasonValue interpole en douceur entre les saisons", () => {
+  const colorAtBoundary = getBlendedSeasonValue(0.25, season => season.treeFoliageTint, (current, next, alpha) => ({ current, next, alpha }))
+  assert.deepEqual(colorAtBoundary, { current: "#c9bfa8", next: "#84cb63", alpha: 0 })
+
+  const midway = getBlendedSeasonValue(0.125, season => season.treeFoliageTint, (current, next, alpha) => ({ current, next, alpha }))
+  assert.deepEqual(midway, { current: "#d89045", next: "#c9bfa8", alpha: 0.5 })
 })

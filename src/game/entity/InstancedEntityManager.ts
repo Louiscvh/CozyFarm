@@ -144,6 +144,16 @@ export class InstancedEntityManager {
     return this.pools.get(InstancedEntityManager.key(def))?.info
   }
 
+
+  forEachMaterial(def: Entity, visitor: (material: THREE.Material) => void): void {
+    const pool = this.pools.get(InstancedEntityManager.key(def))
+    if (!pool) return
+    for (const entry of pool.entries) {
+      const materials = Array.isArray(entry.mesh.material) ? entry.mesh.material : [entry.mesh.material]
+      for (const material of materials) visitor(material)
+    }
+  }
+
   // ── Instance CRUD ─────────────────────────────────────────────────────────
 
   /** Add a new instance. Returns the slot index. */
