@@ -92,6 +92,7 @@ export class PlacementController {
     // ── Click state ───────────────────────────────────────────────────────────
     private mouseDownPos = { x: 0, y: 0 }
     private skipNextClick = false
+    private activeTouchId: number | null = null
 
     // ── Store subscription ────────────────────────────────────────────────────
     private lastSelectedId: string | null = null
@@ -103,6 +104,9 @@ export class PlacementController {
     private readonly _onMouseDown = this.onMouseDown.bind(this)
     private readonly _onClick = this.onClick.bind(this)
     private readonly _onKeyDown = this.onKeyDown.bind(this)
+    private readonly _onTouchStart = this.onTouchStart.bind(this)
+    private readonly _onTouchMove = this.onTouchMove.bind(this)
+    private readonly _onTouchEnd = this.onTouchEnd.bind(this)
 
     // ── Injected dependencies ─────────────────────────────────────────────────
     private readonly camera: THREE.Camera
@@ -125,6 +129,10 @@ export class PlacementController {
         window.addEventListener("mousedown", this._onMouseDown)
         window.addEventListener("click", this._onClick)
         window.addEventListener("keydown", this._onKeyDown)
+        window.addEventListener("touchstart", this._onTouchStart, { passive: false })
+        window.addEventListener("touchmove", this._onTouchMove, { passive: false })
+        window.addEventListener("touchend", this._onTouchEnd)
+        window.addEventListener("touchcancel", this._onTouchEnd)
 
         this.unsubscribeStore = placementStore.subscribe(() => this.onStoreChange())
         this.unsubscribeToolLevel = toolLevelStore.subscribe(() => this.onToolLevelChange())
@@ -143,6 +151,10 @@ export class PlacementController {
         window.removeEventListener("mousedown", this._onMouseDown)
         window.removeEventListener("click", this._onClick)
         window.removeEventListener("keydown", this._onKeyDown)
+        window.removeEventListener("touchstart", this._onTouchStart)
+        window.removeEventListener("touchmove", this._onTouchMove)
+        window.removeEventListener("touchend", this._onTouchEnd)
+        window.removeEventListener("touchcancel", this._onTouchEnd)
     }
 
     // ─── Item type helpers ────────────────────────────────────────────────────
@@ -201,6 +213,34 @@ export class PlacementController {
     }
 
     // ─── Helpers de coordonnées ───────────────────────────────────────────────
+
+    private isUiTarget(target: EventTarget | null): boolean {
+        return !!(target as HTMLElement | null)?.closest?.("#ui-root")
+    }
+
+    private updatePointer(clientX: number, clientY: number): boolean {
+        const rect = this.renderer.domElement.getBoundingClientRect()
+        this.mouse.set(
+            ((clientX - rect.left) / rect.width) * 2 - 1,
+            ((clientY - rect.top) / rect.height) * -2 + 1,
+        )
+        this.raycaster.setFromCamera(this.mouse, this.camera)
+        const hits = this.raycaster.intersectObject(groundPlane)
+        if (!hits.length) return false
+
+        const { cellX, cellZ } = this.snapToCell(hits[0].point.x, hits[0].point.z)
+        placementStore.hoveredCell = { cellX, cellZ }
+
+        const selectedItem = placementStore.selectedItem
+        if (!selectedItem || !this.isGhostItem(selectedItem)) {
+            this.updateHoverCursor(cellX, cellZ, this.getHoverFootprint(selectedItem), this.getHoverShape(selectedItem))
+        } else {
+            this.updatePlacementGhost(cellX, cellZ, selectedItem)
+        }
+
+        return true
+    }
+
 
     private snapToCell(x: number, z: number): { cellX: number; cellZ: number } {
         const half = this.world.sizeInCells / 2
@@ -641,27 +681,35 @@ export class PlacementController {
     }
 
     private onMouseMove(e: MouseEvent): void {
-        const rect = this.renderer.domElement.getBoundingClientRect()
-        this.mouse.set(
-            ((e.clientX - rect.left) / rect.width) * 2 - 1,
-            ((e.clientY - rect.top) / rect.height) * -2 + 1,
-        )
-        this.raycaster.setFromCamera(this.mouse, this.camera)
-        const hits = this.raycaster.intersectObject(groundPlane)
-        if (!hits.length) return
-
-        const { cellX, cellZ } = this.snapToCell(hits[0].point.x, hits[0].point.z)
-        placementStore.hoveredCell = { cellX, cellZ }
-
-        const selectedItem = placementStore.selectedItem
-        if (!selectedItem || !this.isGhostItem(selectedItem)) {
-            this.updateHoverCursor(cellX, cellZ, this.getHoverFootprint(selectedItem), this.getHoverShape(selectedItem))
-        } else {
-            this.updatePlacementGhost(cellX, cellZ, selectedItem)
-        }
+        this.updatePointer(e.clientX, e.clientY)
     }
 
     // ─── Click ────────────────────────────────────────────────────────────────
+
+
+    private onTouchStart(e: TouchEvent): void {
+        if (e.touches.length !== 1 || this.isUiTarget(e.target)) return
+        const touch = e.touches[0]
+        this.activeTouchId = touch.identifier
+        this.mouseDownPos = { x: touch.clientX, y: touch.clientY }
+        this.updatePointer(touch.clientX, touch.clientY)
+    }
+
+    private onTouchMove(e: TouchEvent): void {
+        if (e.touches.length !== 1 || this.activeTouchId === null || this.isUiTarget(e.target)) return
+        const touch = Array.from(e.touches).find(candidate => candidate.identifier === this.activeTouchId)
+        if (!touch) return
+        e.preventDefault()
+        this.updatePointer(touch.clientX, touch.clientY)
+    }
+
+    private onTouchEnd(e: TouchEvent): void {
+        if (this.activeTouchId === null) return
+        const touch = Array.from(e.changedTouches).find(candidate => candidate.identifier === this.activeTouchId)
+        this.activeTouchId = null
+        if (!touch || this.isUiTarget(e.target)) return
+        void this.onClick(new MouseEvent("click", { clientX: touch.clientX, clientY: touch.clientY }))
+    }
 
     private onMouseDown(e: MouseEvent): void {
         this.mouseDownPos = { x: e.clientX, y: e.clientY }

@@ -177,6 +177,7 @@ export function InventoryBar() {
     const [rotation, setRotation] = useState(0)
     const [, forceUpdate] = useState(0)
     const [expanded, setExpanded] = useState(false)
+    const [mobileLayout, setMobileLayout] = useState(() => window.matchMedia("(max-width: 900px), (pointer: coarse)").matches)
     const [hotbar, setHotbar] = useState<(string | null)[]>(INITIAL_HOTBAR)
     const [extraOrder, setExtraOrder] = useState<string[]>(() =>
         ALL_ITEMS.map(item => item.id).filter(id => !INITIAL_HOTBAR.includes(id))
@@ -271,6 +272,14 @@ export function InventoryBar() {
         setSelectedId(placementStore.selectedItem?.id ?? null)
         setRotation(placementStore.rotation)
     }), [])
+
+    useEffect(() => {
+        const media = window.matchMedia("(max-width: 900px), (pointer: coarse)")
+        const sync = () => setMobileLayout(media.matches)
+        sync()
+        media.addEventListener("change", sync)
+        return () => media.removeEventListener("change", sync)
+    }, [])
 
     useEffect(() => {
         let raf = 0
@@ -432,7 +441,7 @@ export function InventoryBar() {
                     onClick={() => placementStore.cancel()}
                     aria-label="Annuler l'action en cours"
                 >
-                    Échap
+                    {mobileLayout ? "✕" : "Échap"}
                 </button>
                 Annuler
             </>
@@ -441,7 +450,7 @@ export function InventoryBar() {
         if (isPlaceable(item)) {
             return (
                 <div id="placement-hint">
-                    <span className="hint-key">R</span> Rotation {rotation}°
+                    <span className="hint-key">{mobileLayout ? "↻" : "R"}</span> Rotation {rotation}°
                     <span className="hint-sep">·</span>
                     {renderEscapeHint()}
                 </div>
@@ -459,7 +468,7 @@ export function InventoryBar() {
                     <div id="placement-hint">
                         Clique pour couper un arbre - Max: {getBestTreeLabelForAxeLevel(level)}
                         <span className="hint-sep">·</span>
-                        <span className="hint-key">↑</span>/<span className="hint-key">↓</span>
+                        <span className="hint-key">{mobileLayout ? "+" : "↑"}</span>/<span className="hint-key">{mobileLayout ? "−" : "↓"}</span>
                         {level}/{unlockedLevel}
                         <span className="hint-sep">·</span>
                         {renderEscapeHint()}
@@ -477,7 +486,7 @@ export function InventoryBar() {
                     )}
                     {showLevel && (
                         <>
-                            <span className="hint-key">↑</span>/<span className="hint-key">↓</span>
+                            <span className="hint-key">{mobileLayout ? "+" : "↑"}</span>/<span className="hint-key">{mobileLayout ? "−" : "↓"}</span>
                             {level}/{unlockedLevel} max {maxLevel}
                             <span className="hint-sep">·</span>
                         </>
@@ -599,7 +608,7 @@ export function InventoryBar() {
                         onClick={() => setExpanded(v => !v)}
                         title={expanded ? "Réduire" : "Plus d'items"}
                     >
-                        E
+                        {mobileLayout ? (expanded ? "−" : "+") : "E"}
                     </button>
                 )}
 

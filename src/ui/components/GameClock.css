@@ -8,3 +8,14 @@
     line-height: 1;
     z-index: 1000;
 }
+
+
+@media (max-width: 900px), (pointer: coarse) {
+  .game-clock {
+    font-size: 1rem;
+    line-height: 1.1;
+    text-align: center;
+    align-self: center;
+    padding-top: 10px;
+  }
+}

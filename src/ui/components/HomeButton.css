@@ -32,3 +32,21 @@
   gap: 6px;
   font-family: "JetBrains Mono", monospace;
 }
+
+@media (max-width: 900px), (pointer: coarse) {
+  .ui-top-left-actions {
+    gap: 6px;
+    padding: 8px;
+    border-radius: 14px;
+  }
+
+  .ui-home-icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  .ui-money-button {
+    min-height: 42px;
+    padding-inline: 12px;
+  }
+}

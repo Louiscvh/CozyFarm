@@ -393,3 +393,82 @@ body.placing { cursor: crosshair; }
     filter: brightness(1);
   }
 }
+
+
+@media (max-width: 900px), (pointer: coarse) {
+  #inventory-bar {
+    --inv-slot-size: 48px;
+    --inv-slot-gap: 6px;
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+    left: max(12px, env(safe-area-inset-left, 0px));
+    right: max(12px, env(safe-area-inset-right, 0px));
+    transform: none;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  #placement-hint {
+    align-self: center;
+    max-width: min(100%, 34rem);
+    flex-wrap: wrap;
+    justify-content: center;
+    text-align: center;
+    padding: 8px 12px;
+    font-size: 10px;
+  }
+
+  #inventory-wrapper {
+    width: 100%;
+    align-items: center;
+    gap: 8px;
+  }
+
+  #inventory-expand-btn {
+    width: 42px;
+    height: 42px;
+    margin-bottom: 0;
+    font-size: 15px;
+    border-radius: 12px;
+  }
+
+  #inventory-slots {
+    width: 100%;
+    padding: 8px;
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .inventory-row {
+    width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .inventory-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .extra-row {
+    width: 100%;
+    overflow-x: visible;
+    justify-content: flex-start;
+  }
+
+  .inv-slot {
+    flex: 0 0 var(--inv-slot-size);
+    min-width: var(--inv-slot-size);
+    min-height: var(--inv-slot-size);
+    border-radius: 12px;
+  }
+
+  .inv-slot-label {
+    font-size: 8px;
+  }
+
+  .inv-slot-key {
+    display: none;
+  }
+}

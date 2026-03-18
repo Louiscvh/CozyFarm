@@ -4,13 +4,51 @@ html, body, #root {
   overflow: hidden;
   user-select: none;
   -webkit-user-select: none;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+}
+
+body {
+  font-family: Inter, system-ui, sans-serif;
+  background: #120f12;
+}
+
+canvas {
+  display: block;
+  touch-action: none;
+}
+
+#ui-root {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
 }
 
 header {
-    position: absolute;
-    left: 1rem;
-    top: 1rem;
-    display: flex;
-    align-items: center;
-    gap: 6px;
+  position: absolute;
+  left: max(1rem, env(safe-area-inset-left, 0px));
+  top: max(1rem, env(safe-area-inset-top, 0px));
+  right: max(1rem, env(safe-area-inset-right, 0px));
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+footer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+}
+
+@media (max-width: 900px), (pointer: coarse) {
+  header {
+    left: max(0.75rem, env(safe-area-inset-left, 0px));
+    top: max(0.75rem, env(safe-area-inset-top, 0px));
+    right: max(0.75rem, env(safe-area-inset-right, 0px));
+    align-items: stretch;
+    gap: 8px;
+  }
 }

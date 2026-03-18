@@ -17,6 +17,7 @@ export class CameraController {
   minDistance = 3
   maxDistance = 20
   private pinchLastDistance: number | null = null
+  private pinchLastMidpoint: { x: number; y: number } | null = null
 
   // Rotation
   azimuth = Math.PI / 4
@@ -61,19 +62,28 @@ export class CameraController {
     window.addEventListener("touchstart", e => {
       if (e.touches.length === 2) {
         this.pinchLastDistance = this.getTouchDistance(e.touches[0], e.touches[1])
+        this.pinchLastMidpoint = this.getTouchMidpoint(e.touches[0], e.touches[1])
       }
     }, { passive: false })
 
     window.addEventListener("touchmove", e => {
-      if (e.touches.length === 2 && this.pinchLastDistance !== null) {
+      if (e.touches.length === 2 && this.pinchLastDistance !== null && this.pinchLastMidpoint) {
         e.preventDefault()
         const d = this.getTouchDistance(e.touches[0], e.touches[1])
         addZoom((this.pinchLastDistance - d) * 0.05)
+
+        const midpoint = this.getTouchMidpoint(e.touches[0], e.touches[1])
+        this.panFromScreenDelta(midpoint.x - this.pinchLastMidpoint.x, midpoint.y - this.pinchLastMidpoint.y)
+
         this.pinchLastDistance = d
+        this.pinchLastMidpoint = midpoint
       }
     }, { passive: false })
 
-    const endPinch = () => (this.pinchLastDistance = null)
+    const endPinch = () => {
+      this.pinchLastDistance = null
+      this.pinchLastMidpoint = null
+    }
     window.addEventListener("touchend", endPinch)
     window.addEventListener("touchcancel", endPinch)
   }
@@ -161,6 +171,19 @@ export class CameraController {
     this.camera.updateProjectionMatrix()
   }
 
+
+  private panFromScreenDelta(dx: number, dy: number) {
+    const aspect = window.innerWidth / Math.max(window.innerHeight, 1)
+    const zoomFactor = 1 / Math.max(this.camera.zoom, 0.001)
+    const baseScale = 0.03 * zoomFactor * Math.max(1, aspect * 0.85)
+
+    const right = this.getRight().multiplyScalar(-dx * baseScale)
+    const forward = this.getForward().multiplyScalar(dy * baseScale)
+
+    this.target.add(right).add(forward)
+    this.clampTarget()
+  }
+
   rotate(dx: number, dy: number) {
     this.azimuth -= dx * this.rotateSpeed
     this.elevation = THREE.MathUtils.clamp(this.elevation + dy * this.rotateSpeed, 0.3, Math.PI / 3)
@@ -181,6 +204,13 @@ export class CameraController {
 
   private getTouchDistance(a: Touch, b: Touch) {
     return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY)
+  }
+
+  private getTouchMidpoint(a: Touch, b: Touch) {
+    return {
+      x: (a.clientX + b.clientX) / 2,
+      y: (a.clientY + b.clientY) / 2,
+    }
   }
 
   getForward(): THREE.Vector3 {

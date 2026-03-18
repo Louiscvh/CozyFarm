@@ -7,16 +7,20 @@ export class MouseDrag {
   vy = 0
 
   onDrag: (dx: number, dy: number) => void
+  private activeTouchId: number | null = null
 
   friction = 0.95 // vitesse diminue de 10% par frame
 
   constructor(onDrag: (dx: number, dy: number) => void) {
     this.onDrag = onDrag
 
+    const isUiTarget = (target: EventTarget | null) =>
+      (target as HTMLElement | null)?.closest?.("#ui-root")
+
     // Souris (desktop)
     window.addEventListener("mousedown", e => {
       if (e.button !== 0) return
-      if ((e.target as HTMLElement | null)?.closest?.("#ui-root")) return
+      if (isUiTarget(e.target)) return
 
       e.preventDefault()
       this.dragging = true
@@ -52,21 +56,26 @@ export class MouseDrag {
       "touchstart",
       e => {
         if (e.touches.length !== 1) return
+        if (isUiTarget(e.target)) return
         const t = e.touches[0]
         this.dragging = true
+        this.activeTouchId = t.identifier
         this.lastX = t.clientX
         this.lastY = t.clientY
         this.vx = 0
         this.vy = 0
       },
-      { passive: true }
+      { passive: false }
     )
 
     window.addEventListener(
       "touchmove",
       e => {
         if (!this.dragging || e.touches.length !== 1) return
-        const t = e.touches[0]
+        const t = Array.from(e.touches).find(touch => touch.identifier === this.activeTouchId) ?? e.touches[0]
+        if (isUiTarget(e.target)) return
+
+        e.preventDefault()
 
         const dx = t.clientX - this.lastX
         const dy = t.clientY - this.lastY
@@ -79,11 +88,12 @@ export class MouseDrag {
 
         this.onDrag(dx, dy)
       },
-      { passive: true }
+      { passive: false }
     )
 
     const endTouch = () => {
       this.dragging = false
+      this.activeTouchId = null
     }
 
     window.addEventListener("touchend", endTouch)

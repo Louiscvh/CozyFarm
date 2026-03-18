@@ -148,3 +148,38 @@
 .season-icon.summer {
   transform: translate(-50%, -50%) translateX(17px);
 }
+
+
+@media (max-width: 900px), (pointer: coarse) {
+  .temperature-bar {
+    top: max(12px, env(safe-area-inset-top, 0px));
+    right: max(12px, env(safe-area-inset-right, 0px));
+    gap: 3px;
+    padding: 6px;
+    border-radius: 14px;
+    transform: scale(0.92);
+    transform-origin: top right;
+  }
+
+  .cycle-rotator {
+    height: 34px;
+    width: 34px;
+  }
+
+  .season-cycle-rotator {
+    height: 30px;
+    width: 30px;
+  }
+
+  .sun, .moon {
+    font-size: 1.12rem;
+  }
+
+  .season-icon {
+    font-size: 1.15rem;
+  }
+
+  .calendar-day {
+    font-size: 0.95rem;
+  }
+}

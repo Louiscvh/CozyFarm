@@ -22,6 +22,7 @@ export class ItemActionController {
 
     // ── Drag detection ────────────────────────────────────────────────────────
     private mouseDownPos = { x: 0, y: 0 }
+    private activeTouchId: number | null = null
 
     // ── Store subscription ────────────────────────────────────────────────────
     private unsubscribeStore: (() => void) | null = null
@@ -30,6 +31,9 @@ export class ItemActionController {
     private readonly _onMouseDown = this.onMouseDown.bind(this)
     private readonly _onMouseMove = this.onMouseMove.bind(this)
     private readonly _onClick = this.onClick.bind(this)
+    private readonly _onTouchStart = this.onTouchStart.bind(this)
+    private readonly _onTouchMove = this.onTouchMove.bind(this)
+    private readonly _onTouchEnd = this.onTouchEnd.bind(this)
 
     // ── Injected dependencies ─────────────────────────────────────────────────
     private readonly camera: THREE.Camera
@@ -48,6 +52,10 @@ export class ItemActionController {
         window.addEventListener("mousedown", this._onMouseDown)
         window.addEventListener("mousemove", this._onMouseMove)
         window.addEventListener("click", this._onClick)
+        window.addEventListener("touchstart", this._onTouchStart, { passive: false })
+        window.addEventListener("touchmove", this._onTouchMove, { passive: false })
+        window.addEventListener("touchend", this._onTouchEnd)
+        window.addEventListener("touchcancel", this._onTouchEnd)
         this.unsubscribeStore = placementStore.subscribe(() => this.onStoreChange())
     }
 
@@ -58,16 +66,26 @@ export class ItemActionController {
         window.removeEventListener("mousedown", this._onMouseDown)
         window.removeEventListener("mousemove", this._onMouseMove)
         window.removeEventListener("click", this._onClick)
+        window.removeEventListener("touchstart", this._onTouchStart)
+        window.removeEventListener("touchmove", this._onTouchMove)
+        window.removeEventListener("touchend", this._onTouchEnd)
+        window.removeEventListener("touchcancel", this._onTouchEnd)
     }
 
     // ─── Helpers généraux ─────────────────────────────────────────────────────
 
-    private toNDC(e: MouseEvent): THREE.Vector2 {
+
+    private isUiTarget(target: EventTarget | null): boolean {
+        return !!(target as HTMLElement | null)?.closest?.("#ui-root")
+    }
+
+    private updatePointer(clientX: number, clientY: number): void {
         const rect = this.renderer.domElement.getBoundingClientRect()
-        return new THREE.Vector2(
-            ((e.clientX - rect.left) / rect.width) * 2 - 1,
-            ((e.clientY - rect.top) / rect.height) * -2 + 1,
+        this.mouse.set(
+            ((clientX - rect.left) / rect.width) * 2 - 1,
+            ((clientY - rect.top) / rect.height) * -2 + 1,
         )
+        this.raycaster.setFromCamera(this.mouse, this.camera)
     }
 
     private isDrag(e: MouseEvent): boolean {
@@ -275,6 +293,33 @@ export class ItemActionController {
 
     // ─── Mouse events ─────────────────────────────────────────────────────────
 
+    private onTouchStart(e: TouchEvent): void {
+        if (e.touches.length !== 1 || this.isUiTarget(e.target)) return
+        const touch = e.touches[0]
+        this.activeTouchId = touch.identifier
+        this.mouseDownPos = { x: touch.clientX, y: touch.clientY }
+        this.updatePointer(touch.clientX, touch.clientY)
+        this.onMouseMove()
+    }
+
+    private onTouchMove(e: TouchEvent): void {
+        if (e.touches.length !== 1 || this.activeTouchId === null || this.isUiTarget(e.target)) return
+        const touch = Array.from(e.touches).find(candidate => candidate.identifier === this.activeTouchId)
+        if (!touch) return
+        e.preventDefault()
+        this.updatePointer(touch.clientX, touch.clientY)
+        this.onMouseMove()
+    }
+
+    private onTouchEnd(e: TouchEvent): void {
+        if (this.activeTouchId === null) return
+        const touch = Array.from(e.changedTouches).find(candidate => candidate.identifier === this.activeTouchId)
+        this.activeTouchId = null
+        if (!touch || this.isUiTarget(e.target)) return
+        this.onClick(new MouseEvent("click", { clientX: touch.clientX, clientY: touch.clientY }))
+    }
+
+
     private onMouseDown(e: MouseEvent): void {
         this.mouseDownPos = { x: e.clientX, y: e.clientY }
     }
@@ -314,8 +359,7 @@ export class ItemActionController {
         if ((e.target as HTMLElement).closest("#ui-root")) return
         if (this.isDrag(e)) return
 
-        this.mouse.copy(this.toNDC(e))
-        this.raycaster.setFromCamera(this.mouse, this.camera)
+        this.updatePointer(e.clientX, e.clientY)
 
         if (this.tryHarvestCrop()) return
 
