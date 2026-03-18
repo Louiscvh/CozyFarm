@@ -5,6 +5,7 @@ type UIButtonProps = {
   variant?: "primary" | "ghost"
   size?: "md" | "lg"
   children: ReactNode
+  playClickSound?: boolean
 } & ButtonHTMLAttributes<HTMLButtonElement>
 
 let clickAudio: HTMLAudioElement | null = null
@@ -26,6 +27,7 @@ const playClickSound = () => {
 export const UIButton = ({
   variant = "primary",
   size = "md",
+  playClickSound: shouldPlayClickSound = true,
   className = "",
   children,
   ...rest
@@ -40,7 +42,7 @@ export const UIButton = ({
     .join(" ")
 
   const handleClick = (e: MouseEvent<HTMLButtonElement>) => {
-    playClickSound()
+    if (shouldPlayClickSound) playClickSound()
     rest.onClick?.(e)
   }
 
@@ -50,4 +52,3 @@ export const UIButton = ({
     </button>
   )
 }
-

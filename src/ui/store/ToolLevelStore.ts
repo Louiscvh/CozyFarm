@@ -10,10 +10,14 @@ function isToolId(value: string): value is ToolId {
 
 class ToolLevelStore {
     private readonly levels = new Map<ToolId, number>()
+    private readonly unlockedLevels = new Map<ToolId, number>()
     private listeners: (() => void)[] = []
 
     constructor() {
-        for (const id of TOOL_IDS) this.levels.set(id, DEFAULT_TOOL_LEVEL)
+        for (const id of TOOL_IDS) {
+            this.levels.set(id, DEFAULT_TOOL_LEVEL)
+            this.unlockedLevels.set(id, DEFAULT_TOOL_LEVEL)
+        }
     }
 
     subscribe(fn: () => void) {
@@ -30,17 +34,59 @@ class ToolLevelStore {
         return this.levels.get(toolId) ?? DEFAULT_TOOL_LEVEL
     }
 
+    getUnlockedLevel(toolId: string): number {
+        if (!isToolId(toolId)) return DEFAULT_TOOL_LEVEL
+        return this.unlockedLevels.get(toolId) ?? DEFAULT_TOOL_LEVEL
+    }
+
     setLevel(toolId: string, level: number): number {
         if (!isToolId(toolId)) return DEFAULT_TOOL_LEVEL
         const next = Math.max(DEFAULT_TOOL_LEVEL, Math.min(MAX_TOOL_LEVEL, Math.round(level)))
-        if (next === this.getLevel(toolId)) return next
+        const currentLevel = this.getLevel(toolId)
+        const currentUnlockedLevel = this.getUnlockedLevel(toolId)
+
+        if (next > currentUnlockedLevel) this.unlockedLevels.set(toolId, next)
+        if (next === currentLevel && next === currentUnlockedLevel) return next
+
         this.levels.set(toolId, next)
         this.notify()
         return next
     }
 
-    increase(toolId: string): number { return this.setLevel(toolId, this.getLevel(toolId) + 1) }
-    decrease(toolId: string): number { return this.setLevel(toolId, this.getLevel(toolId) - 1) }
+    setUnlockedLevel(toolId: string, level: number): number {
+        if (!isToolId(toolId)) return DEFAULT_TOOL_LEVEL
+        const next = Math.max(DEFAULT_TOOL_LEVEL, Math.min(MAX_TOOL_LEVEL, Math.round(level)))
+        const currentUnlockedLevel = this.getUnlockedLevel(toolId)
+        const currentLevel = this.getLevel(toolId)
+        if (next === currentUnlockedLevel && currentLevel <= next) return currentUnlockedLevel
+
+        this.unlockedLevels.set(toolId, next)
+        if (currentLevel > next || next > currentLevel) this.levels.set(toolId, next)
+        this.notify()
+        return next
+    }
+
+    increase(toolId: string): number {
+        return this.setActiveLevel(toolId, this.getLevel(toolId) + 1)
+    }
+
+    decrease(toolId: string): number {
+        return this.setActiveLevel(toolId, this.getLevel(toolId) - 1)
+    }
+
+    purchaseUpgrade(toolId: string): number {
+        return this.setUnlockedLevel(toolId, this.getUnlockedLevel(toolId) + 1)
+    }
+
+    private setActiveLevel(toolId: string, level: number): number {
+        if (!isToolId(toolId)) return DEFAULT_TOOL_LEVEL
+        const maxLevel = this.getUnlockedLevel(toolId)
+        const next = Math.max(DEFAULT_TOOL_LEVEL, Math.min(maxLevel, Math.round(level)))
+        if (next === this.getLevel(toolId)) return next
+        this.levels.set(toolId, next)
+        this.notify()
+        return next
+    }
 }
 
 export function getAreaOffsetsForLevel(level: number): Array<{ x: number; z: number }> {

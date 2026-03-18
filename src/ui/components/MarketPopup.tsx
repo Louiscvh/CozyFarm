@@ -110,14 +110,14 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
     }
 
     if (item.kind === "tool_upgrade") {
-      const currentLevel = toolLevelStore.getLevel(item.id)
-      if (currentLevel >= 3) {
+      const unlockedLevel = toolLevelStore.getUnlockedLevel(item.id)
+      if (unlockedLevel >= 3) {
         moneyStore.add(item.unitPrice)
         soundManager.playError()
         return
       }
 
-      toolLevelStore.increase(item.id)
+      toolLevelStore.purchaseUpgrade(item.id)
       emitPurchaseFeedback(item.id, item.icon)
       soundManager.playSuccess()
       forceRefresh(v => v + 1)
@@ -193,16 +193,16 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
           <div className="market-popup-list">
             {BUYABLE_ITEMS.map(item => {
               const canAfford = money >= item.unitPrice
-              const toolLevel = item.kind === "tool_upgrade" ? toolLevelStore.getLevel(item.id) : null
-              const isMaxLevel = toolLevel !== null && toolLevel >= 3
+              const unlockedLevel = item.kind === "tool_upgrade" ? toolLevelStore.getUnlockedLevel(item.id) : null
+              const isMaxLevel = unlockedLevel !== null && unlockedLevel >= 3
 
               return (
                 <div key={item.id} className="market-popup-row market-popup-buy-row">
                   <div className="market-popup-item">
                     <div className="market-popup-icon" aria-label={item.id}><ItemIcon icon={item.icon} alt={item.label} className="market-popup-icon-asset" />
-                      {toolLevel !== null  && <span className="market-popup-icon-count">
+                      {unlockedLevel !== null  && <span className="market-popup-icon-count">
                         <span>Niv.</span>
-                        <span>{`${toolLevel + 1}`}</span>
+                        <span>{`${unlockedLevel}`}</span>
                       </span>}
                       
                     </div>
@@ -212,7 +212,7 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
                     </div>
                   </div>
                   <div className="market-popup-buy-meta">
-                    <UIButton onClick={() => buyItem(item)} disabled={!canAfford || isMaxLevel}>{isMaxLevel ? "Max" : item.unitPrice + " 💵"}</UIButton>
+                    <UIButton playClickSound={false} onClick={() => buyItem(item)} disabled={!canAfford || isMaxLevel}>{isMaxLevel ? "Max" : item.unitPrice + " 💵"}</UIButton>
                   </div>
                 </div>
               )
@@ -248,7 +248,7 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
                     </div>
                   </div>
                   <span className="market-popup-total">{total} 💵</span>
-                  <UIButton onClick={() => sellItem(item)} disabled={stock <= 0}>💰</UIButton>
+                  <UIButton playClickSound={false} onClick={() => sellItem(item)} disabled={stock <= 0}>💰</UIButton>
                 </div>
               )
             })}
