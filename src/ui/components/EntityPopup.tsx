@@ -17,6 +17,46 @@ interface PopupInfo {
   id: string
 }
 
+function getEntityHitEntries(entities: THREE.Object3D[]) {
+  return entities
+    .map(entity => ({ entity, hitbox: entity.getObjectByName("__hitbox__") }))
+    .filter((entry): entry is { entity: THREE.Object3D; hitbox: THREE.Object3D } => !!entry.hitbox)
+}
+
+function raycastEntityHitboxes(
+  raycaster: THREE.Raycaster,
+  hitEntries: Array<{ entity: THREE.Object3D; hitbox: THREE.Object3D }>,
+) {
+  const worldHitPoint = new THREE.Vector3()
+
+  const hits = hitEntries
+    .map((entry) => {
+      entry.hitbox.updateWorldMatrix(true, false)
+
+      const geometry = entry.hitbox as THREE.Mesh
+      if (!geometry.geometry.boundingBox) {
+        geometry.geometry.computeBoundingBox()
+      }
+
+      const localBox = geometry.geometry.boundingBox
+      if (!localBox) return null
+
+      const worldBox = localBox.clone().applyMatrix4(entry.hitbox.matrixWorld)
+      const hitPoint = raycaster.ray.intersectBox(worldBox, worldHitPoint.clone())
+      if (!hitPoint) return null
+
+      return {
+        entity: entry.entity,
+        hitbox: entry.hitbox,
+        distance: raycaster.ray.origin.distanceToSquared(hitPoint),
+      }
+    })
+    .filter((hit): hit is { entity: THREE.Object3D; hitbox: THREE.Object3D; distance: number } => !!hit)
+    .sort((a, b) => a.distance - b.distance)
+
+  return hits[0] ?? null
+}
+
 export function EntityPopups() {
   const [hoveredPopup, setHoveredPopup] = useState<PopupInfo | null>(null)
   const [marketEntity, setMarketEntity] = useState<THREE.Object3D | null>(null)
@@ -103,21 +143,21 @@ export function EntityPopups() {
       mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1
       raycaster.setFromCamera(mouse, w.camera)
 
-      const hitEntries = w.entities
-        .map(entity => ({ entity, hitbox: entity.getObjectByName("__hitbox__") }))
-        .filter((entry): entry is { entity: THREE.Object3D; hitbox: THREE.Object3D } => !!entry.hitbox)
+      const hitEntries = getEntityHitEntries(w.entities)
 
-      const hitboxes = hitEntries.map(entry => entry.hitbox)
-      const ownerByHitbox = new Map(hitEntries.map(entry => [entry.hitbox.uuid, entry.entity]))
-      const intersections = raycaster.intersectObjects(hitboxes, false)
-
-      const owner = intersections.length > 0
-        ? ownerByHitbox.get(intersections[0].object.uuid) ?? null
-        : null
+      const owner = raycastEntityHitboxes(raycaster, hitEntries)?.entity ?? null
 
       if (!owner) {
         if (pointerDownRef.current) return
         applyHoverTarget(null)
+        return
+      }
+
+      if (owner.userData.id === "market") {
+        if (pointerDownRef.current) return
+        OutlineSystem.instance?.setHovered(owner)
+        cancelOpen()
+        scheduleClose()
         return
       }
 
@@ -136,32 +176,27 @@ export function EntityPopups() {
       const w = World.current
       if (!w || !w.camera || placementStore.selectedItem) return
 
-      mouse.x = (e.clientX / window.innerWidth) * 2 - 1
-      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1
+      const renderer = Renderer.instance?.renderer
+      if (!renderer) return
+
+      const rect = renderer.domElement.getBoundingClientRect()
+      if (rect.width <= 0 || rect.height <= 0) return
+      if (e.clientX < rect.left || e.clientX > rect.right || e.clientY < rect.top || e.clientY > rect.bottom) return
+
+      mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1
+      mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1
       raycaster.setFromCamera(mouse, w.camera)
 
-      const hitEntries = w.entities
-        .map(entity => ({ entity, hitbox: entity.getObjectByName("__hitbox__") }))
-        .filter((entry): entry is { entity: THREE.Object3D; hitbox: THREE.Object3D } => !!entry.hitbox)
-
-      const intersects = raycaster.intersectObjects(hitEntries.map(entry => entry.hitbox), true)
-      if (intersects.length === 0) return
-
-      const hitObject = intersects[0].object
-      const owner = hitEntries.find(entry => {
-        let node: THREE.Object3D | null = hitObject
-        while (node) {
-          if (node === entry.hitbox) return true
-          node = node.parent
-        }
-        return false
-      })
+      const hitEntries = getEntityHitEntries(w.entities)
+      const owner = raycastEntityHitboxes(raycaster, hitEntries)
 
       if (!owner || owner.entity.userData.id !== "market") {
         setMarketEntity(null)
         return
       }
 
+      OutlineSystem.instance?.setHovered(owner.entity)
+      setHoveredPopup(null)
       setMarketEntity(owner.entity)
     }
 
