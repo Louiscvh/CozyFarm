@@ -13,7 +13,7 @@ type SellableItem = {
   unitPrice: number
 }
 
-const SELLABLE_QTY_STEPS = [-1, 1, 5, 10] as const
+const SELLABLE_QTY_STEPS = [-1, 5, 10] as const
 
 const SELLABLE_ITEMS: SellableItem[] = [
   { id: "carrot", icon: "🥕", unitPrice: 3 },
@@ -94,8 +94,9 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
 
             return (
               <div key={item.id} className="market-popup-row">
-                <span className="market-popup-icon" aria-label={item.id}>{item.icon}</span>
-                <span className="market-popup-stock">stock: {stock}</span>
+                <div className="market-popup-icon" aria-label={item.id}>{item.icon}
+                  <span>{stock}</span>
+                </div>
                 <div className="market-popup-qty">
                   <span className="market-popup-qty-value">x{sellQty}</span>
                   <div className="market-popup-step-buttons">
