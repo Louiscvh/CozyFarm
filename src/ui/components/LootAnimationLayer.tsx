@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { createPortal } from "react-dom"
 import type { ItemDef } from "../../game/entity/ItemDef"
 import { World } from "../../game/world/World"
+import { soundManager } from "../../game/system/SoundManager"
 import { lootFeedbackStore } from "../store/LootFeedbackStore"
 import { ItemIcon } from "./ItemIcon"
 
@@ -98,6 +99,11 @@ export function LootAnimationLayer({ items }: LootAnimationLayerProps) {
                         : { x: window.innerWidth / 2, y: window.innerHeight / 2 }
 
             const clampedAmount = Math.max(1, Math.min(event.amount, 5))
+            const isMoneyCounterTarget = event.targetSelector === "[data-money-counter='true']"
+
+            if (isMoneyCounterTarget) {
+                soundManager.playMoneyPickup()
+            }
             const newParticles: LootParticle[] = Array.from({ length: clampedAmount }).map((_, i) => ({
                 id: idSeed++,
                 icon,
