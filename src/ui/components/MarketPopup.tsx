@@ -113,6 +113,15 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
     }
 
     if (item.kind === "tool_upgrade") {
+      const alreadyOwned = inventoryStore.getQty(item.id) > 0
+      if (!alreadyOwned) {
+        inventoryStore.grant(item.id, 1)
+        emitPurchaseFeedback(item.id, item.icon)
+        soundManager.playSuccess()
+        forceRefresh(v => v + 1)
+        return
+      }
+
       const unlockedLevel = toolLevelStore.getUnlockedLevel(item.id)
       if (unlockedLevel >= toolLevelStore.getMaxLevel(item.id)) {
         moneyStore.add(item.unitPrice)
@@ -196,15 +205,16 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
           <div className="market-popup-list">
             {BUYABLE_ITEMS.map(item => {
               const canAfford = money >= item.unitPrice
+              const ownedTool = item.kind === "tool_upgrade" ? inventoryStore.getQty(item.id) > 0 : false
               const unlockedLevel = item.kind === "tool_upgrade" ? toolLevelStore.getUnlockedLevel(item.id) : null
               const maxLevel = item.kind === "tool_upgrade" ? toolLevelStore.getMaxLevel(item.id) : null
-              const isMaxLevel = unlockedLevel !== null && maxLevel !== null && unlockedLevel >= maxLevel
+              const isMaxLevel = ownedTool && unlockedLevel !== null && maxLevel !== null && unlockedLevel >= maxLevel
 
               return (
                 <div key={item.id} className="market-popup-row market-popup-buy-row">
                   <div className="market-popup-item">
                     <div className="market-popup-icon" aria-label={item.id}><ItemIcon icon={item.icon} alt={item.label} className="market-popup-icon-asset" />
-                      {unlockedLevel !== null  && <span className="market-popup-icon-count">
+                      {ownedTool && unlockedLevel !== null  && <span className="market-popup-icon-count">
                         <span>Niv.</span>
                         <span>{`${unlockedLevel}`}</span>
                       </span>}
@@ -216,7 +226,7 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
                     </div>
                   </div>
                   <div className="market-popup-buy-meta">
-                    <UIButton playClickSound={false} onClick={() => buyItem(item)} disabled={!canAfford || isMaxLevel}>{isMaxLevel ? "Max" : item.unitPrice + " 💵"}</UIButton>
+                    <UIButton playClickSound={false} onClick={() => buyItem(item)} disabled={!canAfford || isMaxLevel}>{isMaxLevel ? "Max" : !ownedTool && item.kind === "tool_upgrade" ? `Acheter • ${item.unitPrice} 💵` : item.unitPrice + " 💵"}</UIButton>
                   </div>
                 </div>
               )

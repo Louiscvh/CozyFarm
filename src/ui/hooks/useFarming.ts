@@ -119,6 +119,7 @@ export function registerFarmingActions(): void {
                 for (const { cellX, cellZ } of readyCells) {
                     const harvested = world.cropManager.harvest(cellX, cellZ)
                     if (!harvested) continue
+                    if (world.tilesFactory.isSoil(cellX, cellZ)) world.tilesFactory.playSoilHarvestParticles(cellX, cellZ)
                     inventoryStore.produce(harvested.def.harvestItemId, harvested.def.harvestQty, { cellX, cellZ })
                     inventoryStore.produce(harvested.def.harvestItemId, harvested.def.harvestQty)
                     changed = true
@@ -170,6 +171,7 @@ export function registerFarmingActions(): void {
                 if (!world) return false
                 const harvested = world.cropManager.harvest(ctx.cellX, ctx.cellZ)
                 if (!harvested) return false
+                if (world.tilesFactory.isSoil(ctx.cellX, ctx.cellZ)) world.tilesFactory.playSoilHarvestParticles(ctx.cellX, ctx.cellZ)
                 inventoryStore.produce(harvested.def.harvestItemId, harvested.def.harvestQty, { cellX: ctx.cellX, cellZ: ctx.cellZ })
                 inventoryStore.produce(harvested.def.harvestItemId, harvested.def.harvestQty)
                 if (harvested.def.fruitRegrowSeconds) {

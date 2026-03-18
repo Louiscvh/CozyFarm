@@ -38,8 +38,8 @@ class InventoryStore {
             if (e.infinite) {
                 // Outil non consommable — ne passe jamais par l'historique
                 this.farmingItems.add(e.id)
-                this.farmingQty.set(e.id, 1)
-                this.farmingMax.set(e.id, 1)
+                this.farmingQty.set(e.id, e.initialQty ?? 1)
+                this.farmingMax.set(e.id, e.maxQty)
             } else if (e.initialQty !== undefined) {
                 // Item farming avec stock initial explicite
                 this.farmingItems.add(e.id)

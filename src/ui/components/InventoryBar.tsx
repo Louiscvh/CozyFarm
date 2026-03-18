@@ -117,8 +117,8 @@ inventoryStore.register([
     { id: "lettuce", maxQty: 9999, initialQty: 64 },      // ← farming
     { id: "orange", maxQty: 99, initialQty: 0 },
     { id: "shovel", maxQty: 1, infinite: true },
-    { id: "watering_can", maxQty: 1, infinite: true },
-    { id: "axe", maxQty: 1, infinite: true },
+    { id: "watering_can", maxQty: 1, initialQty: 0, infinite: true },
+    { id: "axe", maxQty: 1, initialQty: 0, infinite: true },
     { id: "planter", maxQty: 1, infinite: true },
     { id: "scanner", maxQty: 1, infinite: true },
     { id: "wood", maxQty: 64, initialQty: 24 },
@@ -131,9 +131,21 @@ const isInfinite = (item: ItemDef): boolean =>
 
 const HOTBAR_SIZE = 9
 
+const STARTER_HOTBAR_IDS = [
+    "hoe",
+    "shovel",
+    "planter",
+    "scanner",
+    "wood",
+    "tree1",
+    "tree2",
+    "tree3",
+    "rock1",
+] as const
+
 const INITIAL_HOTBAR: (string | null)[] = [
-    ...ALL_ITEMS.slice(0, HOTBAR_SIZE).map(i => i.id),
-    ...Array(Math.max(0, HOTBAR_SIZE - ALL_ITEMS.length)).fill(null),
+    ...STARTER_HOTBAR_IDS.slice(0, HOTBAR_SIZE),
+    ...Array(Math.max(0, HOTBAR_SIZE - STARTER_HOTBAR_IDS.length)).fill(null),
 ]
 
 const itemById = (id: string | null): ItemDef | null =>
@@ -171,7 +183,10 @@ export function InventoryBar() {
     )
 
     const extraItems = useMemo(
-        () => extraOrder.map(id => itemById(id)).filter((item): item is ItemDef => item !== null),
+        () => extraOrder
+            .map(id => itemById(id))
+            .filter((item): item is ItemDef => item !== null)
+            .filter(item => !(isInfinite(item) && inventoryStore.getQty(item.id) <= 0)),
         [extraOrder]
     )
     const hasExtra = extraItems.length > 0
