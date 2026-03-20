@@ -28,7 +28,7 @@ type SellableItem = {
 type MarketMode = "buy" | "sell"
 
 const SELLABLE_QTY_STEPS = [-1, 5, 10] as const
-const BUY_QTY_INCREMENT = 5
+const BUY_QTY_MULTIPLIER = 5
 
 const BUYABLE_ITEMS: BuyableItem[] = [
   { id: "carrot_seed", icon: "🌱", unitPrice: 2, label: "Graine carotte", description: "Pour lancer une culture rentable.", kind: "stock" },
@@ -75,7 +75,6 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
   const [mobileLayout, setMobileLayout] = useState(() => window.matchMedia("(max-width: 900px), (pointer: coarse)").matches)
   const [mode, setMode] = useState<MarketMode>("buy")
   const [sellQtyById, setSellQtyById] = useState<Record<SellableItem["id"], number>>(DEFAULT_SELL_QTY)
-  const [buyQtyById, setBuyQtyById] = useState<Record<string, number>>({})
 
   useEffect(() => inventoryStore.subscribe(() => forceRefresh(v => v + 1)), [])
 
@@ -106,7 +105,6 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
   const handleClose = () => {
     setMode("buy")
     setSellQtyById(DEFAULT_SELL_QTY)
-    setBuyQtyById({})
     onClose()
   }
 
@@ -128,18 +126,6 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
 
     const affordableQty = Math.floor(moneyStore.getAmount() / item.unitPrice)
     return Math.max(0, Math.min(desiredQty, affordableQty))
-  }
-
-  const getSelectedBuyQuantity = (item: BuyableItem) => {
-    if (!isStackableBuyItem(item)) return 1
-    return Math.max(1, buyQtyById[item.id] ?? 1)
-  }
-
-  const updateBuyQty = (item: BuyableItem, nextQty: number) => {
-    if (!isStackableBuyItem(item)) return
-    const affordableQty = Math.max(1, Math.floor(moneyStore.getAmount() / item.unitPrice))
-    const clamped = Math.max(1, Math.min(nextQty, affordableQty))
-    setBuyQtyById((prev) => ({ ...prev, [item.id]: clamped }))
   }
 
   const buyItem = (item: BuyableItem, quantity = 1) => {
@@ -228,9 +214,7 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
   }
 
   const handlePopupWheel = (e: WheelEvent<HTMLDivElement>) => {
-    e.preventDefault()
     e.stopPropagation()
-    e.currentTarget.scrollTop += e.deltaY
   }
 
   const popupBody = (
@@ -260,9 +244,7 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
             const unlockedLevel = item.kind === "tool_upgrade" ? toolLevelStore.getUnlockedLevel(item.id) : null
             const maxLevel = item.kind === "tool_upgrade" ? toolLevelStore.getMaxLevel(item.id) : null
             const isMaxLevel = ownedTool && unlockedLevel !== null && maxLevel !== null && unlockedLevel >= maxLevel
-            const selectedQty = getSelectedBuyQuantity(item)
-            const totalPrice = item.unitPrice * selectedQty
-            const canIncreaseBuyQty = isStackableBuyItem(item) && getBuyQuantity(item, selectedQty + BUY_QTY_INCREMENT) > selectedQty
+            const canBuyFive = isStackableBuyItem(item) && getBuyQuantity(item, BUY_QTY_MULTIPLIER) === BUY_QTY_MULTIPLIER
 
             return (
               <div key={item.id} className="market-popup-row market-popup-buy-row">
@@ -280,17 +262,23 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
                 </div>
                 <div className="market-popup-buy-meta">
                   <div className="market-popup-buy-actions">
-                    <UIButton playClickSound={false} onClick={() => buyItem(item, selectedQty)} disabled={!canAfford || isMaxLevel}>
-                      {isMaxLevel ? "Max" : `x${selectedQty} · ${totalPrice} 💵`}
+                    <UIButton
+                      playClickSound={false}
+                      onClick={() => buyItem(item, 1)}
+                      disabled={!canAfford || isMaxLevel}
+                      className="market-popup-buy-button"
+                    >
+                      {isMaxLevel ? "Max" : `${item.unitPrice} 💵`}
                     </UIButton>
                     {isStackableBuyItem(item) && (
                       <UIButton
                         playClickSound={false}
-                        onClick={() => updateBuyQty(item, selectedQty + BUY_QTY_INCREMENT)}
-                        disabled={!canIncreaseBuyQty}
-                        className="market-popup-buy-actions-increment"
+                        onClick={() => buyItem(item, BUY_QTY_MULTIPLIER)}
+                        disabled={!canBuyFive}
+                        className="market-popup-buy-button market-popup-buy-button--multi"
                       >
-                        +5
+                        <span className="market-popup-buy-badge">x5</span>
+                        <span>{item.unitPrice * BUY_QTY_MULTIPLIER} 💵</span>
                       </UIButton>
                     )}
                   </div>
