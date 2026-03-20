@@ -262,7 +262,7 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
                           onClick={() => buyItem(item, BUY_QTY_MULTIPLIER)}
                           disabled={!canBuyFive}
                         >
-                          x5 · {item.unitPrice * BUY_QTY_MULTIPLIER} 💵
+                          x5 {item.unitPrice * BUY_QTY_MULTIPLIER} 💵
                         </UIButton>
                       )}
                     </div>
