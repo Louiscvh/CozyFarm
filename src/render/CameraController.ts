@@ -175,7 +175,7 @@ export class CameraController {
   private panFromScreenDelta(dx: number, dy: number) {
     const aspect = window.innerWidth / Math.max(window.innerHeight, 1)
     const zoomFactor = 1 / Math.max(this.camera.zoom, 0.001)
-    const baseScale = 0.03 * zoomFactor * Math.max(1, aspect * 0.85)
+    const baseScale = 0.075 * zoomFactor * Math.max(1, aspect * 0.85)
 
     const right = this.getRight().multiplyScalar(-dx * baseScale)
     const forward = this.getForward().multiplyScalar(dy * baseScale)

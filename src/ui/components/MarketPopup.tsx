@@ -1,4 +1,4 @@
-import { type WheelEvent, useEffect, useState } from "react"
+import { type CSSProperties, type WheelEvent, useEffect, useState } from "react"
 import type { Object3D } from "three"
 import { soundManager } from "../../game/system/SoundManager"
 import { toolLevelStore } from "../store/ToolLevelStore"
@@ -71,10 +71,19 @@ type MarketPopupProps = {
 
 export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
   const [, forceRefresh] = useState(0)
+  const [mobileLayout, setMobileLayout] = useState(() => window.matchMedia("(max-width: 900px), (pointer: coarse)").matches)
   const [mode, setMode] = useState<MarketMode>("buy")
   const [sellQtyById, setSellQtyById] = useState<Record<SellableItem["id"], number>>(DEFAULT_SELL_QTY)
 
   useEffect(() => inventoryStore.subscribe(() => forceRefresh(v => v + 1)), [])
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 900px), (pointer: coarse)")
+    const sync = () => setMobileLayout(media.matches)
+    sync()
+    media.addEventListener("change", sync)
+    return () => media.removeEventListener("change", sync)
+  }, [])
   useEffect(() => moneyStore.subscribe(() => forceRefresh(v => v + 1)), [])
   useEffect(() => toolLevelStore.subscribe(() => forceRefresh(v => v + 1)), [])
 
@@ -181,6 +190,17 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
     e.currentTarget.scrollTop += e.deltaY
   }
 
+  const popupStyle: CSSProperties | undefined = mobileLayout
+    ? {
+        position: "fixed",
+        left: 0,
+        top: 0,
+        transform: "none",
+        width: "100vw",
+        height: "100dvh",
+      }
+    : undefined
+
   return (
     <WorldPopup
       open={open}
@@ -188,9 +208,10 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
       onClose={handleClose}
       anchorResolver={(entityObject) => entityObject.getObjectByName("__hitbox__") ?? entityObject}
       offsetY={0.38}
-      className="market-popup"
+      className={["market-popup", mobileLayout ? "market-popup--mobile" : ""].filter(Boolean).join(" ")}
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
+      style={popupStyle}
     >
       <div className="market-popup-content" onWheel={handlePopupWheel}>
         <h3>🛒 Marché</h3>
