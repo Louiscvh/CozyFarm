@@ -465,7 +465,7 @@ body.placing { cursor: crosshair; }
   .inv-slot-icon {
     width: 26px;
     height: 26px;
-    font-size: 24px;
+    font-size: 20px;
   }
 
   .inv-slot-label {
