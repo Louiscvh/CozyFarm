@@ -1,4 +1,4 @@
-import { type WheelEvent, useEffect, useState } from "react"
+import { type TouchEvent, type WheelEvent, useEffect, useState } from "react"
 import type { Object3D } from "three"
 import { soundManager } from "../../game/system/SoundManager"
 import { toolLevelStore } from "../store/ToolLevelStore"
@@ -73,10 +73,19 @@ type MarketPopupProps = {
 
 export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
   const [, forceRefresh] = useState(0)
+  const [mobileLayout, setMobileLayout] = useState(() => window.matchMedia("(max-width: 900px), (pointer: coarse)").matches)
   const [mode, setMode] = useState<MarketMode>("buy")
   const [sellQtyById, setSellQtyById] = useState<Record<SellableItem["id"], number>>(DEFAULT_SELL_QTY)
 
   useEffect(() => inventoryStore.subscribe(() => forceRefresh(v => v + 1)), [])
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 900px), (pointer: coarse)")
+    const sync = () => setMobileLayout(media.matches)
+    sync()
+    media.addEventListener("change", sync)
+    return () => media.removeEventListener("change", sync)
+  }, [])
   useEffect(() => moneyStore.subscribe(() => forceRefresh(v => v + 1)), [])
   useEffect(() => toolLevelStore.subscribe(() => forceRefresh(v => v + 1)), [])
 
@@ -201,28 +210,31 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
 
   const money = moneyStore.getAmount()
 
+
+  const stopTouchPropagation = (e: TouchEvent<HTMLDivElement>) => {
+    e.stopPropagation()
+  }
+
   const handlePopupWheel = (e: WheelEvent<HTMLDivElement>) => {
     e.preventDefault()
     e.stopPropagation()
     e.currentTarget.scrollTop += e.deltaY
   }
 
-  return (
-    <WorldPopup
-      open={open}
-      anchorObject={marketEntity}
-      onClose={handleClose}
-      anchorResolver={(entityObject) => entityObject.getObjectByName("__hitbox__") ?? entityObject}
-      offsetY={0.38}
-      className="market-popup"
-      onMouseDown={(e) => e.stopPropagation()}
-      onClick={(e) => e.stopPropagation()}
-    >
-      <div className="market-popup-content" onWheel={handlePopupWheel}>
-        <h3>🛒 Marché</h3>
-        <p>{mode === "buy" ? "Choisis ce que tu veux acheter." : "Choisis rapidement la quantité à vendre pour chaque produit."}</p>
+  const popupBody = (
+    <div className="market-popup-content" onWheel={handlePopupWheel} onTouchStart={stopTouchPropagation} onTouchMove={stopTouchPropagation}>
+      {mobileLayout && (
+        <div className="market-popup-mobile-header">
+          <h3>🛒 Marché</h3>
+          <button type="button" className="market-popup-close" onClick={handleClose} aria-label="Fermer le marché">
+            ✕
+          </button>
+        </div>
+      )}
+      {!mobileLayout && <h3>🛒 Marché</h3>}
+      <p>{mode === "buy" ? "Choisis ce que tu veux acheter." : "Choisis rapidement la quantité à vendre pour chaque produit."}</p>
 
-        <div className="market-popup-tabs">
+      <div className="market-popup-tabs">
           <UIButton className={mode === "buy" ? "market-popup-tab is-active" : "market-popup-tab"} onClick={() => setMode("buy")}>Acheter</UIButton>
           <UIButton className={mode === "sell" ? "market-popup-tab is-active" : "market-popup-tab"} onClick={() => setMode("sell")}>Vendre</UIButton>
           <span className="market-popup-money">{money} 💵</span>
@@ -311,7 +323,35 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
             })}
           </div>
         )}
+    </div>
+  )
+
+  if (mobileLayout) {
+    return (
+      <div
+        className="market-popup market-popup--mobile"
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+        onTouchStart={stopTouchPropagation}
+        onTouchMove={stopTouchPropagation}
+      >
+        {popupBody}
       </div>
+    )
+  }
+
+  return (
+    <WorldPopup
+      open={open}
+      anchorObject={marketEntity}
+      onClose={handleClose}
+      anchorResolver={(entityObject) => entityObject.getObjectByName("__hitbox__") ?? entityObject}
+      offsetY={0.38}
+      className="market-popup"
+      onMouseDown={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+    >
+      {popupBody}
     </WorldPopup>
   )
 }
