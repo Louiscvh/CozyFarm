@@ -18,6 +18,7 @@ export class CameraController {
   maxDistance = 20
   private pinchLastDistance: number | null = null
   private pinchLastMidpoint: { x: number; y: number } | null = null
+  private pinchZoomWeight = 0.12
 
   // Rotation
   azimuth = Math.PI / 4
@@ -49,7 +50,13 @@ export class CameraController {
     this.updateCamera()
 
     this.keyboard = new KeyboardInput()
-    this.mouseDrag = new MouseDrag((dx, dy) => this.rotate(dx, dy))
+    this.mouseDrag = new MouseDrag((dx, dy, pointerType) => {
+      if (pointerType === "touch") {
+        this.panFromScreenDelta(dx, dy)
+        return
+      }
+      this.rotate(dx, dy)
+    })
 
     // Zoom (wheel + pinch)
     const addZoom = (delta: number) => (this.zoomVelocity += delta * this.zoomSpeed)
@@ -70,10 +77,10 @@ export class CameraController {
       if (e.touches.length === 2 && this.pinchLastDistance !== null && this.pinchLastMidpoint) {
         e.preventDefault()
         const d = this.getTouchDistance(e.touches[0], e.touches[1])
-        addZoom((d - this.pinchLastDistance) * 0.12)
+        addZoom((d - this.pinchLastDistance) * this.pinchZoomWeight)
 
         const midpoint = this.getTouchMidpoint(e.touches[0], e.touches[1])
-        this.panFromScreenDelta(midpoint.x - this.pinchLastMidpoint.x, midpoint.y - this.pinchLastMidpoint.y)
+        this.rotate(midpoint.x - this.pinchLastMidpoint.x, midpoint.y - this.pinchLastMidpoint.y)
 
         this.pinchLastDistance = d
         this.pinchLastMidpoint = midpoint
