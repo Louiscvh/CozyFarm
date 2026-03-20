@@ -6,12 +6,13 @@ export class MouseDrag {
   vx = 0
   vy = 0
 
-  onDrag: (dx: number, dy: number) => void
+  onDrag: (dx: number, dy: number, pointerType: "mouse" | "touch") => void
   private activeTouchId: number | null = null
+  private lastPointerType: "mouse" | "touch" = "mouse"
 
   friction = 0.95 // vitesse diminue de 10% par frame
 
-  constructor(onDrag: (dx: number, dy: number) => void) {
+  constructor(onDrag: (dx: number, dy: number, pointerType: "mouse" | "touch") => void) {
     this.onDrag = onDrag
 
     const isUiTarget = (target: EventTarget | null) =>
@@ -47,8 +48,9 @@ export class MouseDrag {
 
       this.vx = dx
       this.vy = dy
+      this.lastPointerType = "mouse"
 
-      this.onDrag(dx, dy)
+      this.onDrag(dx, dy, "mouse")
     })
 
     // Touch (mobile / tablette)
@@ -64,6 +66,7 @@ export class MouseDrag {
         this.lastY = t.clientY
         this.vx = 0
         this.vy = 0
+        this.lastPointerType = "touch"
       },
       { passive: false }
     )
@@ -85,8 +88,9 @@ export class MouseDrag {
 
         this.vx = dx
         this.vy = dy
+        this.lastPointerType = "touch"
 
-        this.onDrag(dx, dy)
+        this.onDrag(dx, dy, "touch")
       },
       { passive: false }
     )
@@ -94,6 +98,8 @@ export class MouseDrag {
     const endTouch = () => {
       this.dragging = false
       this.activeTouchId = null
+      this.vx = 0
+      this.vy = 0
     }
 
     window.addEventListener("touchend", endTouch)
@@ -106,7 +112,7 @@ export class MouseDrag {
 
     // inertia / easing
     if (Math.abs(this.vx) > 0.01 || Math.abs(this.vy) > 0.01) {
-      this.onDrag(this.vx, this.vy)
+      this.onDrag(this.vx, this.vy, this.lastPointerType)
       this.vx *= this.friction
       this.vy *= this.friction
     }
