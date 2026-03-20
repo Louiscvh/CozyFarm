@@ -190,34 +190,20 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
     e.currentTarget.scrollTop += e.deltaY
   }
 
-  const popupStyle: CSSProperties | undefined = mobileLayout
-    ? {
-        position: "fixed",
-        left: 0,
-        top: 0,
-        transform: "none",
-        width: "100vw",
-        height: "100dvh",
-      }
-    : undefined
+  const popupBody = (
+    <div className="market-popup-content" onWheel={handlePopupWheel}>
+      {mobileLayout && (
+        <div className="market-popup-mobile-header">
+          <h3>🛒 Marché</h3>
+          <button type="button" className="market-popup-close" onClick={handleClose} aria-label="Fermer le marché">
+            ✕
+          </button>
+        </div>
+      )}
+      {!mobileLayout && <h3>🛒 Marché</h3>}
+      <p>{mode === "buy" ? "Choisis ce que tu veux acheter." : "Choisis rapidement la quantité à vendre pour chaque produit."}</p>
 
-  return (
-    <WorldPopup
-      open={open}
-      anchorObject={marketEntity}
-      onClose={handleClose}
-      anchorResolver={(entityObject) => entityObject.getObjectByName("__hitbox__") ?? entityObject}
-      offsetY={0.38}
-      className={["market-popup", mobileLayout ? "market-popup--mobile" : ""].filter(Boolean).join(" ")}
-      onMouseDown={(e) => e.stopPropagation()}
-      onClick={(e) => e.stopPropagation()}
-      style={popupStyle}
-    >
-      <div className="market-popup-content" onWheel={handlePopupWheel}>
-        <h3>🛒 Marché</h3>
-        <p>{mode === "buy" ? "Choisis ce que tu veux acheter." : "Choisis rapidement la quantité à vendre pour chaque produit."}</p>
-
-        <div className="market-popup-tabs">
+      <div className="market-popup-tabs">
           <UIButton className={mode === "buy" ? "market-popup-tab is-active" : "market-popup-tab"} onClick={() => setMode("buy")}>Acheter</UIButton>
           <UIButton className={mode === "sell" ? "market-popup-tab is-active" : "market-popup-tab"} onClick={() => setMode("sell")}>Vendre</UIButton>
           <span className="market-popup-money">{money} 💵</span>
@@ -290,7 +276,36 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
             })}
           </div>
         )}
+    </div>
+  )
+
+  if (mobileLayout) {
+    return (
+      <div
+        className="market-popup market-popup--mobile"
+        onMouseDown={(e) => e.stopPropagation()}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {popupBody}
       </div>
+    )
+  }
+
+  const popupStyle: CSSProperties | undefined = undefined
+
+  return (
+    <WorldPopup
+      open={open}
+      anchorObject={marketEntity}
+      onClose={handleClose}
+      anchorResolver={(entityObject) => entityObject.getObjectByName("__hitbox__") ?? entityObject}
+      offsetY={0.38}
+      className="market-popup"
+      onMouseDown={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+      style={popupStyle}
+    >
+      {popupBody}
     </WorldPopup>
   )
 }

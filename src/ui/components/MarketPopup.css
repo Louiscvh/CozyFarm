@@ -16,6 +16,25 @@
   padding-right: 4px;
 }
 
+
+.market-popup-mobile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.market-popup-close {
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  font: 600 18px/1 "JetBrains Mono", monospace;
+}
+
+
 .market-popup-content::-webkit-scrollbar {
   width: 8px;
 }
@@ -161,6 +180,8 @@
 
 @media (max-width: 900px), (pointer: coarse) {
   .market-popup.market-popup--mobile {
+    position: fixed;
+    inset: 0;
     box-sizing: border-box;
     min-width: 100vw;
     max-width: 100vw;
@@ -169,6 +190,7 @@
     border-radius: 0;
     padding: max(16px, env(safe-area-inset-top, 0px)) max(14px, env(safe-area-inset-right, 0px)) max(14px, env(safe-area-inset-bottom, 0px)) max(14px, env(safe-area-inset-left, 0px));
     border: none;
+    transform: none;
   }
 
   .market-popup--mobile .market-popup-content {
