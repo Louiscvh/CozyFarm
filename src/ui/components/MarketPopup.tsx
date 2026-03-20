@@ -1,4 +1,4 @@
-import { type CSSProperties, type WheelEvent, useEffect, useState } from "react"
+import { type TouchEvent, type WheelEvent, useEffect, useState } from "react"
 import type { Object3D } from "three"
 import { soundManager } from "../../game/system/SoundManager"
 import { toolLevelStore } from "../store/ToolLevelStore"
@@ -184,6 +184,11 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
 
   const money = moneyStore.getAmount()
 
+
+  const stopTouchPropagation = (e: TouchEvent<HTMLDivElement>) => {
+    e.stopPropagation()
+  }
+
   const handlePopupWheel = (e: WheelEvent<HTMLDivElement>) => {
     e.preventDefault()
     e.stopPropagation()
@@ -191,7 +196,7 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
   }
 
   const popupBody = (
-    <div className="market-popup-content" onWheel={handlePopupWheel}>
+    <div className="market-popup-content" onWheel={handlePopupWheel} onTouchStart={stopTouchPropagation} onTouchMove={stopTouchPropagation}>
       {mobileLayout && (
         <div className="market-popup-mobile-header">
           <h3>🛒 Marché</h3>
@@ -285,13 +290,13 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
         className="market-popup market-popup--mobile"
         onMouseDown={(e) => e.stopPropagation()}
         onClick={(e) => e.stopPropagation()}
+        onTouchStart={stopTouchPropagation}
+        onTouchMove={stopTouchPropagation}
       >
         {popupBody}
       </div>
     )
   }
-
-  const popupStyle: CSSProperties | undefined = undefined
 
   return (
     <WorldPopup
@@ -303,7 +308,6 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
       className="market-popup"
       onMouseDown={(e) => e.stopPropagation()}
       onClick={(e) => e.stopPropagation()}
-      style={popupStyle}
     >
       {popupBody}
     </WorldPopup>
