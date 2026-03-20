@@ -115,10 +115,10 @@ export class CameraController {
     const moveDir = new THREE.Vector3()
     const cameraDelta = 1 / 60
 
-    if (!ctrl && this.keyboard.isDown("z")) moveDir.add(forward)
-    if (this.keyboard.isDown("s")) moveDir.add(forward.clone().multiplyScalar(-1))
-    if (this.keyboard.isDown("q")) moveDir.add(right.clone().multiplyScalar(-1))
-    if (this.keyboard.isDown("d")) moveDir.add(right)
+    if (!ctrl && this.keyboard.isDown("z", "arrowup")) moveDir.add(forward)
+    if (this.keyboard.isDown("s", "arrowdown")) moveDir.add(forward.clone().multiplyScalar(-1))
+    if (this.keyboard.isDown("q", "arrowleft")) moveDir.add(right.clone().multiplyScalar(-1))
+    if (this.keyboard.isDown("d", "arrowright")) moveDir.add(right)
 
     if (moveDir.lengthSq() > 0) {
       moveDir.normalize()
