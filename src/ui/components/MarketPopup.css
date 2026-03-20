@@ -58,7 +58,7 @@
 .market-popup-list {
   display: flex;
   flex-direction: column;
-  max-height: min(68vh, 300px);
+  max-height: min(68vh, 250px);
   overflow-y: auto;
   overscroll-behavior: contain;
   gap: 8px;
@@ -100,7 +100,7 @@
   font-size: 2rem;
   line-height: 1;
   position: relative;
-  margin-left: 1rem;
+  margin-left: 0.5rem;
   display: flex;
   gap: 8px;
   align-items: center;
@@ -163,4 +163,9 @@
   flex-direction: row;
   align-items: center;
   gap: 6px;
+}
+
+.market-popup-buy-actions-x5 {
+  display: flex;
+  align-items: safe;
 }

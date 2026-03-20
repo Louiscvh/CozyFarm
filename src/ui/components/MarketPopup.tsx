@@ -261,8 +261,9 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
                           playClickSound={false}
                           onClick={() => buyItem(item, BUY_QTY_MULTIPLIER)}
                           disabled={!canBuyFive}
+                          className="market-popup-buy-actions-x5"
                         >
-                          x5 {item.unitPrice * BUY_QTY_MULTIPLIER} 💵
+                          <span>{item.unitPrice * BUY_QTY_MULTIPLIER} 💵</span>
                         </UIButton>
                       )}
                     </div>

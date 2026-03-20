@@ -58,7 +58,7 @@ const ALL_ITEMS: ItemDef[] = [
     { id: "tree2", label: "Chêne", icon: "🌳", usage: { kind: "placeable", entity: Tree2Entity } },
     { id: "tree3", label: "Acacia", icon: "🌴", usage: { kind: "placeable", entity: Tree3Entity } },
     { id: "rock1", label: "Rocher", icon: "🪨", usage: { kind: "placeable", entity: Rock1Entity } },
-    { id: "tulip", label: "Tulipe", icon: "🌸", usage: { kind: "placeable", entity: TulipEntity } },
+    { id: "tulip", label: "Tulipe", icon: "🌷", usage: { kind: "placeable", entity: TulipEntity } },
     { id: "farm", label: "Ferme", icon: "🏚️", usage: { kind: "placeable", entity: FarmEntity } },
     CarrotSeedItemDef,
     LettuceSeedItemDef,
