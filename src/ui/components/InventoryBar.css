@@ -397,7 +397,7 @@ body.placing { cursor: crosshair; }
 
 @media (max-width: 900px), (pointer: coarse) {
   #inventory-bar {
-    --inv-slot-size: 48px;
+    --inv-slot-size: 42px;
     --inv-slot-gap: 6px;
     bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
     left: max(12px, env(safe-area-inset-left, 0px));
@@ -418,17 +418,17 @@ body.placing { cursor: crosshair; }
   }
 
   #inventory-expand-btn {
-    width: 42px;
-    height: 42px;
+    width: 38px;
+    height: 38px;
     margin-bottom: 0;
-    font-size: 15px;
-    border-radius: 12px;
+    font-size: 14px;
+    border-radius: 10px;
   }
 
   #inventory-slots {
     width: 100%;
     padding: 8px;
-    border-radius: 16px;
+    border-radius: 10px;
     overflow: hidden;
   }
 
@@ -455,7 +455,17 @@ body.placing { cursor: crosshair; }
     flex: 0 0 var(--inv-slot-size);
     min-width: var(--inv-slot-size);
     min-height: var(--inv-slot-size);
-    border-radius: 12px;
+    border-radius: 10px;
+  }
+
+  .inv-slot.ui-button {
+    border-radius: 8px;
+  }
+
+  .inv-slot-icon {
+    width: 24px;
+    height: 24px;
+    font-size: 18px;
   }
 
   .inv-slot-label {
