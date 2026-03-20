@@ -319,8 +319,10 @@ export function MarketPopup({ open, marketEntity, onClose }: MarketPopupProps) {
                     </UIButton>
                   </div>
                 </div>
-                <span className="market-popup-total">{total} 💵</span>
-                <UIButton playClickSound={false} onClick={() => sellItem(item)} disabled={stock <= 0}>💰</UIButton>
+                <div className="market-popup-step-money">
+                  <span className="market-popup-total">{total} 💵</span>
+                  <UIButton playClickSound={false} onClick={() => sellItem(item)} disabled={stock <= 0}>💰</UIButton>
+                </div>
               </div>
             )
           })}

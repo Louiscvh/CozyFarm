@@ -177,18 +177,21 @@
   gap: 8px;
 }
 
+.market-popup-step-money {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .market-popup-buy-actions {
   display: flex;
   flex-direction: row;
-  align-items: center;
+  align-items: end;
   gap: 6px;
 }
 
 .market-popup-buy-button {
   position: relative;
-  width: auto;
-  min-width: 84px;
-  padding: 0 14px;
 }
 
 .market-popup-buy-button--multi {
@@ -237,4 +240,16 @@
   min-height: 0;
   max-height: none;
   padding-bottom: 18px;
+}
+
+.market-popup--mobile .market-popup-total {
+  font-size: 0.8rem;
+}
+
+.market-popup--mobile .market-popup-step-money button {
+  min-width: 52px;
+}
+
+.market-popup--mobile .market-popup-step-buttons button:nth-child(3),  .market-popup--mobile .market-popup-step-buttons button:nth-child(4){
+  display: none;
 }
