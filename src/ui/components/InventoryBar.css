@@ -397,7 +397,7 @@ body.placing { cursor: crosshair; }
 
 @media (max-width: 900px), (pointer: coarse) {
   #inventory-bar {
-    --inv-slot-size: 42px;
+    --inv-slot-size: 46px;
     --inv-slot-gap: 6px;
     bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
     left: max(12px, env(safe-area-inset-left, 0px));
@@ -418,8 +418,8 @@ body.placing { cursor: crosshair; }
   }
 
   #inventory-expand-btn {
-    width: 38px;
-    height: 38px;
+    width: 42px;
+    height: 42px;
     margin-bottom: 0;
     font-size: 14px;
     border-radius: 10px;
@@ -463,9 +463,9 @@ body.placing { cursor: crosshair; }
   }
 
   .inv-slot-icon {
-    width: 24px;
-    height: 24px;
-    font-size: 22px;
+    width: 26px;
+    height: 26px;
+    font-size: 24px;
   }
 
   .inv-slot-label {
