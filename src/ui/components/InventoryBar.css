@@ -428,7 +428,7 @@ body.placing { cursor: crosshair; }
   #inventory-slots {
     width: 100%;
     padding: 8px;
-    border-radius: 16px;
+    border-radius: 10px;
     overflow: hidden;
   }
 
@@ -459,7 +459,7 @@ body.placing { cursor: crosshair; }
   }
 
   .inv-slot.ui-button {
-    border-radius: 10px;
+    border-radius: 8px;
   }
 
   .inv-slot-icon {
