@@ -7,6 +7,7 @@ import { itemActionRegistry, type UseOnEntityContext } from "../../game/interact
 import { World } from "../../game/world/World"
 import { getAreaOffsetsForLevel, getAreaOffsetsForTool, toolLevelStore } from "../store/ToolLevelStore"
 import { placementStore } from "../store/PlacementStore"
+import { soundManager } from "../../game/system/SoundManager"
 
 export function useFarming() {
     useEffect(() => {
@@ -119,7 +120,10 @@ export function registerFarmingActions(): void {
                 for (const { cellX, cellZ } of readyCells) {
                     const harvested = world.cropManager.harvest(cellX, cellZ)
                     if (!harvested) continue
-                    if (world.tilesFactory.isSoil(cellX, cellZ)) world.tilesFactory.playSoilHarvestParticles(cellX, cellZ)
+                    if (world.tilesFactory.isSoil(cellX, cellZ)) {
+                        world.tilesFactory.playSoilHarvestParticles(cellX, cellZ)
+                        soundManager.playCrop()
+                    }
                     inventoryStore.produce(harvested.def.harvestItemId, harvested.def.harvestQty, { cellX, cellZ })
                     inventoryStore.produce(harvested.def.harvestItemId, harvested.def.harvestQty)
                     changed = true
@@ -171,7 +175,10 @@ export function registerFarmingActions(): void {
                 if (!world) return false
                 const harvested = world.cropManager.harvest(ctx.cellX, ctx.cellZ)
                 if (!harvested) return false
-                if (world.tilesFactory.isSoil(ctx.cellX, ctx.cellZ)) world.tilesFactory.playSoilHarvestParticles(ctx.cellX, ctx.cellZ)
+                if (world.tilesFactory.isSoil(ctx.cellX, ctx.cellZ)) {
+                    world.tilesFactory.playSoilHarvestParticles(ctx.cellX, ctx.cellZ)
+                    soundManager.playCrop()
+                }
                 inventoryStore.produce(harvested.def.harvestItemId, harvested.def.harvestQty, { cellX: ctx.cellX, cellZ: ctx.cellZ })
                 inventoryStore.produce(harvested.def.harvestItemId, harvested.def.harvestQty)
                 if (harvested.def.fruitRegrowSeconds) {

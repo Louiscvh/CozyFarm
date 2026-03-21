@@ -62,7 +62,7 @@ export class ItemActionController {
     dispose(): void {
         this.unsubscribeStore?.()
         this.setHighlight(null)
-        this.renderer.domElement.style.cursor = "default"
+        this.setCursor("default")
         window.removeEventListener("mousedown", this._onMouseDown)
         window.removeEventListener("mousemove", this._onMouseMove)
         window.removeEventListener("click", this._onClick)
@@ -233,6 +233,42 @@ export class ItemActionController {
 
     private setCursor(cursor: string): void {
         this.renderer.domElement.style.cursor = cursor
+
+        if (typeof document === "undefined") return
+
+        document.body.style.cursor = cursor
+        document.documentElement.style.cursor = cursor
+        document.getElementById("root")?.style.setProperty("cursor", cursor)
+        document.getElementById("ui-root")?.style.setProperty("cursor", cursor)
+    }
+
+    private refreshCursorState(): void {
+        const item = placementStore.selectedItem
+        const hoveredCell = placementStore.hoveredCell
+
+        // Ghost item (plaçable ou graine) — curseur piloté depuis l'état de placement.
+        if (item && (isPlaceable(item) || !!ALL_CROPS.find(c => c.seedItemId === item.id)?.usePlacementGhost)) {
+            this.updateCursorForPlacement()
+            return
+        }
+
+        if (hoveredCell && !item) {
+            this.updateCursorForHarvestHover()
+            return
+        }
+
+        if (isUsableOnEntity(item)) {
+            this.updateCursorForEntityHover(item)
+            return
+        }
+
+        if (isUsableOnTile(item)) {
+            this.updateCursorForTileHover(item)
+            return
+        }
+
+        this.setHighlight(null)
+        this.setCursor("default")
     }
 
     private updateCursorForPlacement(): void {
@@ -325,32 +361,7 @@ export class ItemActionController {
     }
 
     private onMouseMove(): void {
-        const item = placementStore.selectedItem
-        const hoveredCell = placementStore.hoveredCell
-
-        // Ghost item (plaçable ou graine) — cursor géré par PlacementController
-        if (item && (isPlaceable(item) || !!ALL_CROPS.find(c => c.seedItemId === item.id)?.usePlacementGhost)) {
-            this.updateCursorForPlacement()
-            return
-        }
-
-        if (hoveredCell && !item) {
-            this.updateCursorForHarvestHover()
-            return
-        }
-
-        if (isUsableOnEntity(item)) {
-            this.updateCursorForEntityHover(item)
-            return
-        }
-
-        if (isUsableOnTile(item)) {
-            this.updateCursorForTileHover(item)
-            return
-        }
-
-        this.setHighlight(null)
-        this.setCursor("default")
+        this.refreshCursorState()
     }
 
     // ─── Click ────────────────────────────────────────────────────────────────
@@ -387,7 +398,6 @@ export class ItemActionController {
             itemId: "",
         })
 
-        if (success) soundManager.playSuccess()
         return success
     }
 
@@ -517,6 +527,11 @@ export class ItemActionController {
     }
 
     private playToolSuccessSound(item: ItemDef): void {
+        if (this.isSeedItem(item)) {
+            soundManager.playCrop()
+            return
+        }
+
         if (item.id === "hoe" || item.id === "shovel") {
             soundManager.playCrop()
             return
@@ -548,11 +563,6 @@ export class ItemActionController {
     // ─── Store change ─────────────────────────────────────────────────────────
 
     private onStoreChange(): void {
-        const item = placementStore.selectedItem
-        const isSeedGhost = !!item && !!ALL_CROPS.find(c => c.seedItemId === item.id)?.usePlacementGhost
-        if (!item || (!isUsableOnEntity(item) && !isUsableOnTile(item) && !isSeedGhost)) {
-            this.setCursor("default")
-            this.setHighlight(null)
-        }
+        this.refreshCursorState()
     }
 }
