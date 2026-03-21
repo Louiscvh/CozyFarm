@@ -6,6 +6,7 @@ import { UIButton } from "./UIButton"
 import { placementStore } from "../store/PlacementStore"
 import { animateRotate, pushDeleteAction, historyStore } from "../store/HistoryStore"
 import { getFootprint, isConnectableEntity, supportsManualRotation } from "../../game/entity/Entity"
+import { animateConnectableVariantRotation } from "../../game/entity/connectable/ConnectableSystem"
 import type { Entity } from "../../game/entity/Entity"
 import { OutlineSystem } from "../../render/OutlineSystem"
 import { Renderer } from "../../render/Renderer"
@@ -348,8 +349,7 @@ export function EntityPopups() {
     historyStore.push({ type: "rotate", entityObject: e, prevRotY, nextRotY })
     cancelAnimationFrame(rotRafRef.current)
     if (isConnectable) {
-      e.userData.connectableVariantRotY = nextRotY
-      w.connectableSystem.refreshEntity(e)
+      animateConnectableVariantRotation(e, nextRotY)
       return
     }
     animateRotate(w, e, nextRotY)

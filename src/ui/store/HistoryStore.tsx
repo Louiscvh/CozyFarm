@@ -4,6 +4,7 @@ import { World } from "../../game/world/World"
 import { placementStore } from "./PlacementStore"
 import { animateRemove, animateAppear, animateRotate, animateMove } from "../../game/entity/EntityAnimation"
 import { isConnectableEntity } from "../../game/entity/Entity"
+import { animateConnectableVariantRotation } from "../../game/entity/connectable/ConnectableSystem"
 import type { Entity } from "../../game/entity/Entity"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -153,8 +154,7 @@ export function applyUndo() {
 
   if (action.type === "rotate") {
     if (isConnectableEntity(action.entityObject.userData.def as Entity | undefined)) {
-      action.entityObject.userData.connectableVariantRotY = action.prevRotY
-      w.connectableSystem.refreshEntity(action.entityObject)
+      animateConnectableVariantRotation(action.entityObject, action.prevRotY)
     } else {
       animateRotate(w, action.entityObject, action.prevRotY)
     }
@@ -234,8 +234,7 @@ export function applyRedo() {
 
   if (action.type === "rotate") {
     if (isConnectableEntity(action.entityObject.userData.def as Entity | undefined)) {
-      action.entityObject.userData.connectableVariantRotY = action.nextRotY
-      w.connectableSystem.refreshEntity(action.entityObject)
+      animateConnectableVariantRotation(action.entityObject, action.nextRotY)
     } else {
       animateRotate(w, action.entityObject, action.nextRotY)
     }

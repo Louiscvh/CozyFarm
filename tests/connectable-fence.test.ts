@@ -1,9 +1,11 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import * as THREE from "three"
-import { ConnectableSystem } from "../src/game/entity/connectable/ConnectableSystem.ts"
+import { ConnectableSystem, syncConnectableEntityVisual } from "../src/game/entity/connectable/ConnectableSystem.ts"
+import { createConnectableVisual, getDefaultConnectableLayout } from "../src/game/entity/connectable/ConnectableRegistry.ts"
 import type { World } from "../src/game/world/World.ts"
 import { WoodFenceEntity } from "../src/game/entity/entities/WoodFence.ts"
+import { BushEntity } from "../src/game/entity/entities/Bush.ts"
 
 function createEntity(cellX: number, cellZ: number) {
   const root = new THREE.Group()
@@ -12,6 +14,16 @@ function createEntity(cellX: number, cellZ: number) {
   root.userData.cellZ = cellZ
   root.userData.sizeInCells = 1
   return root
+}
+
+function getInstanceCount(root: THREE.Object3D): number {
+  let count = 0
+  root.traverse(obj => {
+    if ((obj as THREE.InstancedMesh).isInstancedMesh) {
+      count += (obj as THREE.InstancedMesh).count
+    }
+  })
+  return count
 }
 
 test("ConnectableSystem connecte les barrières sur les quatre directions cardinales", () => {
@@ -57,22 +69,30 @@ test("ConnectableSystem ignore les diagonales", () => {
   })
 })
 
-
-test("le registre supporte aussi la famille bush", async () => {
-  const { createConnectableVisual, getDefaultConnectableLayout } = await import("../src/game/entity/connectable/ConnectableRegistry.ts")
-  const { BushEntity } = await import("../src/game/entity/entities/Bush.ts")
-
+test("le registre supporte aussi la famille bush en instanced mesh texturé", () => {
   const visual = createConnectableVisual(BushEntity, 1, getDefaultConnectableLayout())
-  assert.equal(visual.children.length > 0, true)
+  const instancedChildren = visual.children.filter(child => (child as THREE.InstancedMesh).isInstancedMesh)
+
+  assert.equal(instancedChildren.length > 0, true)
+  assert.equal(((instancedChildren[0] as THREE.InstancedMesh).material as THREE.MeshStandardMaterial).map !== null, true)
 })
 
+test("une clôture connectée ajoute un poteau de jonction pour combler l'espace", () => {
+  const visual = createConnectableVisual(WoodFenceEntity, 1, {
+    north: true,
+    east: true,
+    south: false,
+    west: false,
+  })
 
-test("une clôture isolée conserve la rotation de variante et génère une hitbox exploitable", async () => {
+  assert.equal(getInstanceCount(visual), 7)
+})
+
+test("une clôture isolée conserve la rotation de variante et génère une hitbox exploitable", () => {
   const world = {
     cellSize: 1,
   } as unknown as World
 
-  const { syncConnectableEntityVisual } = await import("../src/game/entity/connectable/ConnectableSystem.ts")
   const root = createEntity(2, 2)
   root.userData.connectableVariantRotY = Math.PI / 2
 

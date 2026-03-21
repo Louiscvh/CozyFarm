@@ -28,6 +28,14 @@ export interface ConnectableFamilyDefinition {
   createHitbox(ctx: ConnectableBuildContext): ConnectableHitboxSpec
 }
 
+interface BoxInstanceSpec {
+  size: THREE.Vector3Tuple
+  position: THREE.Vector3Tuple
+}
+
+const boxGeometryCache = new Map<string, THREE.BoxGeometry>()
+const dummy = new THREE.Object3D()
+
 const FENCE_BROWN_MAT = new THREE.MeshStandardMaterial({
   color: 0x8b5a2b,
   roughness: 0.9,
@@ -69,6 +77,7 @@ function createLeafTexture(): THREE.Texture {
       }
 
       const texture = new THREE.CanvasTexture(canvas)
+      texture.colorSpace = THREE.SRGBColorSpace
       texture.wrapS = THREE.RepeatWrapping
       texture.wrapT = THREE.RepeatWrapping
       texture.repeat.set(2, 2)
@@ -97,31 +106,77 @@ BUSH_MAT.map = LEAF_TEXTURE
 BUSH_MAT.color.setHex(0xffffff)
 BUSH_MAT.needsUpdate = true
 
-function createBox(size: THREE.Vector3Tuple, material: THREE.Material, position: THREE.Vector3Tuple): THREE.Mesh {
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(...size), material)
-  mesh.position.set(...position)
-  mesh.castShadow = true
-  mesh.receiveShadow = true
-  return mesh
+function geometryKey(size: THREE.Vector3Tuple): string {
+  return size.join("x")
+}
+
+function getBoxGeometry(size: THREE.Vector3Tuple): THREE.BoxGeometry {
+  const key = geometryKey(size)
+  let geometry = boxGeometryCache.get(key)
+  if (!geometry) {
+    geometry = new THREE.BoxGeometry(...size)
+    boxGeometryCache.set(key, geometry)
+  }
+  return geometry
+}
+
+function createInstancedBoxes(instances: BoxInstanceSpec[], material: THREE.Material): THREE.Group {
+  const group = new THREE.Group()
+  const buckets = new Map<string, BoxInstanceSpec[]>()
+
+  for (const instance of instances) {
+    const key = geometryKey(instance.size)
+    const bucket = buckets.get(key)
+    if (bucket) bucket.push(instance)
+    else buckets.set(key, [instance])
+  }
+
+  for (const [key, batch] of buckets) {
+    const mesh = new THREE.InstancedMesh(getBoxGeometry(batch[0].size), material, batch.length)
+    mesh.name = `__instanced_boxes__:${key}`
+    mesh.castShadow = true
+    mesh.receiveShadow = true
+    mesh.frustumCulled = false
+    mesh.userData.keepGeometryAlive = true
+
+    for (let i = 0; i < batch.length; i++) {
+      dummy.position.set(...batch[i].position)
+      dummy.rotation.set(0, 0, 0)
+      dummy.scale.set(1, 1, 1)
+      dummy.updateMatrix()
+      mesh.setMatrixAt(i, dummy.matrix)
+    }
+
+    mesh.instanceMatrix.needsUpdate = true
+    group.add(mesh)
+  }
+
+  return group
+}
+
+function pushBox(instances: BoxInstanceSpec[], size: THREE.Vector3Tuple, position: THREE.Vector3Tuple): void {
+  instances.push({ size, position })
 }
 
 function createFenceStandalone(cellSize: number, variantRotationY: number): THREE.Object3D {
-  const group = new THREE.Group()
   const postWidth = cellSize * 0.14
   const postHeight = cellSize * 0.82
   const railThickness = cellSize * 0.08
   const railSpan = cellSize * 0.58
   const postOffset = railSpan * 0.5
+  const instances: BoxInstanceSpec[] = []
 
-  group.add(createBox([postWidth, postHeight, postWidth], FENCE_BROWN_MAT, [-postOffset, postHeight / 2, 0]))
-  group.add(createBox([postWidth, postHeight, postWidth], FENCE_BROWN_MAT, [postOffset, postHeight / 2, 0]))
-  group.add(createBox([railSpan, railThickness, railThickness], FENCE_BROWN_MAT, [0, cellSize * 0.28, 0]))
-  group.add(createBox([railSpan, railThickness, railThickness], FENCE_BROWN_MAT, [0, cellSize * 0.53, 0]))
+  pushBox(instances, [postWidth, postHeight, postWidth], [-postOffset, postHeight / 2, 0])
+  pushBox(instances, [postWidth, postHeight, postWidth], [postOffset, postHeight / 2, 0])
+  pushBox(instances, [railSpan, railThickness, railThickness], [0, cellSize * 0.28, 0])
+  pushBox(instances, [railSpan, railThickness, railThickness], [0, cellSize * 0.53, 0])
+
+  const group = createInstancedBoxes(instances, FENCE_BROWN_MAT)
   group.rotation.y = variantRotationY
   return group
 }
 
-function addFenceRail(group: THREE.Group, cellSize: number, direction: ConnectableDirection): void {
+function addFenceRail(instances: BoxInstanceSpec[], cellSize: number, direction: ConnectableDirection): void {
   const postThickness = cellSize * 0.15
   const railThickness = cellSize * 0.08
   const railLength = cellSize * 0.5 - postThickness * 0.7
@@ -140,8 +195,23 @@ function addFenceRail(group: THREE.Group, cellSize: number, direction: Connectab
       ? [0, y, sign * axisOffset]
       : [sign * axisOffset, y, 0]
 
-    group.add(createBox(size, FENCE_BROWN_MAT, pos))
+    pushBox(instances, size, pos)
   }
+}
+
+function addFenceJoinPost(instances: BoxInstanceSpec[], cellSize: number, direction: ConnectableDirection): void {
+  if (direction !== "north" && direction !== "east") return
+
+  const postWidth = cellSize * 0.12
+  const postHeight = cellSize * 0.54
+  const edgeOffset = cellSize * 0.5 - postWidth * 0.5
+
+  if (direction === "north") {
+    pushBox(instances, [postWidth, postHeight, postWidth], [0, postHeight / 2, edgeOffset])
+    return
+  }
+
+  pushBox(instances, [postWidth, postHeight, postWidth], [edgeOffset, postHeight / 2, 0])
 }
 
 function createFenceVisual({ cellSize, layout, variantRotationY }: ConnectableBuildContext): THREE.Object3D {
@@ -151,14 +221,18 @@ function createFenceVisual({ cellSize, layout, variantRotationY }: ConnectableBu
 
   if (activeDirections.length === 0) return createFenceStandalone(cellSize, variantRotationY)
 
-  const group = new THREE.Group()
   const postWidth = cellSize * 0.15
   const postHeight = cellSize * 0.84
+  const instances: BoxInstanceSpec[] = []
 
-  group.add(createBox([postWidth, postHeight, postWidth], FENCE_BROWN_MAT, [0, postHeight / 2, 0]))
+  pushBox(instances, [postWidth, postHeight, postWidth], [0, postHeight / 2, 0])
 
-  for (const direction of activeDirections) addFenceRail(group, cellSize, direction)
-  return group
+  for (const direction of activeDirections) {
+    addFenceRail(instances, cellSize, direction)
+    addFenceJoinPost(instances, cellSize, direction)
+  }
+
+  return createInstancedBoxes(instances, FENCE_BROWN_MAT)
 }
 
 function createFenceHitbox({ cellSize, layout }: ConnectableBuildContext): ConnectableHitboxSpec {
@@ -181,7 +255,7 @@ function createFenceHitbox({ cellSize, layout }: ConnectableBuildContext): Conne
   }
 }
 
-function addHedgeSegment(group: THREE.Group, cellSize: number, direction: ConnectableDirection): void {
+function addHedgeSegment(instances: BoxInstanceSpec[], cellSize: number, direction: ConnectableDirection): void {
   const isVertical = direction === "north" || direction === "south"
   const sign = direction === "north" || direction === "east" ? 1 : -1
   const length = cellSize * 0.34
@@ -196,19 +270,19 @@ function addHedgeSegment(group: THREE.Group, cellSize: number, direction: Connec
     ? [0, cellSize * 0.45, sign * centerOffset]
     : [sign * centerOffset, cellSize * 0.45, 0]
 
-  group.add(createBox(size, BUSH_MAT, pos))
+  pushBox(instances, size, pos)
 }
 
 function createBushVisual({ cellSize, layout }: ConnectableBuildContext): THREE.Object3D {
-  const group = new THREE.Group()
-  group.add(createBox([cellSize * 0.58, cellSize * 0.92, cellSize * 0.58], BUSH_MAT, [0, cellSize * 0.46, 0]))
+  const instances: BoxInstanceSpec[] = []
+  pushBox(instances, [cellSize * 0.58, cellSize * 0.92, cellSize * 0.58], [0, cellSize * 0.46, 0])
 
   for (const [direction, connected] of Object.entries(layout) as Array<[ConnectableDirection, boolean]>) {
     if (!connected) continue
-    addHedgeSegment(group, cellSize, direction)
+    addHedgeSegment(instances, cellSize, direction)
   }
 
-  return group
+  return createInstancedBoxes(instances, BUSH_MAT)
 }
 
 function createBushHitbox({ cellSize, layout }: ConnectableBuildContext): ConnectableHitboxSpec {

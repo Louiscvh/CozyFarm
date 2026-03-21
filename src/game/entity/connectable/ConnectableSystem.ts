@@ -21,7 +21,7 @@ function disposeTree(root: THREE.Object3D | null): void {
   root.traverse(obj => {
     if (!(obj as THREE.Mesh).isMesh) return
     const mesh = obj as THREE.Mesh
-    mesh.geometry?.dispose()
+    if (!mesh.userData.keepGeometryAlive) mesh.geometry?.dispose()
     const materials = Array.isArray(mesh.material) ? mesh.material : [mesh.material]
     for (const material of materials) {
       if (material instanceof THREE.MeshBasicMaterial && material.visible === false) {
@@ -129,6 +129,38 @@ export class ConnectableSystem {
   }
 }
 
+function isIsolatedLayout(layout: ConnectableLayout): boolean {
+  return !layout.north && !layout.east && !layout.south && !layout.west
+}
+
+export function animateConnectableVariantRotation(entity: THREE.Object3D, targetRotationY: number): () => void {
+  entity.userData.connectableVariantRotY = targetRotationY
+
+  const visual = entity.getObjectByName("__connectable_visual__")
+  const layout = entity.userData.connectableLayout as ConnectableLayout | undefined
+  if (!visual) return () => {}
+
+  if (!layout || !isIsolatedLayout(layout)) {
+    return () => {}
+  }
+
+  let current = visual.rotation.y
+  let rafId = 0
+
+  const animate = () => {
+    current += (targetRotationY - current) * 0.3
+    visual.rotation.y = current
+    if (Math.abs(targetRotationY - current) > 0.001) {
+      rafId = requestAnimationFrame(animate)
+    } else {
+      visual.rotation.y = targetRotationY
+    }
+  }
+
+  animate()
+  return () => cancelAnimationFrame(rafId)
+}
+
 export function syncConnectableEntityVisual(world: World, entity: THREE.Object3D, layout?: ConnectableLayout): void {
   const def = entity.userData.def as Entity | undefined
   if (!def || !isConnectableEntity(def)) return
@@ -139,6 +171,7 @@ export function syncConnectableEntityVisual(world: World, entity: THREE.Object3D
 
   const nextLayout = layout ?? getDefaultConnectableLayout()
   const variantRotationY = typeof entity.userData.connectableVariantRotY === "number" ? entity.userData.connectableVariantRotY as number : 0
+  entity.userData.connectableLayout = nextLayout
 
   const visual = entity.getObjectByName("__connectable_visual__")
   if (visual) {
