@@ -370,6 +370,7 @@ export class PlacementController {
 
         placementStore.rotation = initialRotDeg
         const targetRotRad = THREE.MathUtils.degToRad(initialRotDeg)
+        const ghostVariantRotY = placementStore.moveOrigin && isConnectableEntity(entity) ? 0 : targetRotRad
 
         this.removeGhost()
 
@@ -403,7 +404,7 @@ export class PlacementController {
             const { x, z } = this.cellToWorld(placeCellX, placeCellZ, footprint)
             const canPlace = this.world.tilesFactory.canSpawn(placeCellX, placeCellZ, footprint) && !this.hasCropInArea(placeCellX, placeCellZ, footprint)
             if (isConnectable) {
-                root.userData.connectableVariantRotY = targetRotRad
+                root.userData.connectableVariantRotY = ghostVariantRotY
                 const layout = this.world.connectableSystem.computePlacementLayout(entity, placeCellX, placeCellZ)
                 syncConnectableEntityVisual(this.world, root, layout)
                 applyGhostMaterials(root)
@@ -680,7 +681,7 @@ export class PlacementController {
             z = pos.z
             canPlace = this.world.tilesFactory.canSpawn(placeCellX, placeCellZ, footprint) && !this.hasCropInArea(placeCellX, placeCellZ, footprint)
             if (this.ghost && isConnectableEntity(entity)) {
-                this.ghost.userData.connectableVariantRotY = this.targetRotY
+                this.ghost.userData.connectableVariantRotY = placementStore.moveOrigin ? 0 : this.targetRotY
                 const layout = this.world.connectableSystem.computePlacementLayout(entity, placeCellX, placeCellZ)
                 syncConnectableEntityVisual(this.world, this.ghost, layout)
                 applyGhostMaterials(this.ghost)
@@ -930,7 +931,7 @@ export class PlacementController {
             placementStore.rotate()
             this.targetRotY += THREE.MathUtils.degToRad(90)
             if (this.ghost && isConnectableEntity(entity)) {
-                this.ghost.userData.connectableVariantRotY = this.targetRotY
+                this.ghost.userData.connectableVariantRotY = placementStore.moveOrigin ? 0 : this.targetRotY
                 if (placementStore.hoveredCell) {
                     const footprint = getFootprint(entity)
                     const { placeCellX, placeCellZ } = this.getPlaceCells(placementStore.hoveredCell.cellX, placementStore.hoveredCell.cellZ, footprint)

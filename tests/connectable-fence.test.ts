@@ -77,15 +77,30 @@ test("le registre supporte aussi la famille bush en instanced mesh texturé", ()
   assert.equal(((instancedChildren[0] as THREE.InstancedMesh).material as THREE.MeshStandardMaterial).map !== null, true)
 })
 
-test("une clôture connectée ajoute un poteau de jonction pour combler l'espace", () => {
+test("une clôture connectée ajoute un poteau de jonction centré pour combler l'espace", () => {
   const visual = createConnectableVisual(WoodFenceEntity, 1, {
-    north: true,
+    north: false,
     east: true,
     south: false,
     west: false,
   })
+  const box = new THREE.Box3().setFromObject(visual)
 
-  assert.equal(getInstanceCount(visual), 7)
+  assert.equal(getInstanceCount(visual), 4)
+  assert.ok(box.max.x > 0.54)
+})
+
+test("un buisson connecté prolonge le volume principal jusqu'au bord de cellule", () => {
+  const visual = createConnectableVisual(BushEntity, 1, {
+    north: false,
+    east: true,
+    south: false,
+    west: false,
+  })
+  const box = new THREE.Box3().setFromObject(visual)
+
+  assert.ok(Math.abs(box.max.x - 0.5) < 1e-6)
+  assert.ok(Math.abs(box.max.z - 0.29) < 1e-6)
 })
 
 test("une clôture isolée conserve la rotation de variante et génère une hitbox exploitable", () => {

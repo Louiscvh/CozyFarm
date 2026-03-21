@@ -43,7 +43,7 @@ const FENCE_BROWN_MAT = new THREE.MeshStandardMaterial({
 })
 
 const BUSH_MAT = new THREE.MeshStandardMaterial({
-  color: 0x4d7f38,
+  color: 0x264d21,
   roughness: 1,
   metalness: 0,
 })
@@ -204,7 +204,7 @@ function addFenceJoinPost(instances: BoxInstanceSpec[], cellSize: number, direct
 
   const postWidth = cellSize * 0.12
   const postHeight = cellSize * 0.54
-  const edgeOffset = cellSize * 0.5 - postWidth * 0.5
+  const edgeOffset = cellSize * 0.5
 
   if (direction === "north") {
     pushBox(instances, [postWidth, postHeight, postWidth], [0, postHeight / 2, edgeOffset])
@@ -258,8 +258,8 @@ function createFenceHitbox({ cellSize, layout }: ConnectableBuildContext): Conne
 function addHedgeSegment(instances: BoxInstanceSpec[], cellSize: number, direction: ConnectableDirection): void {
   const isVertical = direction === "north" || direction === "south"
   const sign = direction === "north" || direction === "east" ? 1 : -1
-  const length = cellSize * 0.34
-  const thickness = cellSize * 0.42
+  const length = cellSize * 0.42
+  const thickness = cellSize * 0.58
   const centerOffset = cellSize * 0.29
 
   const size: THREE.Vector3Tuple = isVertical
