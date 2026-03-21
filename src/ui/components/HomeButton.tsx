@@ -3,6 +3,7 @@ import { useEffect, useState } from "react"
 import { Renderer } from "../../render/Renderer"
 import { UIButton } from "./UIButton"
 import { moneyStore } from "../store/MoneyStore"
+import { GameClock } from "./GameClock"
 
 export const HomeButton = () => {
   const [money, setMoney] = useState(moneyStore.getAmount())
@@ -46,6 +47,8 @@ export const HomeButton = () => {
         <span>{money}</span>
         <span>💵</span>
       </UIButton>
+
+      <GameClock />
     </div>
   )
 }
