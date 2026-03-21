@@ -1,137 +1,196 @@
 /* src/ui/components/PerfMonitor.css */
 
 .pm-panel {
-    position: fixed;
-    bottom: 150px;
-    right: 12px;
-    width: 260px;
-    background: rgba(8, 8, 12, 0.88);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
-    padding: 10px 12px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    z-index: 999;
-    font-family: "JetBrains Mono", "Fira Code", monospace;
-    animation: pm-in 0.18s ease;
-    contain: layout paint;
+  position: fixed;
+  right: 12px;
+  bottom: 150px;
+  z-index: 999;
+  box-sizing: border-box;
+  display: flex;
+  width: min(360px, calc(100vw - 24px));
+  max-height: min(70vh, 640px);
+  flex-direction: column;
+  gap: 12px;
+  overflow: hidden auto;
+  padding: 14px;
+  background: rgba(8, 8, 12, 0.88);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  font-family: "JetBrains Mono", "Fira Code", monospace;
+  animation: pm-in 0.18s ease;
+  contain: layout paint;
+}
+
+@keyframes pm-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
   }
-  
-  @keyframes pm-in {
-    from { opacity: 0; transform: translateY(-6px) scale(0.98); }
-    to   { opacity: 1; transform: translateY(0)    scale(1);    }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
-  
-  .pm-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  
-  .pm-title {
-    font-size: 9px;
-    letter-spacing: 0.12em;
-    color: rgba(255,255,255,0.3);
-    flex: 1;
-  }
-  
-  .pm-fps {
-    display: flex;
-    align-items: baseline;
-    gap: 3px;
-    transition: color 0.3s;
-  }
-  .pm-fps-n   { font-size: 20px; font-weight: 700; line-height: 1; }
-  .pm-fps-u   { font-size: 10px; opacity: 0.6; }
-  .pm-fps-tag {
-    font-size: 8px;
-    letter-spacing: 0.1em;
-    padding: 1px 5px;
-    border-radius: 3px;
-    background: none;
-    color: #fff !important;
-    opacity: 0.9;
-    font-weight: 700;
-    align-self: center;
-  }
-  
-  .pm-close {
-    background: none;
-    border: none;
-    color: rgba(255,255,255,0.25);
-    cursor: pointer;
-    font-size: 11px;
-    padding: 2px 4px;
-    border-radius: 4px;
-    transition: color 0.15s, background 0.15s;
-    line-height: 1;
-  }
-  .pm-close:hover {
-    color: rgba(255,255,255,0.8);
-    background: rgba(255,255,255,0.08);
-  }
-  
-  .pm-graph {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-  
-  .pm-graph-head {
-    display: flex;
-    justify-content: space-between;
-    font-size: 8px;
-    letter-spacing: 0.1em;
-    color: rgba(255,255,255,0.25);
-  }
-  
-  .pm-canvas {
-    width: 100%;
-    height: 44px;
-    display: block;
-    border-radius: 4px;
-    border: 1px solid rgba(255,255,255,0.04);
-  }
-  
-  .pm-stats {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 6px 4px;
-    padding-top: 4px;
-    border-top: 1px solid rgba(255,255,255,0.06);
-  }
-  
-  .pm-stat {
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-  }
-  
-  .pm-stat span {
-    font-size: 7.5px;
-    letter-spacing: 0.06em;
-    color: rgba(255,255,255,0.25);
-    text-transform: uppercase;
-  }
-  
-  .pm-stat b {
-    font-size: 13px;
-    font-weight: 600;
-    color: rgba(255,255,255,0.85);
-  }
-  
-  .pm-stat b em {
-    font-size: 9px;
-    font-style: normal;
-    color: rgba(255,255,255,0.35);
-    margin-left: 1px;
-  }
+}
+
+.pm-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: start;
+  gap: 10px;
+}
+
+.pm-title {
+  min-width: 0;
+  padding-top: 4px;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.pm-fps {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+  text-align: right;
+  transition: color 0.3s;
+}
+
+.pm-fps-n {
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 0.95;
+}
+
+.pm-fps-u {
+  font-size: 11px;
+  opacity: 0.6;
+}
+
+.pm-fps-tag {
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff !important;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  opacity: 0.95;
+}
+
+.pm-close {
+  align-self: start;
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  font-size: 13px;
+  padding: 4px 6px;
+  border-radius: 6px;
+  transition: color 0.15s, background 0.15s;
+  line-height: 1;
+}
+
+.pm-close:hover {
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.pm-graph {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.pm-graph-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.32);
+}
+
+.pm-canvas {
+  width: 100%;
+  height: 44px;
+  display: block;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.025), rgba(255, 255, 255, 0.01));
+}
+
+.pm-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding-top: 6px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.pm-stat {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.pm-stat span {
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.38);
+  text-transform: uppercase;
+}
+
+.pm-stat b {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 15px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.pm-stat b em {
+  margin-left: 3px;
+  font-size: 10px;
+  font-style: normal;
+  color: rgba(255, 255, 255, 0.45);
+}
 
 @supports ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
   .pm-panel {
     -webkit-backdrop-filter: blur(10px) saturate(1.05);
     backdrop-filter: blur(10px) saturate(1.05);
+  }
+}
+
+@media (max-width: 640px) {
+  .pm-panel {
+    right: 8px;
+    left: 8px;
+    bottom: 104px;
+    width: auto;
+    max-height: min(60vh, 520px);
+    padding: 12px;
+  }
+
+  .pm-header {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .pm-title {
+    grid-column: 1 / -1;
+    padding-top: 0;
+  }
+
+  .pm-stats {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
   }
 }

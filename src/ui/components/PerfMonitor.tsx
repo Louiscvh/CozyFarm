@@ -21,6 +21,12 @@ type Snap = {
   memMB:      number | null
 }
 
+type PerformanceWithMemory = Performance & {
+  memory?: {
+    usedJSHeapSize: number
+  }
+}
+
 function Sparkline({ values, max, color, danger }: {
   values:  number[]
   max:     number
@@ -78,12 +84,17 @@ export function PerfMonitor({ onClose }: Props) {
   const [msH,  setMsH]  = useState<number[]>([])
   const [dcH,  setDcH]  = useState<number[]>([])
 
-  const lastT  = useRef(performance.now())
+  const lastT  = useRef(0)
   const frames = useRef(0)
-  const lastM  = useRef(performance.now())
+  const lastM  = useRef(0)
   const raf    = useRef(0)
 
   useEffect(() => {
+    const perf = performance as PerformanceWithMemory
+    const start = performance.now()
+    lastT.current = start
+    lastM.current = start
+
     const tick = () => {
       raf.current = requestAnimationFrame(tick)
       const now   = performance.now()
@@ -98,8 +109,8 @@ export function PerfMonitor({ onClose }: Props) {
         lastM.current  = now
 
         const info  = Renderer.instance!.renderer.info
-        const memMB = (performance as any).memory
-          ? Math.round((performance as any).memory.usedJSHeapSize / 1048576)
+        const memMB = perf.memory
+          ? Math.round(perf.memory.usedJSHeapSize / 1048576)
           : null
 
         setSnap({ fps, frameMs: Math.round(delta * 10) / 10, drawCalls: info.render.calls, triangles: info.render.triangles, geometries: info.memory.geometries, textures: info.memory.textures, memMB })
