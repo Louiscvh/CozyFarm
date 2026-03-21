@@ -25,7 +25,7 @@ import { TillParticles } from "../../system/TillParticles"
 import { FoliageParticles } from "../../system/FoliageParticles"
 import { WoodChipParticles } from "../../system/WoodChipParticles"
 import { getSeasonState, type SeasonId } from "../../system/Season"
-import { SOIL_HYDRATION_MAX, decaySoilHydration, getSoilHydrationStage, increaseSoilHydration } from "../../farming/SoilHydration"
+import { decaySoilHydration, easeSoilHydration, getSoilHydrationStage, increaseSoilHydration, saturateSoilHydration } from "../../farming/SoilHydration"
 
 export interface DecorCategory { types: Entity[]; density: number }
 export interface FixedEntityDef { def: Entity; tileX: number; tileZ: number; size: number }
@@ -138,7 +138,7 @@ export class TileFactory {
     private snowTransitions = new Map<string, SnowTransition>()
 
     private soilHydration = new Map<string, number>()
-    private rainHydratesSoils = false
+    private soilDisplayedHydration = new Map<string, number>()
     private readonly SOIL_COLOR_DRY = new THREE.Color(1, 1, 1)
     private readonly SOIL_COLOR_WATERED_LIGHT = new THREE.Color(0xC79269)
     private readonly SOIL_COLOR_WATERED_HEAVY = new THREE.Color(0x7B4A2C)
@@ -359,7 +359,7 @@ export class TileFactory {
         if (nextHydration <= currentHydration + 1e-4) return false
 
         this.soilHydration.set(k, nextHydration)
-        this.applySoilHydrationColor(k, slot)
+        this.applySoilHydrationColor(k, slot, this.soilDisplayedHydration.get(k) ?? 0)
         this.waterSplashParticles.spawnAtCell(cellX, cellZ)
         return true
     }
@@ -378,11 +378,11 @@ export class TileFactory {
         if (slot === undefined) return
 
         this.soilHydration.delete(k)
-        this.applySoilHydrationColor(k, slot)
+        this.applySoilHydrationColor(k, slot, this.soilDisplayedHydration.get(k) ?? 0)
     }
 
     isWatered(cellX: number, cellZ: number): boolean {
-        return getSoilHydrationStage(this.soilHydration.get(this.cellKey(cellX, cellZ)) ?? 0, this.rainHydratesSoils) > 0
+        return getSoilHydrationStage(this.soilHydration.get(this.cellKey(cellX, cellZ)) ?? 0) > 0
     }
 
     // ─── Soil layer ───────────────────────────────────────────────
@@ -596,11 +596,10 @@ export class TileFactory {
     private readonly SNOW_Y_VISIBLE: number = 0.025
     private readonly SNOW_Y_HIDDEN: number = -0.06
 
-    private applySoilHydrationColor(cellKey: string, slot: number): void {
+    private applySoilHydrationColor(cellKey: string, slot: number, hydration: number): void {
         const dry = this.soilDryColors.get(cellKey) ?? this.SOIL_COLOR_DRY
         const wateredLight = this.soilWateredLightColors.get(cellKey) ?? this.generateSoilWateredTint(dry, 1)
         const wateredHeavy = this.soilWateredHeavyColors.get(cellKey) ?? this.generateSoilWateredTint(dry, 2)
-        const hydration = this.rainHydratesSoils ? SOIL_HYDRATION_MAX : (this.soilHydration.get(cellKey) ?? 0)
 
         if (hydration <= 1e-4) {
             this.soilMesh.setColorAt(slot, dry)
@@ -616,9 +615,9 @@ export class TileFactory {
     }
 
     private updateSoilHydration(deltaTime: number, rainHydratesSoils: boolean): void {
-        this.rainHydratesSoils = rainHydratesSoils
-
-        if (!rainHydratesSoils && this.soilHydration.size > 0) {
+        if (rainHydratesSoils) {
+            for (const cellKey of this.soilSlots.keys()) this.soilHydration.set(cellKey, saturateSoilHydration())
+        } else if (this.soilHydration.size > 0) {
             for (const [cellKey, hydration] of this.soilHydration) {
                 const nextHydration = decaySoilHydration(hydration, deltaTime)
                 if (nextHydration <= 1e-4) this.soilHydration.delete(cellKey)
@@ -627,7 +626,18 @@ export class TileFactory {
         }
 
         if (!this.soilMesh.instanceColor) return
-        for (const [cellKey, slot] of this.soilSlots) this.applySoilHydrationColor(cellKey, slot)
+
+        for (const [cellKey, slot] of this.soilSlots) {
+            const targetHydration = this.soilHydration.get(cellKey) ?? 0
+            const currentHydration = this.soilDisplayedHydration.get(cellKey) ?? 0
+            const displayedHydration = easeSoilHydration(currentHydration, targetHydration, deltaTime)
+
+            if (displayedHydration <= 1e-4 && targetHydration <= 1e-4) this.soilDisplayedHydration.delete(cellKey)
+            else this.soilDisplayedHydration.set(cellKey, displayedHydration)
+
+            this.applySoilHydrationColor(cellKey, slot, displayedHydration)
+        }
+
         this.soilMesh.instanceColor.needsUpdate = true
     }
 
@@ -736,6 +746,7 @@ export class TileFactory {
         this.soilDryColors.set(k, dryColor)
         this.soilWateredLightColors.set(k, wateredLightColor)
         this.soilWateredHeavyColors.set(k, wateredHeavyColor)
+        this.soilDisplayedHydration.set(k, 0)
         this.soilMesh.setColorAt(slot, dryColor)
         this.soilMesh.instanceColor!.needsUpdate = true
         // Lance l'animation de l'herbe qui descend
@@ -764,6 +775,7 @@ export class TileFactory {
 
         // ← Reset couleur immédiatement, avant que le slot soit réutilisé
         this.soilHydration.delete(k)
+        this.soilDisplayedHydration.delete(k)
         const dry = this.soilDryColors.get(k) ?? this.SOIL_COLOR_DRY
         this.soilMesh.setColorAt(slot, dry)
         this.soilMesh.instanceColor!.needsUpdate = true
@@ -782,6 +794,7 @@ export class TileFactory {
                 this.soilWateredLightColors.delete(k)
                 this.soilWateredHeavyColors.delete(k)
                 this.soilHydration.delete(k)
+                this.soilDisplayedHydration.delete(k)
                 this.soilFreeSlots.push(slot)
                 this.markFree(cellX, cellZ, 1)
             },
