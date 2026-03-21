@@ -5,7 +5,7 @@ import "./EntityPopup.css"
 import { UIButton } from "./UIButton"
 import { placementStore } from "../store/PlacementStore"
 import { animateRotate, pushDeleteAction, historyStore } from "../store/HistoryStore"
-import { getFootprint } from "../../game/entity/Entity"
+import { getFootprint, supportsManualRotation } from "../../game/entity/Entity"
 import type { Entity } from "../../game/entity/Entity"
 import { OutlineSystem } from "../../render/OutlineSystem"
 import { Renderer } from "../../render/Renderer"
@@ -272,6 +272,7 @@ export function EntityPopups() {
     setHoveredPopup(null)
     OutlineSystem.instance?.setHovered(null)
 
+    w.connectableSystem.unregister(popup.entityObject)
     pushDeleteAction(w, popup.entityObject, savedHoveredCell)
   }
 
@@ -299,6 +300,7 @@ export function EntityPopups() {
     w.tilesFactory.markFree(cellX, cellZ, sizeInCells)
 
     if (e.userData.isInstanced) w.instanceManager.hide(def, e.userData.instanceSlot)
+    w.connectableSystem.unregister(e)
     w.scene.remove(e)
 
     const onCancel = () => {
@@ -313,6 +315,7 @@ export function EntityPopups() {
       }
       w.scene.add(e)
       w.entities.push(e)
+      w.connectableSystem.register(e)
     }
 
     placementStore.startMove(def, e, cellX, cellZ, originalRotY, onCancel)
@@ -356,7 +359,9 @@ export function EntityPopups() {
           <>
             <div className="entity-popup-bridge" />
             <UIButton className="move-btn" onClick={() => handleMove(hoveredPopup)}>✥</UIButton>
-            <UIButton className="rotate-btn" onClick={() => handleRotate(hoveredPopup)}>↻</UIButton>
+            {supportsManualRotation(hoveredPopup.entityObject.userData.def as Entity | undefined) && (
+              <UIButton className="rotate-btn" onClick={() => handleRotate(hoveredPopup)}>↻</UIButton>
+            )}
             <UIButton className="delete-btn" onClick={() => handleDelete(hoveredPopup)}>🗑️</UIButton>
           </>
         )}

@@ -4,6 +4,7 @@ import { placementStore } from "../store/PlacementStore"
 import { inventoryStore } from "../store/InventoryStore"
 import type { ItemDef } from "../../game/entity/ItemDef"
 import { isPlaceable, isResource, isUsableOnEntity, isUsableOnTile, getItemEntity } from "../../game/entity/ItemDef"
+import { supportsManualRotation } from "../../game/entity/Entity"
 import { Tree1Entity } from "../../game/entity/entities/Tree1"
 import { Tree2Entity } from "../../game/entity/entities/Tree2"
 import { Rock1Entity } from "../../game/entity/entities/Rock1"
@@ -448,10 +449,15 @@ export function InventoryBar() {
         )
 
         if (isPlaceable(item)) {
+            const entity = getItemEntity(item)
             return (
                 <div id="placement-hint">
-                    <span className="hint-key">{mobileLayout ? "↻" : "R"}</span> Rotation {rotation}°
-                    <span className="hint-sep">·</span>
+                    {supportsManualRotation(entity) && (
+                        <>
+                            <span className="hint-key">{mobileLayout ? "↻" : "R"}</span> Rotation {rotation}°
+                            <span className="hint-sep">·</span>
+                        </>
+                    )}
                     {renderEscapeHint()}
                 </div>
             )

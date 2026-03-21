@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react"
 import { placementStore } from "../store/PlacementStore"
 import { toolLevelStore, type ToolId } from "../store/ToolLevelStore"
-import { isPlaceable } from "../../game/entity/ItemDef"
+import { isPlaceable, getItemEntity } from "../../game/entity/ItemDef"
+import { supportsManualRotation } from "../../game/entity/Entity"
 import "./MobileControls.css"
 
 const MOBILE_QUERY = "(max-width: 900px), (pointer: coarse)"
@@ -33,7 +34,7 @@ export function MobileControls() {
   }, [])
 
   const selectedItem = placementStore.selectedItem
-  const showRotate = !!selectedItem && isPlaceable(selectedItem)
+  const showRotate = !!selectedItem && isPlaceable(selectedItem) && supportsManualRotation(getItemEntity(selectedItem))
   const showLevel = isLevelableTool(selectedId)
   const levelLabel = showLevel
     ? `${toolLevelStore.getLevel(selectedId)}/${toolLevelStore.getUnlockedLevel(selectedId)}`

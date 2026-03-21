@@ -1,4 +1,8 @@
 // src/entity/Entity.ts
+export interface ConnectableEntityConfig {
+    family: string
+}
+
 export interface Entity {
     id: string
     model: string
@@ -26,6 +30,7 @@ export interface Entity {
   
     castShadow?: boolean
     receiveShadow?: boolean
+    connectable?: ConnectableEntityConfig
 }
 
 /**
@@ -44,4 +49,17 @@ export function getSizeInCells(entity: Entity): number {
  */
 export function getFootprint(entity: Entity): number {
   return entity.footprint ?? entity.modelSize
+}
+
+
+export function isConnectableEntity(entity: Entity | null | undefined): entity is Entity & { connectable: ConnectableEntityConfig } {
+  return !!entity?.connectable
+}
+
+export function getConnectableFamily(entity: Entity | null | undefined): string | null {
+  return entity?.connectable?.family ?? null
+}
+
+export function supportsManualRotation(entity: Entity | null | undefined): boolean {
+  return !isConnectableEntity(entity)
 }

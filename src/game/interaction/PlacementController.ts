@@ -7,7 +7,9 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js"
 import { placementStore } from "../../ui/store/PlacementStore"
 import { historyStore } from "../../ui/store/HistoryStore"
 import { World } from "../world/World"
-import { getFootprint } from "../entity/Entity"
+import { getFootprint, isConnectableEntity, supportsManualRotation } from "../entity/Entity"
+import type { Entity } from "../entity/Entity"
+import { syncConnectableEntityVisual } from "../entity/connectable/ConnectableSystem"
 import { isPlaceable, getItemEntity, isUsableOnTile } from "../entity/ItemDef"
 import type { ItemDef } from "../entity/ItemDef"
 import { getAreaOffsetsForTool, toolLevelStore } from "../../ui/store/ToolLevelStore"
@@ -356,12 +358,14 @@ export class PlacementController {
         // ── Entité plaçable ───────────────────────────────────────────────────
         const entity = getItemEntity(item)
 
-        const initialRotDeg = placementStore.moveOrigin
-            ? Math.round(THREE.MathUtils.radToDeg(placementStore.moveOrigin.rotY))
-            : entity.rotation?.y || 0
+        const initialRotDeg = supportsManualRotation(entity)
+            ? (placementStore.moveOrigin
+                ? Math.round(THREE.MathUtils.radToDeg(placementStore.moveOrigin.rotY))
+                : entity.rotation?.y || 0)
+            : 0
 
         placementStore.rotation = initialRotDeg
-        const targetRotRad = THREE.MathUtils.degToRad(initialRotDeg)
+        const targetRotRad = supportsManualRotation(entity) ? THREE.MathUtils.degToRad(initialRotDeg) : 0
 
         this.removeGhost()
 
@@ -393,6 +397,10 @@ export class PlacementController {
             const { placeCellX, placeCellZ } = this.getPlaceCells(cellX, cellZ, footprint)
             const { x, z } = this.cellToWorld(placeCellX, placeCellZ, footprint)
             const canPlace = this.world.tilesFactory.canSpawn(placeCellX, placeCellZ, footprint) && !this.hasCropInArea(placeCellX, placeCellZ, footprint)
+            if (isConnectableEntity(entity)) {
+                const layout = this.world.connectableSystem.computePlacementLayout(entity, placeCellX, placeCellZ)
+                syncConnectableEntityVisual(this.world, root, layout)
+            }
 
             this.targetPos.set(x, this.yOffset, z)
             this.currentPos.copy(this.targetPos)
@@ -664,6 +672,10 @@ export class PlacementController {
             x = pos.x
             z = pos.z
             canPlace = this.world.tilesFactory.canSpawn(placeCellX, placeCellZ, footprint) && !this.hasCropInArea(placeCellX, placeCellZ, footprint)
+            if (this.ghost && isConnectableEntity(entity)) {
+                const layout = this.world.connectableSystem.computePlacementLayout(entity, placeCellX, placeCellZ)
+                syncConnectableEntityVisual(this.world, this.ghost, layout)
+            }
             highlightY = this.getSeedHoverY(cellX, cellZ)
             highlightMesh.scale.set(footprint * this.world.cellSize, footprint * this.world.cellSize, 1)
             revealGroup.position.set(x, GRID_Y + 0.0055, z)
@@ -726,7 +738,7 @@ export class PlacementController {
         const fromCellX = ent.userData.cellX as number
         const fromCellZ = ent.userData.cellZ as number
         const fromRotY = ent.userData.rotY as number
-        const newRotY = this.targetRotY
+        const newRotY = isConnectableEntity(ent.userData.def as Entity | undefined) ? 0 : this.targetRotY
         // Preserve current vertical placement (includes procedural/hitbox adjustments)
         const extraY = ent.position.y
 
@@ -754,6 +766,7 @@ export class PlacementController {
         this.world.scene.add(ent)
         if (!this.world.entities.includes(ent)) this.world.entities.push(ent)
         this.world.tilesFactory.markOccupied(placeCellX, placeCellZ, footprint)
+        this.world.connectableSystem.register(ent)
 
         historyStore.push({
             type: "move",
@@ -776,6 +789,8 @@ export class PlacementController {
         const spawnedEntity = await this.world.spawnEntitySafe(entity, placeCellX, placeCellZ, footprint)
         if (!spawnedEntity) { soundManager.playError(); return }
 
+        this.world.connectableSystem.register(spawnedEntity)
+
         const finalScale = spawnedEntity.scale.clone()
         spawnedEntity.scale.set(0, 0, 0)
 
@@ -783,17 +798,19 @@ export class PlacementController {
         spawnedEntity.userData.cellZ = placeCellZ
         spawnedEntity.userData.sizeInCells = footprint
 
+        const placementRotY = isConnectableEntity(entity) ? 0 : this.targetRotY
+
         if (spawnedEntity.userData.isInstanced) {
-            spawnedEntity.userData.rotY = this.targetRotY
-            spawnedEntity.rotation.y = this.targetRotY
+            spawnedEntity.userData.rotY = placementRotY
+            spawnedEntity.rotation.y = placementRotY
             this.world.instanceManager.setTransform(
-                spawnedEntity.userData.def as any,
+                spawnedEntity.userData.def as Entity,
                 spawnedEntity.userData.instanceSlot,
                 spawnedEntity.position,
-                this.targetRotY,
+                placementRotY,
             )
         } else {
-            spawnedEntity.rotation.y = this.targetRotY
+            spawnedEntity.rotation.y = placementRotY
         }
 
         historyStore.push({
@@ -822,7 +839,7 @@ export class PlacementController {
 
             if (spawnedEntity.userData.isInstanced) {
                 this.world.instanceManager.setTransform(
-                    spawnedEntity.userData.def as any,
+                    spawnedEntity.userData.def as Entity,
                     spawnedEntity.userData.instanceSlot,
                     spawnedEntity.position,
                     spawnedEntity.userData.rotY ?? spawnedEntity.rotation.y,
@@ -836,7 +853,7 @@ export class PlacementController {
                 spawnedEntity.scale.copy(finalScale)
                 if (spawnedEntity.userData.isInstanced) {
                     this.world.instanceManager.setTransform(
-                        spawnedEntity.userData.def as any,
+                        spawnedEntity.userData.def as Entity,
                         spawnedEntity.userData.instanceSlot,
                         spawnedEntity.position,
                         spawnedEntity.userData.rotY ?? spawnedEntity.rotation.y,
@@ -894,6 +911,8 @@ export class PlacementController {
         }
 
         if ((e.key === "r" || e.key === "R") && placementStore.selectedItem && isPlaceable(placementStore.selectedItem)) {
+            const entity = getItemEntity(placementStore.selectedItem)
+            if (!supportsManualRotation(entity)) return
             placementStore.rotate()
             this.targetRotY += THREE.MathUtils.degToRad(90)
         }
