@@ -96,6 +96,7 @@ interface CellTransition {
     cellZ: number
     progress: number
     kind: "terrain_hide" | "terrain_show" | "dirt_show" | "dirt_hide"
+    speedMultiplier?: number
     onDone?: () => void
 }
 
@@ -150,6 +151,7 @@ export class TileFactory {
     private readonly SOIL_COLOR_WATERED_LIGHT = new THREE.Color(0xC79269)
     private readonly SOIL_COLOR_WATERED_HEAVY = new THREE.Color(0x7B4A2C)
     private readonly DIRT_COLOR = new THREE.Color("#b88f67")
+    private readonly dirtColors = new Map<string, THREE.Color>()
     private readonly soilDryColors = new Map<string, THREE.Color>()
     private readonly soilWateredLightColors = new Map<string, THREE.Color>()
     private readonly soilWateredHeavyColors = new Map<string, THREE.Color>()
@@ -600,6 +602,20 @@ export class TileFactory {
         return new THREE.Color().setHSL(hsl.h, hsl.s, hsl.l)
     }
 
+    private generateDirtTint(cellX: number, cellZ: number): THREE.Color {
+        const base = this.DIRT_COLOR.clone()
+        const seed = cellX * 153617 + cellZ * 7919 + 211
+        const noise = Math.sin(seed * 0.0157) * 43758.5453
+        const n = noise - Math.floor(noise)
+
+        const hsl = { h: 0, s: 0, l: 0 }
+        base.getHSL(hsl)
+        hsl.h = (hsl.h + (n - 0.5) * 0.028 + 1) % 1
+        hsl.s = THREE.MathUtils.clamp(hsl.s + (n - 0.5) * 0.16, 0, 1)
+        hsl.l = THREE.MathUtils.clamp(hsl.l + (n - 0.5) * 0.14, 0, 1)
+        return new THREE.Color().setHSL(hsl.h, hsl.s, hsl.l)
+    }
+
     private generateSoilWateredTint(dry: THREE.Color, intensity: 1 | 2): THREE.Color {
         const target = intensity === 2 ? this.SOIL_COLOR_WATERED_HEAVY : this.SOIL_COLOR_WATERED_LIGHT
         const mix = intensity === 2 ? 0.82 : 0.56
@@ -693,7 +709,8 @@ export class TileFactory {
         if (this.transitions.size === 0 && this.snowTransitions.size === 0) return
 
         for (const [k, t] of this.transitions) {
-            t.progress = Math.min(1, t.progress + deltaTime * this.TRANSITION_SPEED)
+            const speed = this.TRANSITION_SPEED * (t.speedMultiplier ?? 1)
+            t.progress = Math.min(1, t.progress + deltaTime * speed)
 
             const ease = t.progress
 
@@ -787,10 +804,13 @@ export class TileFactory {
     // ─── API Soil ─────────────────────────────────────────────────
 
     private acquireDirtSlot(cellX: number, cellZ: number): number {
+        const cellKey = this.cellKey(cellX, cellZ)
         const slot = this.dirtFreeSlots.pop() ?? this.dirtHighWater++
-        this.dirtSlots.set(this.cellKey(cellX, cellZ), slot)
+        this.dirtSlots.set(cellKey, slot)
         this.dirtMesh.count = this.dirtHighWater
-        this.dirtMesh.setColorAt(slot, this.DIRT_COLOR)
+        const dirtColor = this.dirtColors.get(cellKey) ?? this.generateDirtTint(cellX, cellZ)
+        this.dirtColors.set(cellKey, dirtColor)
+        this.dirtMesh.setColorAt(slot, dirtColor)
         this.dirtMesh.instanceColor!.needsUpdate = true
         return slot
     }
@@ -799,6 +819,7 @@ export class TileFactory {
         this.dirtMesh.setMatrixAt(slot, _zero)
         this.dirtMesh.instanceMatrix.needsUpdate = true
         this.dirtSlots.delete(cellKey)
+        this.dirtColors.delete(cellKey)
         this.dirtFreeSlots.push(slot)
     }
 
@@ -920,6 +941,7 @@ export class TileFactory {
             cellZ,
             progress: 0,
             kind: "dirt_show",
+            speedMultiplier: 1.35,
             onDone: () => {
                 this.releaseSoilCell(k, soilSlot)
                 this.markFree(cellX, cellZ, 1)
