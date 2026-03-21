@@ -25,7 +25,7 @@ import { TillParticles } from "../../system/TillParticles"
 import { FoliageParticles } from "../../system/FoliageParticles"
 import { WoodChipParticles } from "../../system/WoodChipParticles"
 import { getSeasonState, type SeasonId } from "../../system/Season"
-import { decaySoilHydration, easeSoilHydration, getSoilHydrationStage, increaseSoilHydration, saturateSoilHydration } from "../../farming/SoilHydration"
+import { clampSoilHydration, decaySoilHydration, easeSoilHydration, getSoilHydrationStage, increaseSoilHydration, saturateSoilHydration } from "../../farming/SoilHydration"
 
 export interface DecorCategory { types: Entity[]; density: number }
 export interface FixedEntityDef { def: Entity; tileX: number; tileZ: number; size: number }
@@ -382,7 +382,11 @@ export class TileFactory {
     }
 
     isWatered(cellX: number, cellZ: number): boolean {
-        return getSoilHydrationStage(this.soilHydration.get(this.cellKey(cellX, cellZ)) ?? 0) > 0
+        return getSoilHydrationStage(this.getHydrationLevel(cellX, cellZ)) > 0
+    }
+
+    getHydrationLevel(cellX: number, cellZ: number): number {
+        return clampSoilHydration(this.soilHydration.get(this.cellKey(cellX, cellZ)) ?? 0)
     }
 
     // ─── Soil layer ───────────────────────────────────────────────
@@ -614,12 +618,12 @@ export class TileFactory {
         }
     }
 
-    private updateSoilHydration(deltaTime: number, rainHydratesSoils: boolean): void {
+    private updateSoilHydration(deltaTime: number, rainHydratesSoils: boolean, temperature: number): void {
         if (rainHydratesSoils) {
             for (const cellKey of this.soilSlots.keys()) this.soilHydration.set(cellKey, saturateSoilHydration())
         } else if (this.soilHydration.size > 0) {
             for (const [cellKey, hydration] of this.soilHydration) {
-                const nextHydration = decaySoilHydration(hydration, deltaTime)
+                const nextHydration = decaySoilHydration(hydration, deltaTime, temperature)
                 if (nextHydration <= 1e-4) this.soilHydration.delete(cellKey)
                 else this.soilHydration.set(cellKey, nextHydration)
             }
@@ -643,12 +647,12 @@ export class TileFactory {
 
     // ── Tick transitions — à appeler depuis World.update ───────────
 
-    tickTransitions(deltaTime: number, rainHydratesSoils: boolean = false): void {
+    tickTransitions(deltaTime: number, rainHydratesSoils: boolean = false, temperature: number = 18): void {
         this.waterSplashParticles.update(deltaTime)
         this.tillParticles.update(deltaTime)
         this.foliageParticles.update(deltaTime)
         this.woodChipParticles.update(deltaTime)
-        this.updateSoilHydration(deltaTime, rainHydratesSoils)
+        this.updateSoilHydration(deltaTime, rainHydratesSoils, temperature)
 
         if (this.transitions.size === 0 && this.snowTransitions.size === 0) return
 

@@ -67,7 +67,8 @@ export class World {
         if (this.weather) this.weather.update(deltaTime)
 
         const rainHydratesSoils = (this.weather?.getRainIntensity() ?? "none") !== "none"
-        this.tilesFactory.tickTransitions(deltaTime, rainHydratesSoils)
+        const currentTemperature = this.weather?.getTemperature() ?? 18
+        this.tilesFactory.tickTransitions(deltaTime, rainHydratesSoils, currentTemperature)
         this.tilesFactory.updateSeasonVisuals()
         this.tilesFactory.emitSeasonLeafDrift(this.entities, deltaTime)
 

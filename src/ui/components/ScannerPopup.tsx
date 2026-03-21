@@ -108,7 +108,12 @@ export function ScannerPopup() {
   })
 
   const conditions = computeGrowthRate(World.current?.weather ?? null)
-  const isWatered = World.current?.tilesFactory.isWatered(crop.cellX, crop.cellZ) ?? false
+  const hydrationLevel = World.current?.tilesFactory.getHydrationLevel(crop.cellX, crop.cellZ) ?? 0
+  const isWatered = hydrationLevel > 0.0001
+  const hydrationStatus = hydrationLevel >= 1 ? "OK" : hydrationLevel > 0 ? "Faible" : "Sec"
+  const hydrationTiles = [0, 1].map(index => ({
+    fill: Math.max(0, Math.min(1, hydrationLevel - index)),
+  }))
   const growthBonus = conditions.breakdown.timePaused
     ? 0
     : conditions.breakdown.temperatureMult
@@ -141,6 +146,15 @@ export function ScannerPopup() {
       <div className="scanner-popup-line">Progression: {progressPct}%</div>
       <div className="scanner-popup-progress">
         <div className="scanner-popup-progress-fill" style={{ width: `${progressPct}%` }} />
+      </div>
+
+      <div className="scanner-popup-line">Hydratation: {hydrationLevel.toFixed(1)}/2 tuiles ({hydrationStatus})</div>
+      <div className="scanner-popup-hydration-grid" aria-hidden>
+        {hydrationTiles.map((tile, index) => (
+          <div key={index} className="scanner-popup-hydration-cell">
+            <div className="scanner-popup-hydration-fill" style={{ transform: `scaleX(${tile.fill})` }} />
+          </div>
+        ))}
       </div>
 
       <div className="scanner-popup-line">Coeff. pousse: {formatMult(growthBonus)}</div>

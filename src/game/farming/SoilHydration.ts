@@ -1,6 +1,7 @@
 export const SOIL_HYDRATION_MAX = 2
-export const SOIL_HYDRATION_STEP_DURATION = 45
+export const SOIL_HYDRATION_STEP_DURATION = 28
 export const SOIL_HYDRATION_VISUAL_SMOOTHING = 0.22
+export const SOIL_HYDRATION_REFERENCE_TEMPERATURE = 18
 
 export type SoilHydrationStage = 0 | 1 | 2
 
@@ -16,9 +17,15 @@ export function saturateSoilHydration(): number {
     return SOIL_HYDRATION_MAX
 }
 
-export function decaySoilHydration(current: number, deltaTime: number): number {
+export function getSoilDryingMultiplier(temperature: number = SOIL_HYDRATION_REFERENCE_TEMPERATURE): number {
+    const delta = temperature - SOIL_HYDRATION_REFERENCE_TEMPERATURE
+    return Math.max(0.7, Math.min(2.2, 1 + delta * 0.045))
+}
+
+export function decaySoilHydration(current: number, deltaTime: number, temperature: number = SOIL_HYDRATION_REFERENCE_TEMPERATURE): number {
     if (deltaTime <= 0) return clampSoilHydration(current)
-    return clampSoilHydration(current - deltaTime / SOIL_HYDRATION_STEP_DURATION)
+    const dryingMultiplier = getSoilDryingMultiplier(temperature)
+    return clampSoilHydration(current - (deltaTime * dryingMultiplier) / SOIL_HYDRATION_STEP_DURATION)
 }
 
 export function easeSoilHydration(current: number, target: number, deltaTime: number): number {
