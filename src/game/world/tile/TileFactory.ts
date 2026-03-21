@@ -211,6 +211,7 @@ export class TileFactory {
         const geo = new THREE.BoxGeometry(this.cellSize, 0.5, this.cellSize)
         geo.translate(0, -0.25, 0)
         const mat = new THREE.MeshStandardMaterial({
+            map: this.generateDirtTexture(),
             roughness: 0.98,
             metalness: 0.0,
             color: "#b88f67",
@@ -588,6 +589,46 @@ export class TileFactory {
         return texture
     }
 
+    private generateDirtTexture(): THREE.CanvasTexture {
+        const size = 256
+        const canvas = document.createElement("canvas")
+        canvas.width = size
+        canvas.height = size
+        const ctx = canvas.getContext("2d")!
+
+        ctx.fillStyle = "#ae845f"
+        ctx.fillRect(0, 0, size, size)
+
+        for (let i = 0; i < 2100; i++) {
+            const x = Math.random() * size
+            const y = Math.random() * size
+            const len = 1.5 + Math.random() * 4.5
+            const angle = (Math.random() - 0.5) * 1.2
+            ctx.strokeStyle = Math.random() > 0.45 ? "rgba(145, 106, 76, 0.28)" : "rgba(197, 160, 124, 0.24)"
+            ctx.lineWidth = 1
+            ctx.beginPath()
+            ctx.moveTo(x, y)
+            ctx.lineTo(x + Math.cos(angle) * len, y + Math.sin(angle) * len)
+            ctx.stroke()
+        }
+
+        for (let i = 0; i < 900; i++) {
+            const x = Math.random() * size
+            const y = Math.random() * size
+            const alpha = 0.08 + Math.random() * 0.08
+            ctx.fillStyle = `rgba(118, 85, 58, ${alpha.toFixed(3)})`
+            ctx.fillRect(x, y, 1, 1)
+        }
+
+        const texture = new THREE.CanvasTexture(canvas)
+        texture.colorSpace = THREE.SRGBColorSpace
+        texture.wrapS = THREE.RepeatWrapping
+        texture.wrapT = THREE.RepeatWrapping
+        texture.repeat.set(1, 1)
+        texture.needsUpdate = true
+        return texture
+    }
+
     private generateSoilDryTint(cellX: number, cellZ: number): THREE.Color {
         const base = new THREE.Color("#fbefdf")
         const seed = cellX * 4131587 + cellZ * 2917 + 97
@@ -610,9 +651,9 @@ export class TileFactory {
 
         const hsl = { h: 0, s: 0, l: 0 }
         base.getHSL(hsl)
-        hsl.h = (hsl.h + (n - 0.5) * 0.028 + 1) % 1
-        hsl.s = THREE.MathUtils.clamp(hsl.s + (n - 0.5) * 0.16, 0, 1)
-        hsl.l = THREE.MathUtils.clamp(hsl.l + (n - 0.5) * 0.14, 0, 1)
+        hsl.h = (hsl.h + (n - 0.5) * 0.012 + 1) % 1
+        hsl.s = THREE.MathUtils.clamp(hsl.s + (n - 0.5) * 0.06, 0, 1)
+        hsl.l = THREE.MathUtils.clamp(hsl.l + (n - 0.5) * 0.07, 0, 1)
         return new THREE.Color().setHSL(hsl.h, hsl.s, hsl.l)
     }
 
@@ -902,6 +943,7 @@ export class TileFactory {
                 cellZ,
                 progress: 0,
                 kind: "dirt_show",
+                speedMultiplier: 2.4,
                 onDone: () => {
                     this.releaseSoilCell(k, soilSlot)
                     this.markFree(cellX, cellZ, 1)
@@ -941,7 +983,7 @@ export class TileFactory {
             cellZ,
             progress: 0,
             kind: "dirt_show",
-            speedMultiplier: 1.35,
+            speedMultiplier: 2.6,
             onDone: () => {
                 this.releaseSoilCell(k, soilSlot)
                 this.markFree(cellX, cellZ, 1)
