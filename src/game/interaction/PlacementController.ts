@@ -339,8 +339,14 @@ export class PlacementController {
                 this.currentPos.z,
             )
 
-            this.currentRotY += (this.targetRotY - this.currentRotY) * 0.3
-            this.ghost.rotation.y = this.currentRotY
+            const ghostDef = this.ghost.userData.def as Entity | undefined
+            if (isConnectableEntity(ghostDef)) {
+                this.currentRotY = 0
+                this.ghost.rotation.y = 0
+            } else {
+                this.currentRotY += (this.targetRotY - this.currentRotY) * 0.3
+                this.ghost.rotation.y = this.currentRotY
+            }
 
             // Le highlight est déjà positionné sur la cellule cible dans updatePlacementGhost().
             // Le recoller ici à currentPos (interpolée) provoque un aller-retour visuel
@@ -382,8 +388,9 @@ export class PlacementController {
         this.yOffset = root.position.y
 
         applyGhostMaterials(root)
-        root.rotation.y = targetRotRad
-        this.currentRotY = targetRotRad
+        const isConnectable = isConnectableEntity(entity)
+        root.rotation.y = isConnectable ? 0 : targetRotRad
+        this.currentRotY = isConnectable ? 0 : targetRotRad
         this.targetRotY = targetRotRad
 
         const footprint = getFootprint(entity)
@@ -395,7 +402,7 @@ export class PlacementController {
             const { placeCellX, placeCellZ } = this.getPlaceCells(cellX, cellZ, footprint)
             const { x, z } = this.cellToWorld(placeCellX, placeCellZ, footprint)
             const canPlace = this.world.tilesFactory.canSpawn(placeCellX, placeCellZ, footprint) && !this.hasCropInArea(placeCellX, placeCellZ, footprint)
-            if (isConnectableEntity(entity)) {
+            if (isConnectable) {
                 root.userData.connectableVariantRotY = targetRotRad
                 const layout = this.world.connectableSystem.computePlacementLayout(entity, placeCellX, placeCellZ)
                 syncConnectableEntityVisual(this.world, root, layout)
@@ -793,8 +800,6 @@ export class PlacementController {
         const spawnedEntity = await this.world.spawnEntitySafe(entity, placeCellX, placeCellZ, footprint)
         if (!spawnedEntity) { soundManager.playError(); return }
 
-        this.world.connectableSystem.register(spawnedEntity)
-
         const finalScale = spawnedEntity.scale.clone()
         spawnedEntity.scale.set(0, 0, 0)
 
@@ -804,7 +809,10 @@ export class PlacementController {
 
         const isConnectable = isConnectableEntity(entity)
         const placementRotY = isConnectable ? 0 : this.targetRotY
-        if (isConnectable) spawnedEntity.userData.connectableVariantRotY = this.targetRotY
+        if (isConnectable) {
+            spawnedEntity.userData.connectableVariantRotY = this.targetRotY
+            this.world.connectableSystem.refreshEntity(spawnedEntity)
+        }
 
         if (spawnedEntity.userData.isInstanced) {
             spawnedEntity.userData.rotY = placementRotY

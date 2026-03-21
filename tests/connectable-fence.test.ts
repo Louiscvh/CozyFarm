@@ -65,3 +65,25 @@ test("le registre supporte aussi la famille bush", async () => {
   const visual = createConnectableVisual(BushEntity, 1, getDefaultConnectableLayout())
   assert.equal(visual.children.length > 0, true)
 })
+
+
+test("une clôture isolée conserve la rotation de variante et génère une hitbox exploitable", async () => {
+  const world = {
+    cellSize: 1,
+  } as unknown as World
+
+  const { syncConnectableEntityVisual } = await import("../src/game/entity/connectable/ConnectableSystem.ts")
+  const root = createEntity(2, 2)
+  root.userData.connectableVariantRotY = Math.PI / 2
+
+  syncConnectableEntityVisual(world, root)
+
+  const visual = root.getObjectByName("__connectable_visual__")
+  const hitbox = root.getObjectByName("__hitbox__") as THREE.Mesh | null
+
+  assert.ok(visual)
+  assert.equal(visual?.rotation.y, Math.PI / 2)
+  assert.ok(hitbox)
+  assert.ok(hitbox?.geometry instanceof THREE.BoxGeometry)
+  assert.ok((hitbox?.geometry as THREE.BoxGeometry).parameters.width >= 0.68)
+})

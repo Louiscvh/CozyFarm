@@ -1,8 +1,8 @@
 import * as THREE from "three"
-import { attachHitBox } from "../EntityFactory"
+import { debugHitboxEnabled } from "../EntityFactory"
 import type { Entity } from "../Entity"
 import { getConnectableFamily, isConnectableEntity } from "../Entity"
-import { createConnectableVisual, getDefaultConnectableLayout, type ConnectableDirection, type ConnectableLayout } from "./ConnectableRegistry"
+import { createConnectableHitbox, createConnectableVisual, getDefaultConnectableLayout, type ConnectableDirection, type ConnectableLayout } from "./ConnectableRegistry"
 import type { World } from "../../world/World"
 
 const NEIGHBOR_OFFSETS: Array<{ direction: ConnectableDirection; dx: number; dz: number }> = [
@@ -29,6 +29,30 @@ function disposeTree(root: THREE.Object3D | null): void {
       }
     }
   })
+}
+
+function attachConnectableHitbox(entity: THREE.Object3D, def: Entity, world: World, layout: ConnectableLayout, variantRotationY: number): void {
+  const hitboxSpec = createConnectableHitbox(def, world.cellSize, layout, variantRotationY)
+  const geometry = new THREE.BoxGeometry(...hitboxSpec.size)
+
+  const hitMesh = new THREE.Mesh(
+    geometry,
+    new THREE.MeshBasicMaterial({ visible: false }),
+  )
+
+  const wire = new THREE.WireframeGeometry(geometry)
+  const line = new THREE.LineSegments(
+    wire,
+    new THREE.LineBasicMaterial({ color: 0xffffff, depthTest: false }),
+  )
+  line.visible = debugHitboxEnabled
+  hitMesh.add(line)
+
+  hitMesh.position.set(...hitboxSpec.center)
+  hitMesh.name = "__hitbox__"
+  hitMesh.userData.isHitBox = true
+
+  entity.add(hitMesh)
 }
 
 export class ConnectableSystem {
@@ -113,6 +137,9 @@ export function syncConnectableEntityVisual(world: World, entity: THREE.Object3D
   entity.userData.rotY = 0
   entity.userData.baseRotY = 0
 
+  const nextLayout = layout ?? getDefaultConnectableLayout()
+  const variantRotationY = typeof entity.userData.connectableVariantRotY === "number" ? entity.userData.connectableVariantRotY as number : 0
+
   const visual = entity.getObjectByName("__connectable_visual__")
   if (visual) {
     entity.remove(visual)
@@ -125,9 +152,9 @@ export function syncConnectableEntityVisual(world: World, entity: THREE.Object3D
     disposeTree(hitbox)
   }
 
-  const variantRotationY = typeof entity.userData.connectableVariantRotY === "number" ? entity.userData.connectableVariantRotY as number : 0
-  const nextVisual = createConnectableVisual(def, world.cellSize, layout ?? getDefaultConnectableLayout(), variantRotationY)
+  const nextVisual = createConnectableVisual(def, world.cellSize, nextLayout, variantRotationY)
   nextVisual.name = "__connectable_visual__"
   entity.add(nextVisual)
-  attachHitBox(entity, def.yOffset ?? 0)
+
+  attachConnectableHitbox(entity, def, world, nextLayout, variantRotationY)
 }

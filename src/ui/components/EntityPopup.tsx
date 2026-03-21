@@ -294,7 +294,10 @@ export function EntityPopups() {
     const sizeInCells = getFootprint(def) || (e.userData.sizeInCells as number) || 1
 
     const originalPos = e.position.clone()
-    const originalRotY = e.userData.isInstanced ? (e.userData.rotY ?? 0) : e.rotation.y
+    const isConnectable = isConnectableEntity(def)
+    const originalRotY = isConnectable
+      ? ((e.userData.connectableVariantRotY as number | undefined) ?? 0)
+      : (e.userData.isInstanced ? (e.userData.rotY ?? 0) : e.rotation.y)
 
     w.entities = w.entities.filter(en => en !== e)
     w.tilesFactory.markFree(cellX, cellZ, sizeInCells)
@@ -308,7 +311,12 @@ export function EntityPopups() {
       e.userData.cellX = cellX
       e.userData.cellZ = cellZ
       e.position.copy(originalPos)
-      e.rotation.y = originalRotY
+      if (isConnectable) {
+        e.rotation.y = 0
+        e.userData.connectableVariantRotY = originalRotY
+      } else {
+        e.rotation.y = originalRotY
+      }
 
       if (e.userData.isInstanced) {
         w.instanceManager.show(def, e.userData.instanceSlot, originalPos, originalRotY)
