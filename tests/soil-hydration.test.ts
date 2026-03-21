@@ -28,6 +28,13 @@ test("plus il fait chaud, plus le soil sèche vite", () => {
   assert.ok(hot < mild)
 })
 
+test("une accélération du temps amplifie aussi la décrue d'hydratation", () => {
+  const normal = decaySoilHydration(2, 1, 18)
+  const accelerated = decaySoilHydration(2, 50, 18)
+
+  assert.ok(accelerated < normal)
+})
+
 test("la pluie sature le sol au niveau max puis laisse la décrue continuer", () => {
   const rainHydrated = saturateSoilHydration()
   assert.equal(rainHydrated, SOIL_HYDRATION_MAX)

@@ -25,6 +25,7 @@ import { TillParticles } from "../../system/TillParticles"
 import { FoliageParticles } from "../../system/FoliageParticles"
 import { WoodChipParticles } from "../../system/WoodChipParticles"
 import { getSeasonState, type SeasonId } from "../../system/Season"
+import { Time } from "../../core/Time"
 import { clampSoilHydration, decaySoilHydration, easeSoilHydration, getSoilHydrationStage, increaseSoilHydration, saturateSoilHydration } from "../../farming/SoilHydration"
 
 export interface DecorCategory { types: Entity[]; density: number }
@@ -619,11 +620,13 @@ export class TileFactory {
     }
 
     private updateSoilHydration(deltaTime: number, rainHydratesSoils: boolean, temperature: number): void {
+        const logicalDeltaTime = Math.max(0, Time.delta || deltaTime)
+
         if (rainHydratesSoils) {
             for (const cellKey of this.soilSlots.keys()) this.soilHydration.set(cellKey, saturateSoilHydration())
         } else if (this.soilHydration.size > 0) {
             for (const [cellKey, hydration] of this.soilHydration) {
-                const nextHydration = decaySoilHydration(hydration, deltaTime, temperature)
+                const nextHydration = decaySoilHydration(hydration, logicalDeltaTime, temperature)
                 if (nextHydration <= 1e-4) this.soilHydration.delete(cellKey)
                 else this.soilHydration.set(cellKey, nextHydration)
             }
