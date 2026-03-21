@@ -14,7 +14,7 @@ function key(x: number, z: number): Cell {
 
 function createFakeWorld() {
   const tilled = new Set<Cell>()
-  const watered = new Set<Cell>()
+  const watered = new Map<Cell, number>()
   const planted = new Set<Cell>()
   const harvestedParticles: Cell[] = []
 
@@ -35,8 +35,10 @@ function createFakeWorld() {
     },
     waterCell(cellX: number, cellZ: number) {
       const k = key(cellX, cellZ)
-      if (!tilled.has(k) || watered.has(k)) return false
-      watered.add(k)
+      if (!tilled.has(k)) return false
+      const current = watered.get(k) ?? 0
+      if (current >= 2) return false
+      watered.set(k, current + 1)
       return true
     },
     clearSnowCell() {
@@ -52,7 +54,7 @@ function createFakeWorld() {
       return tilled.has(key(cellX, cellZ))
     },
     isWatered(cellX: number, cellZ: number) {
-      return watered.has(key(cellX, cellZ))
+      return (watered.get(key(cellX, cellZ)) ?? 0) > 0
     },
   }
 
@@ -143,7 +145,16 @@ test("parcours joueur: bêcher -> planter -> arroser -> récolter", () => {
       cellZ: 12,
     })
     assert.equal(wateredOk, true)
-    assert.equal(watered.has("10|12"), true)
+    assert.equal(watered.get("10|12"), 1)
+
+    const wateredTwiceOk = itemActionRegistry.executeTileAction("farming:water", {
+      itemId: "watering_can",
+      tileType: "soil",
+      cellX: 10,
+      cellZ: 12,
+    })
+    assert.equal(wateredTwiceOk, true)
+    assert.equal(watered.get("10|12"), 2)
 
     const harvestedOk = itemActionRegistry.executeEntityAction("farming:harvest", {
       itemId: "carrot",
@@ -173,14 +184,13 @@ test("pelle niveau 2: retire la neige en zone 2x2", () => {
   const cleared: Cell[] = []
 
   const { world } = createFakeWorld()
-  const originalClearSnow = world.tilesFactory.clearSnowCell
   world.tilesFactory.clearSnowCell = ((cellX: number, cellZ: number) => {
     const k = key(cellX, cellZ)
     if (!snowCells.has(k)) return false
     snowCells.delete(k)
     cleared.push(k)
     return true
-  }) as typeof originalClearSnow
+  }) as typeof world.tilesFactory.clearSnowCell
 
   World.current = world as never
 
