@@ -154,7 +154,7 @@ export function applyUndo() {
 
   if (action.type === "rotate") {
     if (isConnectableEntity(action.entityObject.userData.def as Entity | undefined)) {
-      animateConnectableVariantRotation(action.entityObject, action.prevRotY)
+      animateConnectableVariantRotation(w, action.entityObject, action.prevRotY)
     } else {
       animateRotate(w, action.entityObject, action.prevRotY)
     }
@@ -234,7 +234,7 @@ export function applyRedo() {
 
   if (action.type === "rotate") {
     if (isConnectableEntity(action.entityObject.userData.def as Entity | undefined)) {
-      animateConnectableVariantRotation(action.entityObject, action.nextRotY)
+      animateConnectableVariantRotation(w, action.entityObject, action.nextRotY)
     } else {
       animateRotate(w, action.entityObject, action.nextRotY)
     }

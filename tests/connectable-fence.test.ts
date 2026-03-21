@@ -115,9 +115,10 @@ test("une clôture isolée conserve la rotation de variante et génère une hitb
 
   const visual = root.getObjectByName("__connectable_visual__")
   const hitbox = root.getObjectByName("__hitbox__") as THREE.Mesh | null
+  const box = new THREE.Box3().setFromObject(visual!)
 
   assert.ok(visual)
-  assert.equal(visual?.rotation.y, Math.PI / 2)
+  assert.ok(box.max.z > 0.28)
   assert.ok(hitbox)
   assert.ok(hitbox?.geometry instanceof THREE.BoxGeometry)
   assert.ok((hitbox?.geometry as THREE.BoxGeometry).parameters.width >= 0.68)

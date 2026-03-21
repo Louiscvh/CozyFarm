@@ -349,7 +349,7 @@ export function EntityPopups() {
     historyStore.push({ type: "rotate", entityObject: e, prevRotY, nextRotY })
     cancelAnimationFrame(rotRafRef.current)
     if (isConnectable) {
-      animateConnectableVariantRotation(e, nextRotY)
+      animateConnectableVariantRotation(w, e, nextRotY)
       return
     }
     animateRotate(w, e, nextRotY)
