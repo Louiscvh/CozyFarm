@@ -95,7 +95,7 @@ interface CellTransition {
     cellX: number
     cellZ: number
     progress: number
-    kind: "terrain_hide" | "terrain_show" | "dirt_show" | "dirt_hide" | "soil_hide"
+    kind: "terrain_hide" | "terrain_show" | "dirt_show" | "dirt_hide"
     onDone?: () => void
 }
 
@@ -209,10 +209,9 @@ export class TileFactory {
         const geo = new THREE.BoxGeometry(this.cellSize, 0.5, this.cellSize)
         geo.translate(0, -0.25, 0)
         const mat = new THREE.MeshStandardMaterial({
-            map: this.generateSoilTexture("#9e7858", "#7d5a40"),
             roughness: 0.98,
             metalness: 0.0,
-            color: "#f4dfca",
+            color: "#b88f67",
         })
         const mesh = new THREE.InstancedMesh(geo, mat, this.DIRT_MAX)
         mesh.receiveShadow = true
@@ -714,9 +713,6 @@ export class TileFactory {
             } else if (t.kind === "dirt_hide" && t.slot !== undefined) {
                 const posY = this.DIRT_Y_VISIBLE + (this.DIRT_Y_HIDDEN - this.DIRT_Y_VISIBLE) * ease
                 this.setDirtMatrix(t.slot, t.cellX, t.cellZ, posY)
-            } else if (t.kind === "soil_hide" && t.slot !== undefined) {
-                const posY = this.TERRAIN_Y_UNTILL_START + (this.DIRT_Y_VISIBLE - this.TERRAIN_Y_UNTILL_START) * ease
-                this.setSoilMatrixAtY(t.slot, t.cellX, t.cellZ, posY)
             }
 
             if (t.progress >= 1) {
@@ -847,6 +843,7 @@ export class TileFactory {
             this.soilMesh.instanceColor!.needsUpdate = true
 
             this.markOccupied(cellX, cellZ, 1)
+            this.tillParticles.spawnAtCell(cellX, cellZ, "dirt")
             this.transitions.set(k, {
                 slot: dirtSlot,
                 cellX,
@@ -862,16 +859,9 @@ export class TileFactory {
         if (this.getCornerTypeAtCell(cellX, cellZ) !== "grass") return false
 
         const dirtSlot = this.acquireDirtSlot(cellX, cellZ)
-        this.setDirtMatrix(dirtSlot, cellX, cellZ, this.DIRT_Y_HIDDEN)
+        this.setDirtMatrix(dirtSlot, cellX, cellZ, this.DIRT_Y_VISIBLE)
         this.hideCell(cellX, cellZ)
-        this.tillParticles.spawnAtCell(cellX, cellZ, "dirt")
-        this.transitions.set(k, {
-            slot: dirtSlot,
-            cellX,
-            cellZ,
-            progress: 0,
-            kind: "dirt_show",
-        })
+        this.foliageParticles.spawnAtCell(cellX, cellZ, 0.01, 0.8)
         return true
     }
 
@@ -884,13 +874,13 @@ export class TileFactory {
         const soilSlot = this.soilSlots.get(k)
         if (soilSlot !== undefined) {
             const dirtSlot = this.dirtSlots.has(k) ? this.dirtSlots.get(k)! : this.acquireDirtSlot(cellX, cellZ)
-            this.setDirtMatrix(dirtSlot, cellX, cellZ, this.DIRT_Y_VISIBLE)
+            this.setDirtMatrix(dirtSlot, cellX, cellZ, this.DIRT_Y_HIDDEN)
             this.transitions.set(k, {
-                slot: soilSlot,
+                slot: dirtSlot,
                 cellX,
                 cellZ,
                 progress: 0,
-                kind: "soil_hide",
+                kind: "dirt_show",
                 onDone: () => {
                     this.releaseSoilCell(k, soilSlot)
                     this.markFree(cellX, cellZ, 1)
@@ -923,13 +913,13 @@ export class TileFactory {
         if (this.transitions.has(k)) return false
 
         const dirtSlot = this.dirtSlots.has(k) ? this.dirtSlots.get(k)! : this.acquireDirtSlot(cellX, cellZ)
-        this.setDirtMatrix(dirtSlot, cellX, cellZ, this.DIRT_Y_VISIBLE)
+        this.setDirtMatrix(dirtSlot, cellX, cellZ, this.DIRT_Y_HIDDEN)
         this.transitions.set(k, {
-            slot: soilSlot,
+            slot: dirtSlot,
             cellX,
             cellZ,
             progress: 0,
-            kind: "soil_hide",
+            kind: "dirt_show",
             onDone: () => {
                 this.releaseSoilCell(k, soilSlot)
                 this.markFree(cellX, cellZ, 1)
