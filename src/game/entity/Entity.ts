@@ -61,5 +61,6 @@ export function getConnectableFamily(entity: Entity | null | undefined): string 
 }
 
 export function supportsManualRotation(entity: Entity | null | undefined): boolean {
-  return !isConnectableEntity(entity)
+  void entity
+  return true
 }

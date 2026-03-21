@@ -358,14 +358,12 @@ export class PlacementController {
         // ── Entité plaçable ───────────────────────────────────────────────────
         const entity = getItemEntity(item)
 
-        const initialRotDeg = supportsManualRotation(entity)
-            ? (placementStore.moveOrigin
-                ? Math.round(THREE.MathUtils.radToDeg(placementStore.moveOrigin.rotY))
-                : entity.rotation?.y || 0)
-            : 0
+        const initialRotDeg = placementStore.moveOrigin
+            ? Math.round(THREE.MathUtils.radToDeg(placementStore.moveOrigin.rotY))
+            : placementStore.rotation || entity.rotation?.y || 0
 
         placementStore.rotation = initialRotDeg
-        const targetRotRad = supportsManualRotation(entity) ? THREE.MathUtils.degToRad(initialRotDeg) : 0
+        const targetRotRad = THREE.MathUtils.degToRad(initialRotDeg)
 
         this.removeGhost()
 
@@ -398,8 +396,10 @@ export class PlacementController {
             const { x, z } = this.cellToWorld(placeCellX, placeCellZ, footprint)
             const canPlace = this.world.tilesFactory.canSpawn(placeCellX, placeCellZ, footprint) && !this.hasCropInArea(placeCellX, placeCellZ, footprint)
             if (isConnectableEntity(entity)) {
+                root.userData.connectableVariantRotY = targetRotRad
                 const layout = this.world.connectableSystem.computePlacementLayout(entity, placeCellX, placeCellZ)
                 syncConnectableEntityVisual(this.world, root, layout)
+                applyGhostMaterials(root)
             }
 
             this.targetPos.set(x, this.yOffset, z)
@@ -673,8 +673,10 @@ export class PlacementController {
             z = pos.z
             canPlace = this.world.tilesFactory.canSpawn(placeCellX, placeCellZ, footprint) && !this.hasCropInArea(placeCellX, placeCellZ, footprint)
             if (this.ghost && isConnectableEntity(entity)) {
+                this.ghost.userData.connectableVariantRotY = this.targetRotY
                 const layout = this.world.connectableSystem.computePlacementLayout(entity, placeCellX, placeCellZ)
                 syncConnectableEntityVisual(this.world, this.ghost, layout)
+                applyGhostMaterials(this.ghost)
             }
             highlightY = this.getSeedHoverY(cellX, cellZ)
             highlightMesh.scale.set(footprint * this.world.cellSize, footprint * this.world.cellSize, 1)
@@ -738,7 +740,8 @@ export class PlacementController {
         const fromCellX = ent.userData.cellX as number
         const fromCellZ = ent.userData.cellZ as number
         const fromRotY = ent.userData.rotY as number
-        const newRotY = isConnectableEntity(ent.userData.def as Entity | undefined) ? 0 : this.targetRotY
+        const isConnectable = isConnectableEntity(ent.userData.def as Entity | undefined)
+        const newRotY = isConnectable ? 0 : this.targetRotY
         // Preserve current vertical placement (includes procedural/hitbox adjustments)
         const extraY = ent.position.y
 
@@ -753,6 +756,7 @@ export class PlacementController {
 
         ent.position.copy(newPos)
         ent.rotation.y = newRotY
+        if (isConnectable) ent.userData.connectableVariantRotY = this.targetRotY
         ent.userData.cellX = placeCellX
         ent.userData.cellZ = placeCellZ
         ent.userData.rotY = newRotY
@@ -798,7 +802,9 @@ export class PlacementController {
         spawnedEntity.userData.cellZ = placeCellZ
         spawnedEntity.userData.sizeInCells = footprint
 
-        const placementRotY = isConnectableEntity(entity) ? 0 : this.targetRotY
+        const isConnectable = isConnectableEntity(entity)
+        const placementRotY = isConnectable ? 0 : this.targetRotY
+        if (isConnectable) spawnedEntity.userData.connectableVariantRotY = this.targetRotY
 
         if (spawnedEntity.userData.isInstanced) {
             spawnedEntity.userData.rotY = placementRotY
@@ -915,6 +921,16 @@ export class PlacementController {
             if (!supportsManualRotation(entity)) return
             placementStore.rotate()
             this.targetRotY += THREE.MathUtils.degToRad(90)
+            if (this.ghost && isConnectableEntity(entity)) {
+                this.ghost.userData.connectableVariantRotY = this.targetRotY
+                if (placementStore.hoveredCell) {
+                    const footprint = getFootprint(entity)
+                    const { placeCellX, placeCellZ } = this.getPlaceCells(placementStore.hoveredCell.cellX, placementStore.hoveredCell.cellZ, footprint)
+                    const layout = this.world.connectableSystem.computePlacementLayout(entity, placeCellX, placeCellZ)
+                    syncConnectableEntityVisual(this.world, this.ghost, layout)
+                    applyGhostMaterials(this.ghost)
+                }
+            }
         }
     }
 

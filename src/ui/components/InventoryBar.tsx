@@ -20,6 +20,7 @@ import { WoodFenceEntity } from "../../game/entity/entities/WoodFence"
 import { TreeOrangeEntity } from "../../game/entity/entities/TreeOrange"
 import { GrassEntity } from "../../game/entity/entities/Grass"
 import { WindMillEntity } from "../../game/entity/entities/WindMill"
+import { BushEntity } from "../../game/entity/entities/Bush"
 import { BenchEntity } from "../../game/entity/entities/Bench"
 import { DirtSoilEntity } from "../../game/entity/entities/DirtSoil"
 import { CarrotSeedItemDef } from "../../game/items/CarrotSeedItem"
@@ -74,6 +75,7 @@ const ALL_ITEMS: ItemDef[] = [
     { id: "wood_fence", label: "Barrière", icon: "🪜", usage: { kind: "placeable", entity: WoodFenceEntity } },
     { id: "tree_orange", label: "Oranger", icon: "🍊", usage: { kind: "placeable", entity: TreeOrangeEntity } },
     { id: "grass", label: "Herbe", icon: "🌱", usage: { kind: "placeable", entity: GrassEntity } },
+    { id: "bush", label: "Buisson", icon: "🌿", usage: { kind: "placeable", entity: BushEntity } },
     { id: "bench", label: "Banc", icon: "🪑", usage: { kind: "placeable", entity: BenchEntity } },
     { id: "dirt_soil", label: "Champ", icon: "🥔", usage: { kind: "placeable", entity: DirtSoilEntity } },
     { id: "flower1", label: "Fleur", icon: "🌸", usage: { kind: "placeable", entity: Flower1Entity } },
@@ -111,6 +113,7 @@ inventoryStore.register([
     { id: "wood_plank", maxQty: 32 },
     { id: "wood_fence", maxQty: 16 },
     { id: "grass", maxQty: 64 },
+    { id: "bush", maxQty: 48 },
     { id: "wind_mill", maxQty: 4 },
     { id: "bench", maxQty: 8 },
     { id: "dirt_soil", maxQty: 24 },

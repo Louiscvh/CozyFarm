@@ -3,6 +3,8 @@ import * as THREE from "three"
 import { World } from "../../game/world/World"
 import { placementStore } from "./PlacementStore"
 import { animateRemove, animateAppear, animateRotate, animateMove } from "../../game/entity/EntityAnimation"
+import { isConnectableEntity } from "../../game/entity/Entity"
+import type { Entity } from "../../game/entity/Entity"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -150,7 +152,12 @@ export function applyUndo() {
   }
 
   if (action.type === "rotate") {
-    animateRotate(w, action.entityObject, action.prevRotY)
+    if (isConnectableEntity(action.entityObject.userData.def as Entity | undefined)) {
+      action.entityObject.userData.connectableVariantRotY = action.prevRotY
+      w.connectableSystem.refreshEntity(action.entityObject)
+    } else {
+      animateRotate(w, action.entityObject, action.prevRotY)
+    }
   }
 
   if (action.type === "move") {
@@ -226,7 +233,12 @@ export function applyRedo() {
     }
 
   if (action.type === "rotate") {
-    animateRotate(w, action.entityObject, action.nextRotY)
+    if (isConnectableEntity(action.entityObject.userData.def as Entity | undefined)) {
+      action.entityObject.userData.connectableVariantRotY = action.nextRotY
+      w.connectableSystem.refreshEntity(action.entityObject)
+    } else {
+      animateRotate(w, action.entityObject, action.nextRotY)
+    }
   }
 
   if (action.type === "move") {

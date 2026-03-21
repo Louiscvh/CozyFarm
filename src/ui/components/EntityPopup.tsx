@@ -5,7 +5,7 @@ import "./EntityPopup.css"
 import { UIButton } from "./UIButton"
 import { placementStore } from "../store/PlacementStore"
 import { animateRotate, pushDeleteAction, historyStore } from "../store/HistoryStore"
-import { getFootprint, supportsManualRotation } from "../../game/entity/Entity"
+import { getFootprint, isConnectableEntity, supportsManualRotation } from "../../game/entity/Entity"
 import type { Entity } from "../../game/entity/Entity"
 import { OutlineSystem } from "../../render/OutlineSystem"
 import { Renderer } from "../../render/Renderer"
@@ -329,13 +329,21 @@ export function EntityPopups() {
     const w = World.current
     if (!w) return
 
-    const prevRotY = e.userData.isInstanced ? (e.userData.rotY ?? 0) : e.rotation.y
+    const isConnectable = isConnectableEntity(e.userData.def as Entity | undefined)
+    const prevRotY = isConnectable
+      ? ((e.userData.connectableVariantRotY as number | undefined) ?? 0)
+      : (e.userData.isInstanced ? (e.userData.rotY ?? 0) : e.rotation.y)
     if (Math.abs(targetRotY.current - prevRotY) > 0.01) targetRotY.current = prevRotY
     const nextRotY = targetRotY.current + THREE.MathUtils.degToRad(90)
     targetRotY.current = nextRotY
 
     historyStore.push({ type: "rotate", entityObject: e, prevRotY, nextRotY })
     cancelAnimationFrame(rotRafRef.current)
+    if (isConnectable) {
+      e.userData.connectableVariantRotY = nextRotY
+      w.connectableSystem.refreshEntity(e)
+      return
+    }
     animateRotate(w, e, nextRotY)
   }
 

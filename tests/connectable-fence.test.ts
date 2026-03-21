@@ -56,3 +56,12 @@ test("ConnectableSystem ignore les diagonales", () => {
     west: false,
   })
 })
+
+
+test("le registre supporte aussi la famille bush", async () => {
+  const { createConnectableVisual, getDefaultConnectableLayout } = await import("../src/game/entity/connectable/ConnectableRegistry.ts")
+  const { BushEntity } = await import("../src/game/entity/entities/Bush.ts")
+
+  const visual = createConnectableVisual(BushEntity, 1, getDefaultConnectableLayout())
+  assert.equal(visual.children.length > 0, true)
+})

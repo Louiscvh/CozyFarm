@@ -125,7 +125,8 @@ export function syncConnectableEntityVisual(world: World, entity: THREE.Object3D
     disposeTree(hitbox)
   }
 
-  const nextVisual = createConnectableVisual(def, world.cellSize, layout ?? getDefaultConnectableLayout())
+  const variantRotationY = typeof entity.userData.connectableVariantRotY === "number" ? entity.userData.connectableVariantRotY as number : 0
+  const nextVisual = createConnectableVisual(def, world.cellSize, layout ?? getDefaultConnectableLayout(), variantRotationY)
   nextVisual.name = "__connectable_visual__"
   entity.add(nextVisual)
   attachHitBox(entity, def.yOffset ?? 0)
