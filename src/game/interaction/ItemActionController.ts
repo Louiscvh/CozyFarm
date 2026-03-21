@@ -235,6 +235,35 @@ export class ItemActionController {
         this.renderer.domElement.style.cursor = cursor
     }
 
+    private refreshCursorState(): void {
+        const item = placementStore.selectedItem
+        const hoveredCell = placementStore.hoveredCell
+
+        // Ghost item (plaçable ou graine) — curseur piloté depuis l'état de placement.
+        if (item && (isPlaceable(item) || !!ALL_CROPS.find(c => c.seedItemId === item.id)?.usePlacementGhost)) {
+            this.updateCursorForPlacement()
+            return
+        }
+
+        if (hoveredCell && !item) {
+            this.updateCursorForHarvestHover()
+            return
+        }
+
+        if (isUsableOnEntity(item)) {
+            this.updateCursorForEntityHover(item)
+            return
+        }
+
+        if (isUsableOnTile(item)) {
+            this.updateCursorForTileHover(item)
+            return
+        }
+
+        this.setHighlight(null)
+        this.setCursor("default")
+    }
+
     private updateCursorForPlacement(): void {
         this.setCursor(placementStore.canPlace ? "pointer" : "not-allowed")
     }
@@ -325,32 +354,7 @@ export class ItemActionController {
     }
 
     private onMouseMove(): void {
-        const item = placementStore.selectedItem
-        const hoveredCell = placementStore.hoveredCell
-
-        // Ghost item (plaçable ou graine) — cursor géré par PlacementController
-        if (item && (isPlaceable(item) || !!ALL_CROPS.find(c => c.seedItemId === item.id)?.usePlacementGhost)) {
-            this.updateCursorForPlacement()
-            return
-        }
-
-        if (hoveredCell && !item) {
-            this.updateCursorForHarvestHover()
-            return
-        }
-
-        if (isUsableOnEntity(item)) {
-            this.updateCursorForEntityHover(item)
-            return
-        }
-
-        if (isUsableOnTile(item)) {
-            this.updateCursorForTileHover(item)
-            return
-        }
-
-        this.setHighlight(null)
-        this.setCursor("default")
+        this.refreshCursorState()
     }
 
     // ─── Click ────────────────────────────────────────────────────────────────
@@ -387,7 +391,6 @@ export class ItemActionController {
             itemId: "",
         })
 
-        if (success) soundManager.playSuccess()
         return success
     }
 
@@ -548,11 +551,6 @@ export class ItemActionController {
     // ─── Store change ─────────────────────────────────────────────────────────
 
     private onStoreChange(): void {
-        const item = placementStore.selectedItem
-        const isSeedGhost = !!item && !!ALL_CROPS.find(c => c.seedItemId === item.id)?.usePlacementGhost
-        if (!item || (!isUsableOnEntity(item) && !isUsableOnTile(item) && !isSeedGhost)) {
-            this.setCursor("default")
-            this.setHighlight(null)
-        }
+        this.refreshCursorState()
     }
 }
