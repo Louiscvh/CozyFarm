@@ -599,12 +599,12 @@ export class TileFactory {
         ctx.fillStyle = "#ae845f"
         ctx.fillRect(0, 0, size, size)
 
-        for (let i = 0; i < 2100; i++) {
+        for (let i = 0; i < 3200; i++) {
             const x = Math.random() * size
             const y = Math.random() * size
-            const len = 1.5 + Math.random() * 4.5
-            const angle = (Math.random() - 0.5) * 1.2
-            ctx.strokeStyle = Math.random() > 0.45 ? "rgba(145, 106, 76, 0.28)" : "rgba(197, 160, 124, 0.24)"
+            const len = 1 + Math.random() * 4.2
+            const angle = (Math.random() - 0.5) * 1.35
+            ctx.strokeStyle = Math.random() > 0.45 ? "rgba(145, 106, 76, 0.30)" : "rgba(197, 160, 124, 0.26)"
             ctx.lineWidth = 1
             ctx.beginPath()
             ctx.moveTo(x, y)
@@ -612,12 +612,22 @@ export class TileFactory {
             ctx.stroke()
         }
 
-        for (let i = 0; i < 900; i++) {
+        for (let i = 0; i < 1800; i++) {
             const x = Math.random() * size
             const y = Math.random() * size
-            const alpha = 0.08 + Math.random() * 0.08
+            const alpha = 0.07 + Math.random() * 0.09
             ctx.fillStyle = `rgba(118, 85, 58, ${alpha.toFixed(3)})`
             ctx.fillRect(x, y, 1, 1)
+        }
+
+        for (let i = 0; i < 240; i++) {
+            const x = Math.random() * size
+            const y = Math.random() * size
+            const r = 0.55 + Math.random() * 0.8
+            ctx.fillStyle = Math.random() > 0.5 ? "rgba(92, 62, 40, 0.22)" : "rgba(214, 185, 152, 0.18)"
+            ctx.beginPath()
+            ctx.arc(x, y, r, 0, Math.PI * 2)
+            ctx.fill()
         }
 
         const texture = new THREE.CanvasTexture(canvas)
