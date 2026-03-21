@@ -8,7 +8,7 @@ export const ShovelItemDef: ItemDef = {
     usageHint: "Cliquer sur la terre pour retirer la culture ou le labour",
     usage: {
         kind: "use_on_tile",
-        targetTileTypes: ["soil", "grass"],
+        targetTileTypes: ["soil", "dirt", "grass"],
         actionId: "farming:uproot_or_untill",
         consumeOnUse: false,
         allowOnCrop: true,

@@ -90,12 +90,12 @@ const CORNER_OFFSETS: [number, number][] = [
 const _zero = new THREE.Matrix4().makeScale(0, 0, 0)
 const _dummy = new THREE.Object3D()
 
-interface SoilTransition {
-    slot: number
+interface CellTransition {
+    slot?: number
     cellX: number
     cellZ: number
     progress: number
-    direction: "in" | "out"
+    kind: "terrain_hide" | "terrain_show" | "dirt_show" | "dirt_hide" | "soil_hide"
     onDone?: () => void
 }
 
@@ -122,7 +122,13 @@ export class TileFactory {
     private tileMap = new Map<string, Tile>()
     private cellInstanceMap = new Map<string, { type: TileType; index: number }>()
 
-    // ── Soil layer ────────────────────────────────────────────────
+    // ── Dirt + soil layers ────────────────────────────────────────
+    private dirtMesh!: THREE.InstancedMesh
+    private dirtSlots = new Map<string, number>()
+    private dirtFreeSlots: number[] = []
+    private dirtHighWater = 0
+    private readonly DIRT_MAX = 2000
+
     private soilMesh!: THREE.InstancedMesh
     private soilSlots = new Map<string, number>()
     private soilFreeSlots: number[] = []
@@ -143,13 +149,14 @@ export class TileFactory {
     private readonly SOIL_COLOR_DRY = new THREE.Color(1, 1, 1)
     private readonly SOIL_COLOR_WATERED_LIGHT = new THREE.Color(0xC79269)
     private readonly SOIL_COLOR_WATERED_HEAVY = new THREE.Color(0x7B4A2C)
+    private readonly DIRT_COLOR = new THREE.Color("#b88f67")
     private readonly soilDryColors = new Map<string, THREE.Color>()
     private readonly soilWateredLightColors = new Map<string, THREE.Color>()
     private readonly soilWateredHeavyColors = new Map<string, THREE.Color>()
     private readonly soilColorLerpTmp = new THREE.Color()
     private readonly soilColorLerpTmp2 = new THREE.Color()
     // ── Transitions ───────────────────────────────────────────────
-    private transitions = new Map<string, SoilTransition>()
+    private transitions = new Map<string, CellTransition>()
     private readonly TRANSITION_SPEED = 1   // ~125ms
     private readonly SNOW_TRANSITION_SPEED = 2.4
 
@@ -171,6 +178,7 @@ export class TileFactory {
         this.cellSize = tileSize / 2
         this.worldSizeInCells = worldSize * 2
         this.generateGrid()
+        this.initDirtMesh()
         this.initSoilMesh()
         this.initSnowMesh()
         this.waterSplashParticles = new WaterSplashParticles(this.scene, this.cellSize, this.worldSizeInCells)
@@ -197,9 +205,29 @@ export class TileFactory {
         this.scene.add(mesh)
     }
 
+    private initDirtMesh(): void {
+        const geo = new THREE.BoxGeometry(this.cellSize, 0.5, this.cellSize)
+        geo.translate(0, -0.25, 0)
+        const mat = new THREE.MeshStandardMaterial({
+            map: this.generateSoilTexture("#9e7858", "#7d5a40"),
+            roughness: 0.98,
+            metalness: 0.0,
+            color: "#f4dfca",
+        })
+        const mesh = new THREE.InstancedMesh(geo, mat, this.DIRT_MAX)
+        mesh.receiveShadow = true
+        mesh.frustumCulled = false
+        mesh.count = 0
+        for (let i = 0; i < this.DIRT_MAX; i++) mesh.setMatrixAt(i, _zero)
+        mesh.instanceMatrix.needsUpdate = true
+        this.dirtMesh = mesh
+        this.scene.add(mesh)
+    }
+
     private canHaveSnow(cellX: number, cellZ: number): boolean {
         const key = this.cellKey(cellX, cellZ)
         if (this.soilSlots.has(key)) return false
+        if (this.dirtSlots.has(key)) return false
         if (!this.canSpawn(cellX, cellZ, 1)) return false
         return this.getCornerTypeAtCell(cellX, cellZ) !== "water"
     }
@@ -396,7 +424,7 @@ export class TileFactory {
         const geo = new THREE.BoxGeometry(this.cellSize, 0.5, this.cellSize)
         geo.translate(0, -0.25, 0)
         const mat = new THREE.MeshStandardMaterial({
-            map: this.generateSoilTexture(),
+            map: this.generateSoilTexture("#5a4030", "#3a2418"),
             roughness: 0.98,
             metalness: 0.0,
         })
@@ -410,21 +438,21 @@ export class TileFactory {
         this.scene.add(mesh)
     }
 
-    private generateSoilTexture(): THREE.CanvasTexture {
+    private generateSoilTexture(baseColor: string, pebbleColor: string): THREE.CanvasTexture {
         const size = 128
         const canvas = document.createElement("canvas")
         canvas.width = size
         canvas.height = size
         const ctx = canvas.getContext("2d")!
 
-        ctx.fillStyle = "#5a4030"
+        ctx.fillStyle = baseColor
         ctx.fillRect(0, 0, size, size)
 
         for (let i = 0; i < 5; i++) {
             const x = Math.random() * size
             const y = Math.random() * size
             const r = Math.random() * 6 + 4
-            ctx.fillStyle = "#3a2418"
+            ctx.fillStyle = pebbleColor
             ctx.beginPath()
             ctx.arc(x, y, r, 0, Math.PI * 2)
             ctx.fill()
@@ -581,20 +609,26 @@ export class TileFactory {
 
     // ── Écrit la matrice d'une instance soil avec un scaleY donné ──
 
-    private setSoilMatrix(slot: number, cellX: number, cellZ: number): void {
+    private setDirtMatrix(slot: number, cellX: number, cellZ: number, posY: number = this.DIRT_Y_VISIBLE): void {
         const half = this.worldSizeInCells / 2
         _dummy.position.set(
             (cellX - half + 0.5) * this.cellSize,
-            -0.05,
+            posY,
             (cellZ - half + 0.5) * this.cellSize,
         )
         _dummy.rotation.set(0, 0, 0)
         _dummy.scale.setScalar(1)
         _dummy.updateMatrix()
-        this.soilMesh.setMatrixAt(slot, _dummy.matrix)
-        this.soilMesh.instanceMatrix.needsUpdate = true
+        this.dirtMesh.setMatrixAt(slot, _dummy.matrix)
+        this.dirtMesh.instanceMatrix.needsUpdate = true
     }
 
+    private setSoilMatrix(slot: number, cellX: number, cellZ: number): void {
+        this.setSoilMatrixAtY(slot, cellX, cellZ, this.TERRAIN_Y_UNTILL_START)
+    }
+
+    private readonly DIRT_Y_VISIBLE: number = 0.0
+    private readonly DIRT_Y_HIDDEN: number = -0.18
     private readonly TERRAIN_Y_VISIBLE: number = 0.0
     private readonly TERRAIN_Y_HIDDEN: number = -0.45
     private readonly TERRAIN_Y_UNTILL_START: number = -0.05 // juste sous le soil
@@ -664,14 +698,25 @@ export class TileFactory {
 
             const ease = t.progress
 
-            if (t.direction === "in") {
-                // Bêchage : herbe descend
+            if (t.kind === "terrain_hide") {
                 const posY = this.TERRAIN_Y_VISIBLE + (this.TERRAIN_Y_HIDDEN - this.TERRAIN_Y_VISIBLE) * ease
                 this.setTerrainMatrix(t.cellX, t.cellZ, posY)
-            } else {
-                // Pelle : herbe remonte, linéaire pour accélérer
+            } else if (t.kind === "terrain_show") {
                 const posY = this.TERRAIN_Y_UNTILL_START + (this.TERRAIN_Y_VISIBLE - this.TERRAIN_Y_UNTILL_START) * ease
                 this.setTerrainMatrix(t.cellX, t.cellZ, posY)
+                if (t.slot !== undefined) {
+                    const dirtY = this.DIRT_Y_VISIBLE + (this.DIRT_Y_HIDDEN - this.DIRT_Y_VISIBLE) * ease
+                    this.setDirtMatrix(t.slot, t.cellX, t.cellZ, dirtY)
+                }
+            } else if (t.kind === "dirt_show" && t.slot !== undefined) {
+                const posY = this.DIRT_Y_HIDDEN + (this.DIRT_Y_VISIBLE - this.DIRT_Y_HIDDEN) * ease
+                this.setDirtMatrix(t.slot, t.cellX, t.cellZ, posY)
+            } else if (t.kind === "dirt_hide" && t.slot !== undefined) {
+                const posY = this.DIRT_Y_VISIBLE + (this.DIRT_Y_HIDDEN - this.DIRT_Y_VISIBLE) * ease
+                this.setDirtMatrix(t.slot, t.cellX, t.cellZ, posY)
+            } else if (t.kind === "soil_hide" && t.slot !== undefined) {
+                const posY = this.TERRAIN_Y_UNTILL_START + (this.DIRT_Y_VISIBLE - this.TERRAIN_Y_UNTILL_START) * ease
+                this.setSoilMatrixAtY(t.slot, t.cellX, t.cellZ, posY)
             }
 
             if (t.progress >= 1) {
@@ -729,85 +774,172 @@ export class TileFactory {
         this.snowMesh.instanceMatrix.needsUpdate = true
     }
 
+    private setSoilMatrixAtY(slot: number, cellX: number, cellZ: number, posY: number): void {
+        const half = this.worldSizeInCells / 2
+        _dummy.position.set(
+            (cellX - half + 0.5) * this.cellSize,
+            posY,
+            (cellZ - half + 0.5) * this.cellSize,
+        )
+        _dummy.rotation.set(0, 0, 0)
+        _dummy.scale.setScalar(1)
+        _dummy.updateMatrix()
+        this.soilMesh.setMatrixAt(slot, _dummy.matrix)
+        this.soilMesh.instanceMatrix.needsUpdate = true
+    }
+
     // ─── API Soil ─────────────────────────────────────────────────
+
+    private acquireDirtSlot(cellX: number, cellZ: number): number {
+        const slot = this.dirtFreeSlots.pop() ?? this.dirtHighWater++
+        this.dirtSlots.set(this.cellKey(cellX, cellZ), slot)
+        this.dirtMesh.count = this.dirtHighWater
+        this.dirtMesh.setColorAt(slot, this.DIRT_COLOR)
+        this.dirtMesh.instanceColor!.needsUpdate = true
+        return slot
+    }
+
+    private releaseDirtCell(cellKey: string, slot: number): void {
+        this.dirtMesh.setMatrixAt(slot, _zero)
+        this.dirtMesh.instanceMatrix.needsUpdate = true
+        this.dirtSlots.delete(cellKey)
+        this.dirtFreeSlots.push(slot)
+    }
+
+    private releaseSoilCell(cellKey: string, slot: number): void {
+        const dry = this.soilDryColors.get(cellKey) ?? this.SOIL_COLOR_DRY
+        this.soilMesh.setColorAt(slot, dry)
+        this.soilMesh.instanceColor!.needsUpdate = true
+        this.soilMesh.setMatrixAt(slot, _zero)
+        this.soilMesh.instanceMatrix.needsUpdate = true
+        this.soilSlots.delete(cellKey)
+        this.soilDryColors.delete(cellKey)
+        this.soilWateredLightColors.delete(cellKey)
+        this.soilWateredHeavyColors.delete(cellKey)
+        this.soilHydration.delete(cellKey)
+        this.soilDisplayedHydration.delete(cellKey)
+        this.soilFreeSlots.push(slot)
+    }
 
     tillCell(cellX: number, cellZ: number): boolean {
         const k = this.cellKey(cellX, cellZ)
-        if (this.soilSlots.has(k)) return false
-        if (this.occupiedCells.has(k)) return false
-        if (this.getTileTypeAtCell(cellX, cellZ) !== "grass") return false
+        if (this.transitions.has(k)) return false
         if (this.hasSnowAtCell(cellX, cellZ)) return false
+        if (this.soilSlots.has(k)) return false
 
-        this.markOccupied(cellX, cellZ, 1)
+        if (this.dirtSlots.has(k)) {
+            if (this.occupiedCells.has(k)) return false
 
-        const slot = this.soilFreeSlots.pop() ?? this.soilHighWater++
-        this.soilSlots.set(k, slot)
-        this.soilMesh.count = this.soilHighWater
+            const dirtSlot = this.dirtSlots.get(k)!
+            const soilSlot = this.soilFreeSlots.pop() ?? this.soilHighWater++
+            this.soilSlots.set(k, soilSlot)
+            this.soilMesh.count = this.soilHighWater
+            this.setSoilMatrix(soilSlot, cellX, cellZ)
 
-        // Place le soil immédiatement à sa position finale
-        this.setSoilMatrix(slot, cellX, cellZ)
+            const dryColor = this.generateSoilDryTint(cellX, cellZ)
+            const wateredLightColor = this.generateSoilWateredTint(dryColor, 1)
+            const wateredHeavyColor = this.generateSoilWateredTint(dryColor, 2)
+            this.soilDryColors.set(k, dryColor)
+            this.soilWateredLightColors.set(k, wateredLightColor)
+            this.soilWateredHeavyColors.set(k, wateredHeavyColor)
+            this.soilDisplayedHydration.set(k, 0)
+            this.soilMesh.setColorAt(soilSlot, dryColor)
+            this.soilMesh.instanceColor!.needsUpdate = true
 
-        const dryColor = this.generateSoilDryTint(cellX, cellZ)
-        const wateredLightColor = this.generateSoilWateredTint(dryColor, 1)
-        const wateredHeavyColor = this.generateSoilWateredTint(dryColor, 2)
-        this.soilDryColors.set(k, dryColor)
-        this.soilWateredLightColors.set(k, wateredLightColor)
-        this.soilWateredHeavyColors.set(k, wateredHeavyColor)
-        this.soilDisplayedHydration.set(k, 0)
-        this.soilMesh.setColorAt(slot, dryColor)
-        this.soilMesh.instanceColor!.needsUpdate = true
-        // Lance l'animation de l'herbe qui descend
+            this.markOccupied(cellX, cellZ, 1)
+            this.transitions.set(k, {
+                slot: dirtSlot,
+                cellX,
+                cellZ,
+                progress: 0,
+                kind: "dirt_hide",
+                onDone: () => this.releaseDirtCell(k, dirtSlot),
+            })
+            return true
+        }
+
+        if (this.occupiedCells.has(k)) return false
+        if (this.getCornerTypeAtCell(cellX, cellZ) !== "grass") return false
+
+        const dirtSlot = this.acquireDirtSlot(cellX, cellZ)
+        this.setDirtMatrix(dirtSlot, cellX, cellZ, this.DIRT_Y_HIDDEN)
+        this.hideCell(cellX, cellZ)
+        this.tillParticles.spawnAtCell(cellX, cellZ, "dirt")
         this.transitions.set(k, {
-            slot, cellX, cellZ,
+            slot: dirtSlot,
+            cellX,
+            cellZ,
             progress: 0,
-            direction: "in",
-            onDone: () => {
-                // Cache complètement l'herbe une fois descendue
-                this.hideCell(cellX, cellZ)
-            },
+            kind: "dirt_show",
         })
-
-        this.tillParticles.spawnAtCell(cellX, cellZ)
-
         return true
     }
 
     untillCell(cellX: number, cellZ: number): boolean {
         const k = this.cellKey(cellX, cellZ)
-        const slot = this.soilSlots.get(k)
-        if (slot === undefined) return false
         if (this.transitions.has(k)) return false
 
         this.tillParticles.spawnAtCell(cellX, cellZ)
 
-        // ← Reset couleur immédiatement, avant que le slot soit réutilisé
-        this.soilHydration.delete(k)
-        this.soilDisplayedHydration.delete(k)
-        const dry = this.soilDryColors.get(k) ?? this.SOIL_COLOR_DRY
-        this.soilMesh.setColorAt(slot, dry)
-        this.soilMesh.instanceColor!.needsUpdate = true
+        const soilSlot = this.soilSlots.get(k)
+        if (soilSlot !== undefined) {
+            const dirtSlot = this.dirtSlots.has(k) ? this.dirtSlots.get(k)! : this.acquireDirtSlot(cellX, cellZ)
+            this.setDirtMatrix(dirtSlot, cellX, cellZ, this.DIRT_Y_VISIBLE)
+            this.transitions.set(k, {
+                slot: soilSlot,
+                cellX,
+                cellZ,
+                progress: 0,
+                kind: "soil_hide",
+                onDone: () => {
+                    this.releaseSoilCell(k, soilSlot)
+                    this.markFree(cellX, cellZ, 1)
+                },
+            })
+            return true
+        }
+
+        const dirtSlot = this.dirtSlots.get(k)
+        if (dirtSlot === undefined) return false
 
         this.showCell(cellX, cellZ, this.TERRAIN_Y_UNTILL_START)
-
         this.transitions.set(k, {
-            slot, cellX, cellZ,
+            slot: dirtSlot,
+            cellX,
+            cellZ,
             progress: 0,
-            direction: "out",
+            kind: "terrain_show",
             onDone: () => {
-                this.soilMesh.setMatrixAt(slot, _zero)
-                this.soilMesh.instanceMatrix.needsUpdate = true
-                this.soilSlots.delete(k)
-                this.soilDryColors.delete(k)
-                this.soilWateredLightColors.delete(k)
-                this.soilWateredHeavyColors.delete(k)
-                this.soilHydration.delete(k)
-                this.soilDisplayedHydration.delete(k)
-                this.soilFreeSlots.push(slot)
+                this.releaseDirtCell(k, dirtSlot)
+            },
+        })
+        return true
+    }
+
+    resetSoilToDirt(cellX: number, cellZ: number): boolean {
+        const k = this.cellKey(cellX, cellZ)
+        const soilSlot = this.soilSlots.get(k)
+        if (soilSlot === undefined) return false
+        if (this.transitions.has(k)) return false
+
+        const dirtSlot = this.dirtSlots.has(k) ? this.dirtSlots.get(k)! : this.acquireDirtSlot(cellX, cellZ)
+        this.setDirtMatrix(dirtSlot, cellX, cellZ, this.DIRT_Y_VISIBLE)
+        this.transitions.set(k, {
+            slot: soilSlot,
+            cellX,
+            cellZ,
+            progress: 0,
+            kind: "soil_hide",
+            onDone: () => {
+                this.releaseSoilCell(k, soilSlot)
                 this.markFree(cellX, cellZ, 1)
             },
         })
-
         return true
+    }
+
+    isDirt(cellX: number, cellZ: number): boolean {
+        return this.dirtSlots.has(this.cellKey(cellX, cellZ))
     }
 
     isSoil(cellX: number, cellZ: number): boolean {
@@ -837,6 +969,7 @@ export class TileFactory {
 
     getTileTypeAtCell(cellX: number, cellZ: number): TileType | undefined {
         if (this.isSoil(cellX, cellZ)) return "soil"
+        if (this.isDirt(cellX, cellZ)) return "dirt"
         return this.getCornerTypeAtCell(cellX, cellZ)
     }
 

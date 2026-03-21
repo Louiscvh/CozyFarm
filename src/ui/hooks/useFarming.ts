@@ -71,7 +71,11 @@ export function registerFarmingActions(): void {
                 if (world.tilesFactory.clearSnowCell(cellX, cellZ)) { changed = true; continue }
 
                 const uprooted = world.cropManager.uproot(cellX, cellZ, true)
-                if (uprooted) { changed = true; continue }
+                if (uprooted) {
+                    world.tilesFactory.resetSoilToDirt(cellX, cellZ)
+                    changed = true
+                    continue
+                }
 
                 if (world.cropManager.removeLooseStake(cellX, cellZ)) { changed = true; continue }
 
@@ -122,6 +126,7 @@ export function registerFarmingActions(): void {
                     if (!harvested) continue
                     if (world.tilesFactory.isSoil(cellX, cellZ)) {
                         world.tilesFactory.playSoilHarvestParticles(cellX, cellZ)
+                        if (!harvested.def.fruitRegrowSeconds) world.tilesFactory.resetSoilToDirt(cellX, cellZ)
                         soundManager.playCrop()
                     }
                     inventoryStore.produce(harvested.def.harvestItemId, harvested.def.harvestQty, { cellX, cellZ })
@@ -177,6 +182,7 @@ export function registerFarmingActions(): void {
                 if (!harvested) return false
                 if (world.tilesFactory.isSoil(ctx.cellX, ctx.cellZ)) {
                     world.tilesFactory.playSoilHarvestParticles(ctx.cellX, ctx.cellZ)
+                    if (!harvested.def.fruitRegrowSeconds) world.tilesFactory.resetSoilToDirt(ctx.cellX, ctx.cellZ)
                     soundManager.playCrop()
                 }
                 inventoryStore.produce(harvested.def.harvestItemId, harvested.def.harvestQty, { cellX: ctx.cellX, cellZ: ctx.cellZ })

@@ -1,6 +1,6 @@
 // src/world/Tile.ts
 
-export type TileType = "grass" | "water" | "sand" | "stone" | "soil"
+export type TileType = "grass" | "water" | "sand" | "stone" | "dirt" | "soil"
 
 export interface TileVisual {
   color: string
@@ -13,6 +13,7 @@ export const TILE_VISUALS: Record<TileType, TileVisual> = {
     water: { color: "#1a6fa8", roughness: 0.1, metalness: 0.3 },
     sand: { color: "#d4a96a", roughness: 0.9, metalness: 0.0 },
     stone: { color: "#7a7470", roughness: 0.85, metalness: 0.05 },
+    dirt: { color: "#9f7653", roughness: 0.98, metalness: 0.0 },
     soil: { color: "#3d2b1f", roughness: 0.98, metalness: 0.0 },
 }
 
@@ -25,7 +26,8 @@ export const BIOME_PRIORITY: Record<TileType, number> = {
     sand: 1,
     grass: 2,
     stone: 3,
-    soil: 4,
+    dirt: 4,
+    soil: 5,
 }
 
 // ─── Perlin Noise ─────────────────────────────────────────────────────────────

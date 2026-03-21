@@ -124,7 +124,7 @@ export class ItemActionController {
             const crop = this.world.cropManager.getCrop(cellX, cellZ)
             const hasLooseStake = this.world.cropManager.hasLooseStake(cellX, cellZ)
             const hasSnow = this.world.tilesFactory.hasSnowAtCell(cellX, cellZ)
-            const canUntill = effectiveTileType === "soil"
+            const canUntill = effectiveTileType === "soil" || effectiveTileType === "dirt"
             return !!crop || hasLooseStake || canUntill || hasSnow
         }
 

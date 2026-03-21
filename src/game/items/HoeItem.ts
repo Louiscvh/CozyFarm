@@ -9,7 +9,7 @@ export const HoeItemDef: ItemDef = {
     usageHint: "Cliquer sur l'herbe pour labourer",
     usage: {
         kind: "use_on_tile",
-        targetTileTypes: ["grass"],
+        targetTileTypes: ["grass", "dirt"],
         actionId: "farming:till",
         consumeOnUse: false,
     },

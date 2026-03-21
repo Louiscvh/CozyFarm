@@ -13,6 +13,7 @@ function key(x: number, z: number): Cell {
 }
 
 function createFakeWorld() {
+  const dirt = new Set<Cell>()
   const tilled = new Set<Cell>()
   const watered = new Map<Cell, number>()
   const planted = new Set<Cell>()
@@ -22,14 +23,33 @@ function createFakeWorld() {
     tillCell(cellX: number, cellZ: number) {
       const k = key(cellX, cellZ)
       if (tilled.has(k)) return false
-      tilled.add(k)
+      if (dirt.has(k)) {
+        dirt.delete(k)
+        tilled.add(k)
+        return true
+      }
+      dirt.add(k)
+      return true
+    },
+    resetSoilToDirt(cellX: number, cellZ: number) {
+      const k = key(cellX, cellZ)
+      if (!tilled.has(k)) return false
+      tilled.delete(k)
+      dirt.add(k)
+      watered.delete(k)
       return true
     },
     untillCell(cellX: number, cellZ: number) {
       const k = key(cellX, cellZ)
-      if (!tilled.has(k)) return false
-      if (planted.has(k)) return false
-      tilled.delete(k)
+      if (tilled.has(k)) {
+        if (planted.has(k)) return false
+        tilled.delete(k)
+        dirt.add(k)
+        watered.delete(k)
+        return true
+      }
+      if (!dirt.has(k)) return false
+      dirt.delete(k)
       watered.delete(k)
       return true
     },
@@ -52,6 +72,12 @@ function createFakeWorld() {
     },
     isSoil(cellX: number, cellZ: number) {
       return tilled.has(key(cellX, cellZ))
+    },
+    getTileTypeAtCell(cellX: number, cellZ: number) {
+      const k = key(cellX, cellZ)
+      if (tilled.has(k)) return "soil"
+      if (dirt.has(k)) return "dirt"
+      return "grass"
     },
     isWatered(cellX: number, cellZ: number) {
       return (watered.get(key(cellX, cellZ)) ?? 0) > 0
@@ -100,7 +126,7 @@ function createFakeWorld() {
     },
   }
 
-  return { world: { tilesFactory, cropManager }, tilled, watered, planted, harvestedParticles }
+  return { world: { tilesFactory, cropManager }, dirt, tilled, watered, planted, harvestedParticles }
 }
 
 test("parcours joueur: bêcher -> planter -> arroser -> récolter", () => {
@@ -108,7 +134,7 @@ test("parcours joueur: bêcher -> planter -> arroser -> récolter", () => {
   toolLevelStore.setLevel("watering_can", 1)
   toolLevelStore.setLevel("shovel", 1)
 
-  const { world, tilled, watered, planted, harvestedParticles } = createFakeWorld()
+  const { world, dirt, tilled, watered, planted, harvestedParticles } = createFakeWorld()
   World.current = world as never
 
   const produced: Array<{ id: string; amount: number }> = []
@@ -127,6 +153,15 @@ test("parcours joueur: bêcher -> planter -> arroser -> récolter", () => {
       cellZ: 12,
     })
     assert.equal(tilledOk, true)
+    assert.equal(dirt.has("10|12"), true)
+
+    const tilledSoilOk = itemActionRegistry.executeTileAction("farming:till", {
+      itemId: "hoe",
+      tileType: "dirt",
+      cellX: 10,
+      cellZ: 12,
+    })
+    assert.equal(tilledSoilOk, true)
     assert.equal(tilled.has("10|12"), true)
 
     const plantedOk = itemActionRegistry.executeTileAction("farming:plant_carrot", {
@@ -164,6 +199,8 @@ test("parcours joueur: bêcher -> planter -> arroser -> récolter", () => {
     })
     assert.equal(harvestedOk, true)
     assert.equal(planted.has("10|12"), false)
+    assert.equal(tilled.has("10|12"), false)
+    assert.equal(dirt.has("10|12"), true)
     assert.deepEqual(produced, [
       { id: "carrot", amount: 1 },
       { id: "carrot", amount: 1 },
