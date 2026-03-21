@@ -62,7 +62,7 @@ export class ItemActionController {
     dispose(): void {
         this.unsubscribeStore?.()
         this.setHighlight(null)
-        this.renderer.domElement.style.cursor = "default"
+        this.setCursor("default")
         window.removeEventListener("mousedown", this._onMouseDown)
         window.removeEventListener("mousemove", this._onMouseMove)
         window.removeEventListener("click", this._onClick)
@@ -233,6 +233,13 @@ export class ItemActionController {
 
     private setCursor(cursor: string): void {
         this.renderer.domElement.style.cursor = cursor
+
+        if (typeof document === "undefined") return
+
+        document.body.style.cursor = cursor
+        document.documentElement.style.cursor = cursor
+        document.getElementById("root")?.style.setProperty("cursor", cursor)
+        document.getElementById("ui-root")?.style.setProperty("cursor", cursor)
     }
 
     private refreshCursorState(): void {
@@ -520,6 +527,11 @@ export class ItemActionController {
     }
 
     private playToolSuccessSound(item: ItemDef): void {
+        if (this.isSeedItem(item)) {
+            soundManager.playCrop()
+            return
+        }
+
         if (item.id === "hoe" || item.id === "shovel") {
             soundManager.playCrop()
             return
