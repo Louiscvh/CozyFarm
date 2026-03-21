@@ -1,6 +1,7 @@
 // src/game/entity/EntityFactory.ts
 import * as THREE from "three"
 import type { Entity } from "./Entity"
+import { isConnectableEntity } from "./Entity"
 import { assetManager } from "../../render/AssetManager"
 import { scaleModelToCells } from "./utils/scaleModelToCells"
 import { createTorchMesh } from "./entities/torch/TorchMesh"
@@ -87,6 +88,19 @@ export async function createEntity(
     const scale = tileSize * 0.55
     root.scale.set(scale, scale, scale)
     root.position.y = def.yOffset ?? 0
+    attachHitBox(root, def.yOffset ?? 0)
+    return root
+  }
+
+  if (isConnectableEntity(def)) {
+    const root = new THREE.Group()
+    root.position.y = def.yOffset ?? 0
+
+    const { createConnectableVisual, getDefaultConnectableLayout } = await import("./connectable/ConnectableRegistry")
+    const visual = createConnectableVisual(def, cellSize, getDefaultConnectableLayout())
+    visual.name = "__connectable_visual__"
+    root.add(visual)
+
     attachHitBox(root, def.yOffset ?? 0)
     return root
   }

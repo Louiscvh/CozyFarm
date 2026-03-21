@@ -5,7 +5,8 @@ import "./EntityPopup.css"
 import { UIButton } from "./UIButton"
 import { placementStore } from "../store/PlacementStore"
 import { animateRotate, pushDeleteAction, historyStore } from "../store/HistoryStore"
-import { getFootprint } from "../../game/entity/Entity"
+import { getFootprint, isConnectableEntity, supportsManualRotation } from "../../game/entity/Entity"
+import { animateConnectableVariantRotation } from "../../game/entity/connectable/ConnectableSystem"
 import type { Entity } from "../../game/entity/Entity"
 import { OutlineSystem } from "../../render/OutlineSystem"
 import { Renderer } from "../../render/Renderer"
@@ -272,6 +273,7 @@ export function EntityPopups() {
     setHoveredPopup(null)
     OutlineSystem.instance?.setHovered(null)
 
+    w.connectableSystem.unregister(popup.entityObject)
     pushDeleteAction(w, popup.entityObject, savedHoveredCell)
   }
 
@@ -293,12 +295,16 @@ export function EntityPopups() {
     const sizeInCells = getFootprint(def) || (e.userData.sizeInCells as number) || 1
 
     const originalPos = e.position.clone()
-    const originalRotY = e.userData.isInstanced ? (e.userData.rotY ?? 0) : e.rotation.y
+    const isConnectable = isConnectableEntity(def)
+    const originalRotY = isConnectable
+      ? ((e.userData.connectableVariantRotY as number | undefined) ?? 0)
+      : (e.userData.isInstanced ? (e.userData.rotY ?? 0) : e.rotation.y)
 
     w.entities = w.entities.filter(en => en !== e)
     w.tilesFactory.markFree(cellX, cellZ, sizeInCells)
 
     if (e.userData.isInstanced) w.instanceManager.hide(def, e.userData.instanceSlot)
+    w.connectableSystem.unregister(e)
     w.scene.remove(e)
 
     const onCancel = () => {
@@ -306,13 +312,19 @@ export function EntityPopups() {
       e.userData.cellX = cellX
       e.userData.cellZ = cellZ
       e.position.copy(originalPos)
-      e.rotation.y = originalRotY
+      if (isConnectable) {
+        e.rotation.y = 0
+        e.userData.connectableVariantRotY = originalRotY
+      } else {
+        e.rotation.y = originalRotY
+      }
 
       if (e.userData.isInstanced) {
         w.instanceManager.show(def, e.userData.instanceSlot, originalPos, originalRotY)
       }
       w.scene.add(e)
       w.entities.push(e)
+      w.connectableSystem.register(e)
     }
 
     placementStore.startMove(def, e, cellX, cellZ, originalRotY, onCancel)
@@ -326,13 +338,20 @@ export function EntityPopups() {
     const w = World.current
     if (!w) return
 
-    const prevRotY = e.userData.isInstanced ? (e.userData.rotY ?? 0) : e.rotation.y
+    const isConnectable = isConnectableEntity(e.userData.def as Entity | undefined)
+    const prevRotY = isConnectable
+      ? ((e.userData.connectableVariantRotY as number | undefined) ?? 0)
+      : (e.userData.isInstanced ? (e.userData.rotY ?? 0) : e.rotation.y)
     if (Math.abs(targetRotY.current - prevRotY) > 0.01) targetRotY.current = prevRotY
     const nextRotY = targetRotY.current + THREE.MathUtils.degToRad(90)
     targetRotY.current = nextRotY
 
     historyStore.push({ type: "rotate", entityObject: e, prevRotY, nextRotY })
     cancelAnimationFrame(rotRafRef.current)
+    if (isConnectable) {
+      animateConnectableVariantRotation(w, e, nextRotY)
+      return
+    }
     animateRotate(w, e, nextRotY)
   }
 
@@ -356,7 +375,9 @@ export function EntityPopups() {
           <>
             <div className="entity-popup-bridge" />
             <UIButton className="move-btn" onClick={() => handleMove(hoveredPopup)}>✥</UIButton>
-            <UIButton className="rotate-btn" onClick={() => handleRotate(hoveredPopup)}>↻</UIButton>
+            {supportsManualRotation(hoveredPopup.entityObject.userData.def as Entity | undefined) && (
+              <UIButton className="rotate-btn" onClick={() => handleRotate(hoveredPopup)}>↻</UIButton>
+            )}
             <UIButton className="delete-btn" onClick={() => handleDelete(hoveredPopup)}>🗑️</UIButton>
           </>
         )}

@@ -47,6 +47,7 @@ const BUYABLE_ITEMS: BuyableItem[] = [
   { id: "torch", icon: "🔥", unitPrice: 10, label: "Torche", description: "Éclaire joliment tes allées.", kind: "stock" },
   { id: "campfire", icon: "🏕️", unitPrice: 24, label: "Feu de camp", description: "Pour une ambiance cosy le soir.", kind: "stock" },
   { id: "wood_fence", icon: "🪜", unitPrice: 8, label: "Barrière", description: "Délimite les espaces avec style.", kind: "stock" },
+  { id: "bush", icon: "🌿", unitPrice: 9, label: "Buisson", description: "Une haie naturelle qui se raccorde toute seule.", kind: "stock" },
   { id: "grass", icon: "🌱", unitPrice: 3, label: "Herbe", description: "Cache les zones vides avec un tapis vert.", kind: "stock" },
 ]
 

@@ -3,6 +3,9 @@ import * as THREE from "three"
 import { World } from "../../game/world/World"
 import { placementStore } from "./PlacementStore"
 import { animateRemove, animateAppear, animateRotate, animateMove } from "../../game/entity/EntityAnimation"
+import { isConnectableEntity } from "../../game/entity/Entity"
+import { animateConnectableVariantRotation } from "../../game/entity/connectable/ConnectableSystem"
+import type { Entity } from "../../game/entity/Entity"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -145,11 +148,16 @@ export function applyUndo() {
   if (action.type === "place") {
     w.entities = w.entities.filter(en => en !== action.entityObject)
     w.tilesFactory.markFree(action.cellX, action.cellZ, action.sizeInCells)
+    w.connectableSystem.unregister(action.entityObject)
     animateRemove(w, action.entityObject)
   }
 
   if (action.type === "rotate") {
-    animateRotate(w, action.entityObject, action.prevRotY)
+    if (isConnectableEntity(action.entityObject.userData.def as Entity | undefined)) {
+      animateConnectableVariantRotation(w, action.entityObject, action.prevRotY)
+    } else {
+      animateRotate(w, action.entityObject, action.prevRotY)
+    }
   }
 
   if (action.type === "move") {
@@ -164,8 +172,10 @@ export function applyUndo() {
     const worldZ = (fromCell.z - half + size / 2) * w.cellSize
     const targetPos = new THREE.Vector3(worldX, e.position.y, worldZ)
   
+    w.connectableSystem.unregister(e)
     e.userData.cellX = fromCell.x
     e.userData.cellZ = fromCell.z
+    w.connectableSystem.register(e)
     animateMove(w, e, targetPos, fromRot)
   }
 
@@ -186,6 +196,7 @@ export function applyUndo() {
       action.onRestore(w)
     } else {
       addToScene(w, en, originalY)
+      w.connectableSystem.register(en)
       animateAppear(w, en, originalY, originalScale, originalRotation)
     }
 
@@ -217,11 +228,16 @@ export function applyRedo() {
 
         addToScene(w, e, originalY)
         w.tilesFactory.markOccupied(action.cellX, action.cellZ, action.sizeInCells)
+        w.connectableSystem.register(e)
         animateAppear(w, e, originalY, originalScale, originalRotation)
     }
 
   if (action.type === "rotate") {
-    animateRotate(w, action.entityObject, action.nextRotY)
+    if (isConnectableEntity(action.entityObject.userData.def as Entity | undefined)) {
+      animateConnectableVariantRotation(w, action.entityObject, action.nextRotY)
+    } else {
+      animateRotate(w, action.entityObject, action.nextRotY)
+    }
   }
 
   if (action.type === "move") {
@@ -234,8 +250,10 @@ export function applyRedo() {
     const worldZ = (toCell.z - half + size / 2) * w.cellSize
     const targetPos = new THREE.Vector3(worldX, e.position.y, worldZ)
   
+    w.connectableSystem.unregister(e)
     e.userData.cellX = toCell.x
     e.userData.cellZ = toCell.z
+    w.connectableSystem.register(e)
     animateMove(w, e, targetPos, toRot)
   }
 
@@ -243,6 +261,7 @@ export function applyRedo() {
     const { entityObject: e, occupiedCells } = action
     w.entities = w.entities.filter(en => en !== e)
     occupiedCells.forEach(c => w.tilesFactory.markFree(c.x, c.z, 1))
+    w.connectableSystem.unregister(e)
     if (action.onRemove) {
       action.onRemove(w)
     } else {

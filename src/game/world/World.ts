@@ -3,7 +3,7 @@ import * as THREE from "three"
 import { TileFactory, getFixedEntities, DECOR_CATEGORIES } from "./tile/TileFactory"
 import { createEntity } from "../entity/EntityFactory"
 import { placeOnCell } from "../entity/utils/placeOnCell"
-import { getFootprint } from "../entity/Entity"
+import { getFootprint, isConnectableEntity } from "../entity/Entity"
 import type { Entity } from "../entity/Entity"
 import { Weather } from "../system/Weather"
 import { InstancedEntityManager } from "../entity/InstancedEntityManager"
@@ -12,6 +12,7 @@ import { CropManager } from "../farming/CropManager"
 import { computeGrowthRate } from "../farming/GrowthConditions"
 import { FireLightManager } from "../system/FireLightManager"
 import { assetManager } from "../../render/AssetManager"
+import { ConnectableSystem } from "../entity/connectable/ConnectableSystem"
 
 export class World {
   static current: World | null = null
@@ -33,6 +34,7 @@ export class World {
   public instanceManager: InstancedEntityManager
   public cropManager: CropManager
   public fireLightManager: FireLightManager
+  public connectableSystem: ConnectableSystem
 
   constructor(scene: THREE.Scene, tileSize: number = 2) {
     World.current    = this
@@ -45,6 +47,7 @@ export class World {
     this.instanceManager = new InstancedEntityManager(scene)
     this.cropManager = new CropManager(scene, this)  // ← ajouter
     this.fireLightManager = new FireLightManager(scene)
+    this.connectableSystem = new ConnectableSystem(this)
 
     this.initialize()
   }
@@ -228,6 +231,7 @@ export class World {
     placeOnCell(entity, cellX, cellZ, this.cellSize, this.sizeInCells, cells)
     this.scene.add(entity)
     this.entities.push(entity)
+    this.connectableSystem.register(entity)
 
     return entity
   }
@@ -235,7 +239,9 @@ export class World {
   /** Pre-warm instanced pools for a list of entity definitions. */
   async preparePoolsForEntities(defs: { entity: Entity; maxQty: number }[]) {
     await Promise.all(
-      defs.map(({ entity, maxQty }) => this.instanceManager.preparePool(entity, this.tileSize, maxQty))
+      defs
+        .filter(({ entity }) => !isConnectableEntity(entity))
+        .map(({ entity, maxQty }) => this.instanceManager.preparePool(entity, this.tileSize, maxQty))
     )
   }
 
