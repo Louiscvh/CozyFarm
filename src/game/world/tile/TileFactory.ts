@@ -596,15 +596,15 @@ export class TileFactory {
         canvas.height = size
         const ctx = canvas.getContext("2d")!
 
-        ctx.fillStyle = "#ae845f"
+        ctx.fillStyle = "#a97e59"
         ctx.fillRect(0, 0, size, size)
 
-        for (let i = 0; i < 3200; i++) {
+        for (let i = 0; i < 2200; i++) {
             const x = Math.random() * size
             const y = Math.random() * size
-            const len = 1 + Math.random() * 4.2
-            const angle = (Math.random() - 0.5) * 1.35
-            ctx.strokeStyle = Math.random() > 0.45 ? "rgba(145, 106, 76, 0.30)" : "rgba(197, 160, 124, 0.26)"
+            const len = 0.8 + Math.random() * 3.2
+            const angle = (Math.random() - 0.5) * 1.1
+            ctx.strokeStyle = Math.random() > 0.45 ? "rgba(133, 95, 66, 0.24)" : "rgba(197, 165, 133, 0.2)"
             ctx.lineWidth = 1
             ctx.beginPath()
             ctx.moveTo(x, y)
@@ -612,19 +612,19 @@ export class TileFactory {
             ctx.stroke()
         }
 
-        for (let i = 0; i < 1800; i++) {
+        for (let i = 0; i < 2600; i++) {
             const x = Math.random() * size
             const y = Math.random() * size
-            const alpha = 0.07 + Math.random() * 0.09
-            ctx.fillStyle = `rgba(118, 85, 58, ${alpha.toFixed(3)})`
+            const alpha = 0.08 + Math.random() * 0.08
+            ctx.fillStyle = `rgba(121, 87, 60, ${alpha.toFixed(3)})`
             ctx.fillRect(x, y, 1, 1)
         }
 
-        for (let i = 0; i < 240; i++) {
+        for (let i = 0; i < 420; i++) {
             const x = Math.random() * size
             const y = Math.random() * size
-            const r = 0.55 + Math.random() * 0.8
-            ctx.fillStyle = Math.random() > 0.5 ? "rgba(92, 62, 40, 0.22)" : "rgba(214, 185, 152, 0.18)"
+            const r = 0.8 + Math.random() * 1.15
+            ctx.fillStyle = Math.random() > 0.52 ? "rgba(86, 58, 37, 0.28)" : "rgba(224, 198, 166, 0.18)"
             ctx.beginPath()
             ctx.arc(x, y, r, 0, Math.PI * 2)
             ctx.fill()
@@ -694,7 +694,7 @@ export class TileFactory {
     }
 
     private readonly DIRT_Y_VISIBLE: number = 0.0
-    private readonly DIRT_Y_HIDDEN: number = -0.18
+    private readonly DIRT_Y_HIDDEN: number = -0.085
     private readonly TERRAIN_Y_VISIBLE: number = 0.0
     private readonly TERRAIN_Y_HIDDEN: number = -0.45
     private readonly TERRAIN_Y_UNTILL_START: number = -0.05 // juste sous le soil
@@ -953,7 +953,7 @@ export class TileFactory {
                 cellZ,
                 progress: 0,
                 kind: "dirt_show",
-                speedMultiplier: 2.4,
+                speedMultiplier: 1.2,
                 onDone: () => {
                     this.releaseSoilCell(k, soilSlot)
                     this.markFree(cellX, cellZ, 1)
@@ -993,7 +993,7 @@ export class TileFactory {
             cellZ,
             progress: 0,
             kind: "dirt_show",
-            speedMultiplier: 2.6,
+            speedMultiplier: 1.25,
             onDone: () => {
                 this.releaseSoilCell(k, soilSlot)
                 this.markFree(cellX, cellZ, 1)
