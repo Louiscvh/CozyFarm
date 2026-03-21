@@ -279,7 +279,7 @@ export class ItemActionController {
         const { hoveredCell } = placementStore
         if (!hoveredCell) return
         const crop = this.world.cropManager.getCrop(hoveredCell.cellX, hoveredCell.cellZ)
-        this.setCursor(crop?.isReady ? "pointer" : "not-allowed")
+        this.setCursor(crop?.isReady ? "pointer" : "default")
     }
 
     private updateCursorForEntityHover(item: ItemDef): void {
