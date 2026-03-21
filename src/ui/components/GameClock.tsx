@@ -1,11 +1,16 @@
 // src/ui/components/GameClock.tsx
-import { useGameTime } from "../hooks/useGameTime"
-import { formatGameTime } from "../hooks/useGameTime"
+import { UIButton } from "./UIButton"
+import { useGameTime, formatGameTime } from "../hooks/useGameTime"
 import "./GameClock.css"
 
 export const GameClock = () => {
   const elapsed = useGameTime({ source: "visual", smooth: true })
   const timeStr = formatGameTime(elapsed)
 
-  return <p className="game-clock">{timeStr}</p>
+  return (
+    <UIButton className="game-clock static" aria-label={`Heure en jeu : ${timeStr}`}>
+      <span className="game-clock__label">🕒</span>
+      <span>{timeStr}</span>
+    </UIButton>
+  )
 }

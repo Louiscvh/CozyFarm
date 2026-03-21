@@ -1,6 +1,5 @@
 // src/App.tsx
 import "./ui/App.css"
-import { GameClock } from "./ui/components/GameClock"
 import { HomeButton } from "./ui/components/HomeButton"
 import { LoaderOverlay } from "./ui/components/LoaderOverlay"
 import { LoaderProvider } from "./ui/store/LoaderContext"
@@ -24,7 +23,6 @@ export const App = () => {
       <div id="ui-root">
         <header>
           <HomeButton />
-          <GameClock />
           <Temperature />
         </header>
         <EntityPopups />
